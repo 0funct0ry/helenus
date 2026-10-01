@@ -1,0 +1,209 @@
+@import 'tailwindcss';
+
+:root,
+[data-theme='dark'] {
+  --bg-editor: #282c33;
+  --bg-surface: #2f343e;
+  --bg-titlebar: #3b414d;
+  --bg-elevated: #2f343e;
+  --border: #464b57;
+  --border-variant: #363c46;
+  --border-focus: #47679e;
+  --text: #dce0e5;
+  --text-muted: #a9afbc;
+  --text-placeholder: #878a98;
+  --text-disabled: #6e7380;
+  --accent: #74ade8;
+  --accent-bg: rgba(116, 173, 232, 0.14);
+  --hover: #363c46;
+  --selected: #454a56;
+  --active-line: rgba(47, 52, 62, 0.75);
+  --error: #d07277;
+  --warning: #dec184;
+  --success: #a1c181;
+  --info: #74ade8;
+  --err-bg: rgba(208, 114, 119, 0.12);
+  --ok-bg: rgba(161, 193, 129, 0.12);
+  --warn-bg: rgba(222, 193, 132, 0.12);
+  --on-accent: #1e2127;
+  --syn-kw: #b477cf;
+  --syn-str: #a1c181;
+  --syn-num: #bf956a;
+  --syn-fn: #73ade9;
+  --syn-type: #6eb4bf;
+  --syn-com: #5d636f;
+  --syn-const: #dfc184;
+  --syn-punct: #acb2be;
+  --b-uuid: #74ade8;
+  --b-num: #bf956a;
+  --b-counter: #b477cf;
+  --b-blob: #a9afbc;
+  --b-time: #6eb4bf;
+  --b-coll: #dec184;
+  --b-udt: #a1c181;
+  --b-vec: #d07ab4;
+  --b-text: #a9afbc;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border);
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg-editor: #fafafa;
+  --bg-surface: #ebebec;
+  --bg-titlebar: #dcdcdd;
+  --bg-elevated: #f4f4f5;
+  --border: #c9c9ca;
+  --border-variant: #dfdfe0;
+  --border-focus: #7d82e8;
+  --text: #242529;
+  --text-muted: #58585a;
+  --text-placeholder: #7e8086;
+  --text-disabled: #a2a3a7;
+  --accent: #5c78e2;
+  --accent-bg: rgba(92, 120, 226, 0.12);
+  --hover: #e3e3e4;
+  --selected: #d3d3d4;
+  --active-line: rgba(235, 235, 236, 0.8);
+  --error: #d36151;
+  --warning: #a48819;
+  --success: #669f59;
+  --info: #5c78e2;
+  --err-bg: rgba(211, 97, 81, 0.1);
+  --ok-bg: rgba(102, 159, 89, 0.12);
+  --warn-bg: rgba(164, 136, 25, 0.12);
+  --on-accent: #ffffff;
+  --syn-kw: #a449ab;
+  --syn-str: #649f57;
+  --syn-num: #ad6e25;
+  --syn-fn: #5b79e3;
+  --syn-type: #3882b7;
+  --syn-com: #a2a3a7;
+  --syn-const: #c18401;
+  --syn-punct: #4d4f52;
+  --b-uuid: #3882b7;
+  --b-num: #ad6e25;
+  --b-counter: #a449ab;
+  --b-blob: #58585a;
+  --b-time: #2b8a8f;
+  --b-coll: #a48819;
+  --b-udt: #669f59;
+  --b-vec: #b5487f;
+  --b-text: #58585a;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--border);
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-editor: var(--bg-editor);
+  --color-surface: var(--bg-surface);
+  --color-titlebar: var(--bg-titlebar);
+  --color-elevated: var(--bg-elevated);
+  --color-line: var(--border);
+  --color-line2: var(--border-variant);
+  --color-focus: var(--border-focus);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-placeholder);
+  --color-dim: var(--text-disabled);
+  --color-accent: var(--accent);
+  --color-accent-bg: var(--accent-bg);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-danger: var(--error);
+  --color-warn: var(--warning);
+  --color-ok: var(--success);
+  --color-err-bg: var(--err-bg);
+  --color-ok-bg: var(--ok-bg);
+  --color-warn-bg: var(--warn-bg);
+  --color-on-accent: var(--on-accent);
+  --color-syn-kw: var(--syn-kw);
+  --color-syn-str: var(--syn-str);
+  --color-syn-num: var(--syn-num);
+  --color-syn-const: var(--syn-const);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border-variant);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font: 13px/1.45 'IBM Plex Sans', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg-editor);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: -1px;
+  }
+  input:focus-visible {
+    outline-offset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* CodeMirror theme glue */
+.cm-editor {
+  height: 100%;
+  background: var(--bg-editor);
+  color: var(--text);
+  font: 13px/20px 'IBM Plex Mono', ui-monospace, monospace;
+}
+.cm-editor.cm-focused {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+.cm-scroller {
+  font-family: inherit;
+  line-height: 20px;
+}
+.cm-gutters {
+  background: var(--bg-editor);
+  color: var(--text-disabled);
+  border: 0;
+}
+.cm-activeLine,
+.cm-activeLineGutter {
+  background: var(--active-line);
+}
+.cm-activeLineGutter {
+  color: var(--text);
+}
+.cm-cursor {
+  border-left: 2px solid var(--accent);
+}
+.cm-selectionBackground,
+.cm-focused .cm-selectionBackground {
+  background: var(--accent-bg) !important;
+}
+
+/* Scrollable strips (tab bar) scroll without drawing a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

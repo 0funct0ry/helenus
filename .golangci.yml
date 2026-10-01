@@ -1,0 +1,8 @@
+run:
+  timeout: 5m
+issues:
+  exclude-dirs:
+    - web/node_modules
+    - site
+  max-issues-per-linter: 0
+  max-same-issues: 0
