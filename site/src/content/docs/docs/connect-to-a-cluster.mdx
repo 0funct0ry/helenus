@@ -1,0 +1,68 @@
+---
+title: Connect to a cluster
+description: Save a connection profile and connect to Cassandra from the web UI or the shell.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **profile** is a named connection: contact points, login, TLS settings, and defaults such as the keyspace and consistency level. Profiles live in `config.yaml`, so the web UI and the shell share them. A profile you save in one place is available in the other straight away.
+
+<Tabs>
+  <TabItem label="Web UI">
+    1. Run `helenus ui`. The app opens in your browser.
+    2. Select the profile name in the title bar, then choose **Manage profiles…**.
+    3. Select **New profile** and enter a name.
+    4. On the **Direct connection** tab, enter the contact points (comma-separated), the port, and the local datacenter if you use more than one.
+    5. If the cluster needs a login, enter the username and password. The password is stored but never shown again; the field reads **Saved** afterwards.
+    6. To encrypt the connection, turn on **Encrypt connections with TLS** and enter the path to the CA certificate. For mutual TLS, also enter a client certificate and key.
+    7. Select **Test connection**. Helenus reports each step — DNS, TCP, TLS, authentication, protocol — and tells you which one failed.
+    8. Select **Save profile**. Helenus connects, and the status bar shows the Cassandra version, datacenter, and node count.
+
+    To switch profiles, select the profile name in the title bar and pick another one. The dot next to the name shows the state: grey (not connected), amber (connecting), green (connected), red (failed — hover to read why).
+
+    While the schema browser is still being built, the tree on the left shows a **Sample schema** label after you connect. It is example data, not your cluster.
+  </TabItem>
+  <TabItem label="Shell">
+    1. Create a profile:
+
+       ```bash
+       helenus profile add local --hosts 127.0.0.1 --keyspace payments
+       ```
+
+       Add `--username app --password-stdin` and pipe the password in if the cluster needs a login. Add `--ssl --ca-cert ~/.certs/prod-ca.pem` for TLS.
+    2. Check the connection:
+
+       ```bash
+       helenus profile test local
+       ```
+
+    3. Connect:
+
+       ```bash
+       helenus --profile local
+       ```
+
+       You can also connect without a profile: `helenus 10.20.0.11 9042 --username app`. If you give a username and no password, Helenus asks for it with echo off.
+
+    Helenus prints a banner with the server versions and the cluster topology, then waits for input. Type `EXIT` to leave. The full CQL shell arrives in a later release.
+
+    Other profile commands: `helenus profile list`, `helenus profile show <name>` (passwords are masked), and `helenus profile remove <name>`.
+  </TabItem>
+</Tabs>
+
+## If the connection fails
+
+The message names the stage that failed.
+
+| Stage | What it means | What to check |
+|---|---|---|
+| dns | A contact point name did not resolve. | Spelling of the host name; your network or VPN. |
+| tcp | The host answered nothing on that port. | The port, firewalls, and that Cassandra listens on its native port. |
+| tls | The TLS handshake failed. | The CA certificate matches the server; the server name matches the certificate. |
+| auth | Cassandra rejected the login or wanted one. | Username and password; whether the cluster requires authentication. |
+| protocol | Cassandra connected but did not complete the handshake. | The protocol version setting, and that the node is fully started. |
+
+## Related
+
+- [Profiles reference](/helenus/docs/profiles-reference/)
+- [Connect to Astra DB](/helenus/docs/connect-to-astra-db/)

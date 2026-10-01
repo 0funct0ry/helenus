@@ -11,7 +11,7 @@ import { App } from './App'
 import { initTheme } from './store/theme'
 
 initTheme()
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

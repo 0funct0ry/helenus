@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
+import { afterEach, beforeEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 class RO {
@@ -24,3 +24,8 @@ Range.prototype.getBoundingClientRect ??= () => new DOMRect()
 // Give elements a viewport-sized box so TanStack Virtual renders rows.
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 600 })
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => 1000 })
+
+// Components call the API through fetch; tests opt in with mockApi() and otherwise get a network error.
+beforeEach(() => {
+  globalThis.fetch = (() => Promise.reject(new TypeError('network disabled in tests'))) as typeof fetch
+})

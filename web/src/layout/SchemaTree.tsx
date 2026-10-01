@@ -22,6 +22,7 @@ export function SchemaTree() {
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId))
   const open = useWorkspace((s) => s.open)
   const newQuery = useWorkspace((s) => s.newQuery)
+  const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
 
   const q = filter.trim().toLowerCase()
   const isOpen = (key: string) => (q ? true : (toggled[key] ?? !defaultClosed(key)))
@@ -122,7 +123,13 @@ export function SchemaTree() {
   return (
     <aside aria-label="Schema" className="flex min-h-0 flex-col border-r border-line bg-surface">
       <div className="flex items-center gap-1.5 border-b border-line2 py-1.5 pl-3 pr-2">
-        <h2 className="m-0 flex-1 text-[13px] font-medium">Schema</h2>
+        <h2 className="m-0 text-[13px] font-medium">Schema</h2>
+        {connected && (
+          <span className="whitespace-nowrap rounded bg-selected px-1.5 py-px text-[11px] text-muted" title="Real schema browsing arrives in a later milestone">
+            Sample schema
+          </span>
+        )}
+        <span className="flex-1" />
         <IconButton label="New query" icon={<Plus size={14} />} onClick={newQuery} />
         <IconButton label="Refresh schema" icon={<RefreshCw size={14} />} />
       </div>

@@ -14,14 +14,17 @@ var uiCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := config.Resolve(cmd)
+		cfgFlag, _ := cmd.Flags().GetString(config.ConfigFlag.Name)
+		cfgPath, _ := config.ConfigPath(cfgFlag)
 		if err != nil {
 			return err
 		}
 		return server.Run(cmd.Context(), server.Options{
-			Addr:    s.V.GetString("ui.addr"),
-			Open:    s.V.GetBool("ui.open_browser"),
-			Version: Version,
-			Stderr:  cmd.ErrOrStderr(),
+			ConfigPath: cfgPath,
+			Addr:       s.V.GetString("ui.addr"),
+			Open:       s.V.GetBool("ui.open_browser"),
+			Version:    Version,
+			Stderr:     cmd.ErrOrStderr(),
 		})
 	},
 }

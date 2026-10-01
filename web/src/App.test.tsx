@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
+import { renderWithClient as render } from './test/api'
 import { initialTabs, useWorkspace } from './store/workspace'
 
 describe('App', () => {

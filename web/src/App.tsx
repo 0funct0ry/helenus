@@ -8,6 +8,7 @@ import { TypeView } from './layout/TypeView'
 import { StatusBar } from './layout/StatusBar'
 import { CommandPalette } from './layout/CommandPalette'
 import { ProfileDialog } from './layout/ProfileDialog'
+import { useBootstrapProfile } from './api/useBootstrap'
 import { useWorkspace } from './store/workspace'
 import { initTheme } from './store/theme'
 
@@ -22,6 +23,7 @@ export function App() {
   const close = useWorkspace((s) => s.close)
   const newQuery = useWorkspace((s) => s.newQuery)
   const active = tabs.find((t) => t.id === activeId)
+  useBootstrapProfile()
 
   useEffect(() => initTheme(), [])
   useEffect(() => {

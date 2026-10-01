@@ -1,11 +1,14 @@
 import type { ProfileStatus } from '../mocks/types'
 
+type Status = ProfileStatus | 'idle'
+
 export interface StatusDotProps {
-  /** Connection state: connected is green, connecting is amber, error is red. */
-  status: ProfileStatus
+  /** Connection state: connected is green, connecting is amber, error is red, idle (not connected yet) is grey. */
+  status: Status
 }
 
-const colour: Record<ProfileStatus, string> = {
+const colour: Record<Status, string> = {
+  idle: 'bg-faint',
   connected: 'bg-ok',
   connecting: 'bg-warn',
   error: 'bg-danger',

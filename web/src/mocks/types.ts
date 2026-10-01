@@ -52,18 +52,6 @@ export interface Keyspace {
 
 export type ProfileStatus = 'connected' | 'connecting' | 'error'
 
-export interface Profile {
-  id: string
-  name: string
-  hosts: string
-  status: ProfileStatus
-  version?: string
-  datacenter?: string
-  nodes?: string
-  tls?: boolean
-  error?: string
-}
-
 export type CellValue = string | number | boolean | null
 export type Row = Record<string, CellValue>
 

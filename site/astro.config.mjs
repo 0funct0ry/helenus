@@ -10,7 +10,17 @@ export default defineConfig({
       title: 'Helenus',
       description: 'A local-first Cassandra client: cqlsh-compatible shell and web UI.',
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/0funct0ry/helenus' }],
-      sidebar: [{ label: 'Get started', items: [{ label: 'Install Helenus', slug: 'docs/install' }] }],
+      sidebar: [
+        { label: 'Get started', items: [{ label: 'Install Helenus', slug: 'docs/install' }] },
+        {
+          label: 'Connect',
+          items: [
+            { label: 'Connect to a cluster', slug: 'docs/connect-to-a-cluster' },
+            { label: 'Connect to Astra DB', slug: 'docs/connect-to-astra-db' },
+            { label: 'Profiles reference', slug: 'docs/profiles-reference' },
+          ],
+        },
+      ],
     }),
   ],
 });

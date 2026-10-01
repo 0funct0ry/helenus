@@ -20,7 +20,7 @@ const EnvPrefix = "HELENUS"
 // DefaultProfile is used when no --profile is given and a profile of that name exists.
 const DefaultProfile = "default"
 
-// Config is the parsed config file (SPEC §5.2). Profile logic arrives in M2.
+// Config is the parsed config file (SPEC §5.2). Profiles are read through LoadProfile(s).
 type Config struct {
 	Profiles map[string]map[string]any `mapstructure:"profiles"`
 	Shell    ShellConfig               `mapstructure:"shell"`
@@ -71,6 +71,8 @@ type Settings struct {
 	Path string
 	// Profile is the selected profile name, empty if none.
 	Profile string
+	// ProfileExists reports whether Profile is defined in the config file.
+	ProfileExists bool
 }
 
 // ConfigPath returns the config file location: -c flag, HELENUS_CONFIG, then XDG.
@@ -111,7 +113,12 @@ func xdgDir(env, fallback string) string {
 
 // Resolve builds the settings for cmd. Each command gets its own viper so that
 // identically named local flags on different commands never share state.
-func Resolve(cmd *cobra.Command) (*Settings, error) {
+func Resolve(cmd *cobra.Command) (*Settings, error) { return ResolveNamed(cmd, "") }
+
+// ResolveNamed is Resolve for commands that take the profile name as a
+// positional argument (profile test) instead of --profile. An empty name
+// falls back to the --profile selection.
+func ResolveNamed(cmd *cobra.Command, name string) (*Settings, error) {
 	v := viper.New()
 	s := &Settings{V: v}
 
@@ -129,10 +136,14 @@ func Resolve(cmd *cobra.Command) (*Settings, error) {
 		s.Path = path
 	}
 
-	if cmd.Flags().Lookup(ProfileFlag.Name) != nil {
-		s.Profile = selectProfile(cmd, v)
+	if name != "" || cmd.Flags().Lookup(ProfileFlag.Name) != nil {
+		s.Profile = name
+		if name == "" {
+			s.Profile = selectProfile(cmd, v)
+		}
 		if s.Profile != "" {
 			if p := v.GetStringMap("profiles." + s.Profile); len(p) > 0 {
+				s.ProfileExists = true
 				if err := v.MergeConfigMap(p); err != nil {
 					return nil, err
 				}

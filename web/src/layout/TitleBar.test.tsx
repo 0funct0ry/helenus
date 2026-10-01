@@ -1,13 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { renderWithClient as render, mockApi, apiProfile } from '../test/api'
 import { TitleBar } from './TitleBar'
 import { useWorkspace } from '../store/workspace'
 
 describe('TitleBar', () => {
-  it('shows mark, profile, breadcrumb and theme toggle', () => {
+  it('shows mark, profile, breadcrumb and theme toggle', async () => {
+    mockApi({ 'GET /profiles': { profiles: [apiProfile({ name: 'prod-eu' })] } })
+    useWorkspace.setState({ profileId: 'prod-eu' })
     render(<TitleBar />)
     expect(screen.getByText('helenus')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /prod-eu/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /prod-eu/ })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('payments')
     expect(screen.getByRole('button', { name: /Theme:/ })).toBeInTheDocument()
   })

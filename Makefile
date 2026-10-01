@@ -18,6 +18,8 @@ GO=go
 GOPKGS=. ./cmd/... ./internal/... ./web
 GOLANGCI_LINT=golangci-lint
 NPM=npm
+# Cassandra images the integration tests run against (SPEC §15).
+CASSANDRA_VERSIONS ?= 4.1 5.0
 
 .PHONY: all
 all: build
@@ -64,7 +66,10 @@ lint:
 .PHONY: it
 ## it: Run integration tests (requires Docker)
 it:
-	@echo "integration tests are not implemented yet (planned for M2)"
+	@for v in $(CASSANDRA_VERSIONS); do \
+		echo "== integration tests against cassandra:$$v =="; \
+		HELENUS_IT_CASSANDRA_VERSION=$$v $(GO) test -tags integration -count=1 -timeout 20m ./internal/... || exit 1; \
+	done
 
 .PHONY: fmt
 ## fmt: Format Go code

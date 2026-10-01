@@ -19,6 +19,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/config"
+	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/web"
 )
 
@@ -30,6 +32,12 @@ type Options struct {
 	// Assets is the web app file system; defaults to the embedded web/dist.
 	Assets fs.FS
 	Stderr io.Writer
+	// ConfigPath is the config file the profile routes read and write.
+	ConfigPath string
+	// DataDir holds uploaded Astra bundles; defaults to config.DataDir().
+	DataDir string
+	// Connector backs the connect routes; defaults to a conn.Manager.
+	Connector Connector
 }
 
 // Run serves until ctx is cancelled or SIGINT/SIGTERM arrives, then shuts down gracefully.
@@ -44,6 +52,10 @@ func Run(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", opts.Addr, err)
 	}
+	if opts.Connector == nil {
+		opts.Connector = managerConnector{conn.NewManager()}
+	}
+	defer opts.Connector.CloseAll()
 	srv := &http.Server{Handler: NewRouter(opts), ReadHeaderTimeout: 10 * time.Second}
 
 	url := "http://" + ln.Addr().String()
@@ -80,6 +92,15 @@ func NewRouter(opts Options) http.Handler {
 	if opts.Stderr == nil {
 		opts.Stderr = os.Stderr
 	}
+	if opts.Connector == nil {
+		opts.Connector = managerConnector{conn.NewManager()}
+	}
+	if opts.DataDir == "" {
+		opts.DataDir = config.DataDir()
+	}
+	if opts.ConfigPath == "" {
+		opts.ConfigPath, _ = config.ConfigPath("")
+	}
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	// Request logging goes to stderr; request bodies are never logged (SPEC §11.4).
@@ -89,6 +110,7 @@ func NewRouter(opts Options) http.Handler {
 	r.GET("/api/v1/meta", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"version": opts.Version, "auth_enabled": false})
 	})
+	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector}).routes(r.Group("/api/v1"))
 	r.NoRoute(staticHandler(opts.Assets))
 	return r
 }

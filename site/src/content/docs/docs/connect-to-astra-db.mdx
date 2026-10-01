@@ -1,0 +1,41 @@
+---
+title: Connect to Astra DB
+description: Connect to a DataStax Astra DB database with a secure connect bundle and an application token.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Astra DB needs two things from your Astra account: a **secure connect bundle** (a `.zip` file) and an **application token** (it starts with `AstraCS:`). Helenus reads the bundle itself, so you do not need to unzip it.
+
+<Tabs>
+  <TabItem label="Web UI">
+    1. In the Astra portal, open your database and download the secure connect bundle. Create an application token if you do not have one.
+    2. In Helenus, select the profile name in the title bar and choose **Manage profiles…**, then **New profile**.
+    3. Select the **Astra DB** tab.
+    4. Select **Upload bundle…** and choose the `.zip` file. Helenus stores a private copy and fills in the path.
+    5. Paste the application token. It is stored but never shown again.
+    6. Select **Test connection**, then **Save profile**.
+  </TabItem>
+  <TabItem label="Shell">
+    1. Download the bundle from the Astra portal.
+    2. Create the profile. Put the token in an environment variable so it does not end up in your shell history:
+
+       ```bash
+       export HELENUS_ASTRA_TOKEN='AstraCS:…'
+       helenus profile add astra-dev --secure-bundle ~/Downloads/secure-connect-dev.zip --token '${HELENUS_ASTRA_TOKEN}'
+       ```
+
+       The single quotes keep the `${…}` reference in the file; Helenus expands it each time it connects.
+    3. Connect:
+
+       ```bash
+       helenus --profile astra-dev
+       ```
+  </TabItem>
+</Tabs>
+
+## Notes
+
+- You do not set a username, contact points, or TLS options for Astra. The bundle supplies them.
+- If **Test connection** fails at the **metadata** step, the bundle is missing, expired, or the database is hibernated. Download a fresh bundle, or resume the database in the Astra portal.
+- Helenus checks the Astra connection in unit tests only. If you hit a problem, please report it with the message you saw.

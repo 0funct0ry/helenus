@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { profiles } from '../mocks/profiles'
+import type { ProfileStatus } from '../mocks/types'
 
 export type TabKind = 'table' | 'view' | 'query' | 'type'
 
@@ -13,10 +13,19 @@ export interface WorkspaceTab {
   closable: boolean
 }
 
+export interface Connection {
+  status: ProfileStatus
+  error?: string
+}
+
 interface WorkspaceState {
   tabs: WorkspaceTab[]
   activeId: string
+  /** Name of the active profile; empty until profiles load. */
   profileId: string
+  connections: Record<string, Connection>
+  setConnection: (name: string, status: ProfileStatus, error?: string) => void
+  clearConnection: (name: string) => void
   paletteOpen: boolean
   profileDialogOpen: boolean
   queryCount: number
@@ -42,7 +51,15 @@ export const initialTabs: WorkspaceTab[] = [
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
   tabs: initialTabs,
   activeId: initialTabs[0].id,
-  profileId: profiles.find((p) => p.status === 'connected')?.id ?? profiles[0].id,
+  profileId: '',
+  connections: {},
+  setConnection: (name, status, error) => set((s) => ({ connections: { ...s.connections, [name]: { status, error } } })),
+  clearConnection: (name) =>
+    set((s) => {
+      const connections = { ...s.connections }
+      delete connections[name]
+      return { connections }
+    }),
   paletteOpen: false,
   profileDialogOpen: false,
   queryCount: 1,
