@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { ProfileStatus } from '../lib/schemaModel'
+import type { QueryResponse } from '../api/types'
+import { abortInflight } from '../api/inflight'
 
 export type TabKind = 'table' | 'view' | 'query' | 'type'
 
@@ -15,6 +17,47 @@ export interface WorkspaceTab {
   initialCql?: string
 }
 
+/** An API error as shown in a result (SPEC §11). */
+export interface ResultError {
+  code: string
+  message: string
+  detail?: Record<string, unknown>
+}
+
+/** The outcome of one executed statement in a query tab. */
+export interface StatementResult {
+  id: string
+  cql: string
+  status: 'running' | 'done' | 'error'
+  response?: QueryResponse
+  error?: ResultError
+  /** Page state used to load each visited page; the last entry is the current page (null for the first). */
+  pageStates: (string | null)[]
+  /** One-shot ALLOW FILTERING used for this statement (offered after a filtering error). */
+  filtering?: boolean
+}
+
+/** Everything a query tab remembers between renders and tab switches. */
+export interface QueryTabState {
+  text: string
+  keyspace: string
+  consistency: string
+  serial: string
+  pageSize: number
+  allowFiltering: boolean
+  trace: boolean
+  running: boolean
+  results: StatementResult[]
+  activeResult: number
+}
+
+export const DEFAULT_QUERY_TEXT = '-- Write CQL here. Cmd+Enter runs the statement under the cursor.\n'
+
+/** Fresh state for a query tab. */
+export function newQueryState(over: Partial<QueryTabState> = {}, consistency = 'LOCAL_QUORUM'): QueryTabState {
+  return { text: DEFAULT_QUERY_TEXT, keyspace: '', consistency, serial: 'SERIAL', pageSize: 100, allowFiltering: false, trace: false, running: false, results: [], activeResult: 0, ...over }
+}
+
 export interface Connection {
   status: ProfileStatus
   error?: string
@@ -26,6 +69,9 @@ interface WorkspaceState {
   /** Name of the active profile; empty until profiles load. */
   profileId: string
   connections: Record<string, Connection>
+  queryStates: Record<string, QueryTabState>
+  /** Merge `patch` into a query tab's state, creating it if needed. */
+  patchQuery: (id: string, patch: Partial<QueryTabState>) => void
   setConnection: (name: string, status: ProfileStatus, error?: string) => void
   clearConnection: (name: string) => void
   paletteOpen: boolean
@@ -49,6 +95,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   activeId: '',
   profileId: '',
   connections: {},
+  queryStates: {},
+  patchQuery: (id, patch) =>
+    set((s) => ({ queryStates: { ...s.queryStates, [id]: { ...(s.queryStates[id] ?? newQueryState({}, s.consistency)), ...patch } } })),
   setConnection: (name, status, error) => set((s) => ({ connections: { ...s.connections, [name]: { status, error } } })),
   clearConnection: (name) =>
     set((s) => {
@@ -76,18 +125,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const id = `query-${n}`
     set((s) => ({
       queryCount: n,
+      queryStates: { ...s.queryStates, [id]: newQueryState({ keyspace: opts?.keyspace ?? '', text: opts?.cql ?? DEFAULT_QUERY_TEXT }, s.consistency) },
       tabs: [...s.tabs, { id, kind: 'query', title: `query-${n}.cql`, keyspace: opts?.keyspace ?? '', object: '', closable: true, initialCql: opts?.cql }],
       activeId: id,
     }))
   },
-  close: (id) =>
+  close: (id) => {
+    abortInflight(id)
     set((s) => {
       const i = s.tabs.findIndex((t) => t.id === id)
       if (i < 0) return s
       const tabs = s.tabs.filter((t) => t.id !== id)
+      const queryStates = { ...s.queryStates }
+      delete queryStates[id]
       const activeId = s.activeId === id ? (tabs[Math.min(i, tabs.length - 1)]?.id ?? '') : s.activeId
-      return { tabs, activeId }
-    }),
+      return { tabs, activeId, queryStates }
+    })
+  },
   activate: (id) => set({ activeId: id }),
   setProfile: (id) => set({ profileId: id }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),

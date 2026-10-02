@@ -3,11 +3,14 @@ package shell
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
 
+	"github.com/0funct0ry/helenus/internal/codec"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -22,57 +25,210 @@ func (f *fakeDescriber) Describe(_ context.Context, t schema.Target, ks string) 
 	return "DDL for " + t.Name + "\n", f.err
 }
 
-func run(t *testing.T, d *fakeDescriber, input string) (out, errOut string) {
-	t.Helper()
-	var o, e bytes.Buffer
-	s := &Shell{
-		In: strings.NewReader(input), Out: &o, Err: &e, Describer: d, Version: "1.2.3", Host: "10.0.0.1", Port: 9042, Keyspace: "payments",
-		Cluster: &conn.ClusterInfo{Name: "Test Cluster", ReleaseVersion: "5.0.2", CQLVersion: "3.4.7", ProtocolVersion: "5"},
+// fakeExec answers Run from fn and records every request.
+type fakeExec struct {
+	reqs []exec.Request
+	fn   func(exec.Request) (*exec.Result, error)
+}
+
+func (f *fakeExec) Run(_ context.Context, req exec.Request) (*exec.Result, error) {
+	f.reqs = append(f.reqs, req)
+	if f.fn == nil {
+		return &exec.Result{Kind: exec.KindVoid}, nil
 	}
-	s.Run(context.Background())
-	return o.String(), e.String()
+	return f.fn(req)
+}
+
+func txt() codec.TypeDesc { return codec.TypeDesc{Name: "text"} }
+func num() codec.TypeDesc { return codec.TypeDesc{Name: "int"} }
+
+// rows builds a rows result with two columns, id (int, partition key) and name (text).
+func rows(vals ...[2]any) *exec.Result {
+	r := &exec.Result{
+		Kind: exec.KindRows,
+		Columns: []exec.Column{
+			{Name: "id", Type: num(), Kind: "partition"},
+			{Name: "name", Type: txt(), Kind: "regular"},
+		},
+	}
+	for _, v := range vals {
+		r.Raw = append(r.Raw, []any{v[0], v[1]})
+	}
+	return r
+}
+
+type harness struct {
+	sh   *Shell
+	out  *bytes.Buffer
+	err  *bytes.Buffer
+	ex   *fakeExec
+	desc *fakeDescriber
+}
+
+func newHarness(fn func(exec.Request) (*exec.Result, error)) *harness {
+	h := &harness{out: &bytes.Buffer{}, err: &bytes.Buffer{}, ex: &fakeExec{fn: fn}, desc: &fakeDescriber{}}
+	h.sh = &Shell{
+		In: strings.NewReader(""), Out: h.out, Err: h.err,
+		Backend: Backend{
+			Exec: h.ex, Describer: h.desc, Keyspace: "payments", Host: "10.0.0.1", Port: 9042,
+			Consistency: "LOCAL_ONE", Serial: "SERIAL",
+			Cluster: &conn.ClusterInfo{Name: "Test Cluster", ReleaseVersion: "5.0.2", CQLVersion: "3.4.7", ProtocolVersion: "5"},
+		},
+		Version: "1.2.3", Format: "table", Paging: 100,
+	}
+	return h
+}
+
+func (h *harness) run(script string) error {
+	return h.sh.RunScript(context.Background(), "", script, ScriptOptions{})
 }
 
 func TestDescribeForms(t *testing.T) {
-	d := &fakeDescriber{}
-	out, errOut := run(t, d, "DESCRIBE TABLE payments.merchants;\ndesc keyspaces\nEXIT\n")
-	if errOut != "" || !strings.Contains(out, "DDL for merchants") {
-		t.Fatalf("out=%q err=%q", out, errOut)
+	h := newHarness(nil)
+	if err := h.run("DESCRIBE TABLE payments.merchants;\ndesc keyspaces\nEXIT\n"); err != nil {
+		t.Fatal(err)
 	}
-	if len(d.got) != 2 || d.got[0].Kind != schema.TableT || d.got[1].Kind != schema.Keyspaces {
-		t.Errorf("targets = %+v", d.got)
+	if h.err.Len() != 0 || !strings.Contains(h.out.String(), "DDL for merchants") {
+		t.Fatalf("out=%q err=%q", h.out, h.err)
 	}
-	if d.ks != "payments" {
-		t.Errorf("current keyspace not passed: %q", d.ks)
+	if len(h.desc.got) != 2 || h.desc.got[0].Kind != schema.TableT || h.desc.got[1].Kind != schema.Keyspaces {
+		t.Errorf("targets = %+v", h.desc.got)
+	}
+	if h.desc.ks != "payments" {
+		t.Errorf("current keyspace not passed: %q", h.desc.ks)
 	}
 }
 
 func TestDescribeErrorsGoToStderr(t *testing.T) {
-	_, errOut := run(t, &fakeDescriber{}, "DESCRIBE\nQUIT\n")
-	if !strings.Contains(errOut, "SyntaxError") {
-		t.Errorf("err = %q", errOut)
+	h := newHarness(nil)
+	_ = h.run("DESCRIBE\n")
+	if !strings.Contains(h.err.String(), "SyntaxError") {
+		t.Errorf("err = %q", h.err)
 	}
-	_, errOut = run(t, &fakeDescriber{err: errors.New("boom")}, "DESCRIBE TABLES\nQUIT\n")
-	if !strings.Contains(errOut, "Error: boom") {
-		t.Errorf("err = %q", errOut)
+	h = newHarness(nil)
+	h.desc.err = errors.New("boom")
+	_ = h.run("DESCRIBE TABLES\n")
+	if !strings.Contains(h.err.String(), "Error: boom") {
+		t.Errorf("err = %q", h.err)
 	}
 }
 
 func TestShow(t *testing.T) {
-	out, errOut := run(t, &fakeDescriber{}, "SHOW VERSION\nSHOW HOST;\nSHOW NOPE\n")
+	h := newHarness(nil)
+	_ = h.sh.Execute(context.Background(), "SHOW VERSION")
+	_ = h.sh.Execute(context.Background(), "SHOW HOST;")
+	err := h.sh.Execute(context.Background(), "SHOW NOPE")
 	for _, want := range []string{"[helenus 1.2.3 | Cassandra 5.0.2 | CQL spec 3.4.7 | Native protocol v5]", "Connected to Test Cluster at 10.0.0.1:9042"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("missing %q in %q", want, out)
+		if !strings.Contains(h.out.String(), want) {
+			t.Errorf("missing %q in %q", want, h.out)
 		}
 	}
-	if !strings.Contains(errOut, "SHOW supports") {
-		t.Errorf("err = %q", errOut)
+	if err == nil || !strings.Contains(err.Error(), "SHOW supports") {
+		t.Errorf("err = %v", err)
 	}
 }
 
-func TestOtherStatementsAreNotYetSupported(t *testing.T) {
-	out, _ := run(t, &fakeDescriber{}, "SELECT 1;\n")
-	if !strings.Contains(out, "not implemented yet") {
-		t.Errorf("out = %q", out)
+func TestQueryRequestCarriesSessionState(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) { return rows([2]any{1, "a"}), nil })
+	h.sh.Consistency, h.sh.Serial, h.sh.Paging = "QUORUM", "LOCAL_SERIAL", 25
+	if err := h.sh.Execute(context.Background(), "SELECT * FROM t;"); err != nil {
+		t.Fatal(err)
+	}
+	r := h.ex.reqs[0]
+	if r.Keyspace != "payments" || r.Consistency != "QUORUM" || r.SerialConsistency != "LOCAL_SERIAL" || r.PageSize != 25 || r.CQL != "SELECT * FROM t;" {
+		t.Errorf("request = %+v", r)
+	}
+	if !strings.Contains(h.out.String(), "(1 row)") {
+		t.Errorf("out = %q", h.out)
+	}
+}
+
+func TestPagingFetchesEveryPage(t *testing.T) {
+	pages := [][2]any{{1, "a"}, {2, "b"}, {3, "c"}}
+	h := newHarness(func(req exec.Request) (*exec.Result, error) {
+		i := 0
+		if len(req.PageState) > 0 {
+			i = int(req.PageState[0])
+		}
+		r := rows(pages[i])
+		if i < len(pages)-1 {
+			r.HasMore = true
+			r.PageState = base64.StdEncoding.EncodeToString([]byte{byte(i + 1)})
+		}
+		return r, nil
+	})
+	h.sh.Format = "raw"
+	if err := h.sh.Execute(context.Background(), "SELECT * FROM t"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := h.out.String(), "id\tname\n1\ta\n2\tb\n3\tc\n"; got != want {
+		t.Errorf("out = %q, want %q", got, want)
+	}
+	if len(h.ex.reqs) != 3 {
+		t.Errorf("requests = %d", len(h.ex.reqs))
+	}
+}
+
+func TestPagingPauseStops(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) {
+		r := rows([2]any{1, "a"})
+		r.HasMore, r.PageState = true, base64.StdEncoding.EncodeToString([]byte{1})
+		return r, nil
+	})
+	asked := 0
+	h.sh.Pause = func() bool { asked++; return false }
+	_ = h.sh.Execute(context.Background(), "SELECT * FROM t")
+	if asked != 1 || len(h.ex.reqs) != 1 {
+		t.Errorf("asked=%d requests=%d", asked, len(h.ex.reqs))
+	}
+	// PAGING OFF never pauses.
+	h.sh.Paging = 0
+	h.ex.reqs = nil
+	n := 0
+	h.ex.fn = func(exec.Request) (*exec.Result, error) {
+		n++
+		r := rows([2]any{n, "x"})
+		r.HasMore = n < 3
+		r.PageState = base64.StdEncoding.EncodeToString([]byte{1})
+		return r, nil
+	}
+	h.sh.Pause = func() bool { t.Error("paused with paging off"); return false }
+	_ = h.sh.Execute(context.Background(), "SELECT * FROM t")
+	if len(h.ex.reqs) != 3 {
+		t.Errorf("requests = %d", len(h.ex.reqs))
+	}
+}
+
+func TestFilteringHint(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) {
+		return nil, &exec.ErrFilteringRequired{Message: "Cannot execute this query ... use ALLOW FILTERING"}
+	})
+	_ = h.run("SELECT * FROM t WHERE x = 1;")
+	if !strings.Contains(h.err.String(), "ALLOW FILTERING") || !strings.Contains(h.err.String(), "Hint:") {
+		t.Errorf("err = %q", h.err)
+	}
+}
+
+func TestWarningsAndTimingGoToStderr(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) {
+		r := rows([2]any{1, "a"})
+		r.Warnings = []string{"Aggregation query used without partition key"}
+		r.Timing.ClientMS = 4.2
+		return r, nil
+	})
+	h.sh.Timing = true
+	_ = h.sh.Execute(context.Background(), "SELECT * FROM t")
+	if !strings.Contains(h.err.String(), "Warning: Aggregation query") || !strings.Contains(h.err.String(), "Time: 4.2 ms") {
+		t.Errorf("err = %q", h.err)
+	}
+	if strings.Contains(h.out.String(), "Warning") || strings.Contains(h.out.String(), "Time:") {
+		t.Errorf("stderr content leaked to stdout: %q", h.out)
+	}
+}
+
+func TestVoidStatementPrintsNothing(t *testing.T) {
+	h := newHarness(nil)
+	if err := h.run("INSERT INTO t (a) VALUES (1);"); err != nil || h.out.Len() != 0 {
+		t.Errorf("err=%v out=%q", err, h.out)
 	}
 }

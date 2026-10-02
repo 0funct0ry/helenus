@@ -157,3 +157,47 @@ export interface SchemaSnapshot {
   version: string
   generated_at: string
 }
+
+/** One result column of a query (SPEC §7.3). `kind` is set only when the column maps to a table column. */
+export interface QueryColumn {
+  name: string
+  type: TypeDesc
+  kind?: 'partition' | 'clustering' | 'static' | 'regular'
+  position?: number
+  order?: 'ASC' | 'DESC'
+}
+
+/** Body of `POST /p/{profile}/query`. */
+export interface QueryRequest {
+  cql: string
+  keyspace: string
+  consistency: string
+  serial_consistency: string
+  page_size: number
+  page_state: string | null
+  allow_filtering: boolean
+  trace: boolean
+}
+
+/** Response of `POST /p/{profile}/query`. Rows are positional, aligned with `columns`. */
+export interface QueryResponse {
+  kind: 'rows' | 'void' | 'schema_change'
+  executed_cql: string
+  columns: QueryColumn[]
+  rows: unknown[][]
+  page_state?: string
+  has_more: boolean
+  warnings: string[]
+  trace_id?: string
+  timing: { client_ms: number }
+  keyspace_after?: string
+}
+
+/** One statement located in editor text. Offsets are UTF-8 byte offsets, `end` exclusive. */
+export interface SplitStatement {
+  text: string
+  start: number
+  end: number
+  line: number
+  complete: boolean
+}

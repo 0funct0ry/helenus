@@ -1,0 +1,2 @@
+CREATE FUNCTION f(x int) RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE java AS $$ int a = 1; return a; $$;
+SELECT 1;

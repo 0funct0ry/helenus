@@ -1,0 +1,7 @@
+USE ks
+CONSISTENCY QUORUM;
+SELECT 1;
+DESCRIBE TABLE t
+EXPAND ON
+\alias foo = bar
+SOURCE 'a;b.cql'

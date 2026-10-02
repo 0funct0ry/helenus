@@ -3,11 +3,13 @@ package server
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -23,6 +25,8 @@ type Connector interface {
 	Schema(ctx context.Context, name string, p config.Profile, refresh bool) (*schema.Snapshot, error)
 	// Describe renders a DESCRIBE target for the profile's cluster.
 	Describe(ctx context.Context, name string, p config.Profile, t schema.Target) (string, error)
+	// Query executes one statement on the profile's session.
+	Query(ctx context.Context, name string, p config.Profile, req exec.Request) (*exec.Result, error)
 	CloseAll()
 }
 
@@ -70,6 +74,17 @@ func (c managerConnector) Describe(ctx context.Context, name string, p config.Pr
 	return c.cache.Describe(ctx, name, sess, t, "")
 }
 
+func (c managerConnector) Query(ctx context.Context, name string, p config.Profile, req exec.Request) (*exec.Result, error) {
+	sess, _, err := c.m.Session(ctx, name, p)
+	if err != nil {
+		return nil, err
+	}
+	if d, err := time.ParseDuration(p.RequestTimeout); err == nil && req.Timeout == 0 {
+		req.Timeout = d
+	}
+	return exec.ForSession(sess, c.cache, name).Run(ctx, req)
+}
+
 func (c managerConnector) CloseAll() { c.m.CloseAll() }
 
 // api carries the dependencies shared by the handlers.
@@ -109,6 +124,8 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/connect", a.connect)
 	p.DELETE("/connect", a.disconnect)
 	p.GET("/cluster", a.cluster)
+	p.POST("/query", a.query)
+	p.POST("/split", a.split)
 	p.GET("/schema", a.schema)
 	p.POST("/schema/refresh", a.refreshSchema)
 	p.GET("/keyspaces/:ks/tables/:t", a.tableDetail)

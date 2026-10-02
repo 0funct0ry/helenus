@@ -1,6 +1,7 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, BundleInfo, ClusterInfo, ConnectResult, SchemaSnapshot, TestResult } from './types'
+import type { ApiProfile, BundleInfo, ClusterInfo, ConnectResult, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult } from './types'
 import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
@@ -137,4 +138,28 @@ export function useCopyDdl(profile: string) {
     const ddl = await qc.fetchQuery(ddlQuery(profile, keyspace, object, name))
     await navigator.clipboard?.writeText(ddl)
   }
+}
+
+/**
+ * Returns a function that runs one CQL statement through the profile's session. `signal` aborts the
+ * HTTP request (which cancels the driver call). A `schema_change` result refreshes the schema cache.
+ */
+export function useRunQuery(profile: string) {
+  const qc = useQueryClient()
+  return useCallback(
+    async (body: QueryRequest, signal?: AbortSignal) => {
+      const res = await api<QueryResponse>(`/p/${enc(profile)}/query`, { body, signal })
+      if (res.kind === 'schema_change') {
+        void qc.invalidateQueries({ queryKey: schemaKey(profile) })
+        void qc.invalidateQueries({ queryKey: ['ddl', profile] })
+      }
+      return res
+    },
+    [profile, qc],
+  )
+}
+
+/** Returns a function that splits editor text into statements with byte offsets. */
+export function useSplit(profile: string) {
+  return useCallback(async (cql: string) => (await api<{ statements: SplitStatement[] }>(`/p/${enc(profile)}/split`, { body: { cql } })).statements, [profile])
 }

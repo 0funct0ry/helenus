@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
+import { EditorState, Prec } from '@codemirror/state'
+import { EditorView, keymap } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { Cassandra, sql } from '@codemirror/lang-sql'
 import { tags as t } from '@lezer/highlight'
@@ -35,6 +35,10 @@ export interface SqlEditorProps {
   initialValue: string
   /** Called with 1-based line and column whenever the cursor moves. */
   onCursor?: (line: number, col: number) => void
+  /** Called with the full text after every edit. */
+  onChange?: (text: string) => void
+  /** Called on Mod-Enter (`all` false) or Shift-Mod-Enter (`all` true) with the text and the cursor's UTF-16 index. */
+  onRun?: (run: { all: boolean; text: string; pos: number }) => void
   'aria-label'?: string
 }
 
@@ -42,11 +46,15 @@ export interface SqlEditorProps {
  * CodeMirror 6 editor with the Cassandra SQL dialect and One-theme highlighting driven by CSS
  * variables, so it follows the light/dark theme without reconfiguration.
  */
-export function SqlEditor({ initialValue, onCursor, ...rest }: SqlEditorProps) {
+export function SqlEditor({ initialValue, onCursor, onChange, onRun, ...rest }: SqlEditorProps) {
   const host = useRef<HTMLDivElement>(null)
   const cb = useRef(onCursor)
+  const changeCb = useRef(onChange)
+  const runCb = useRef(onRun)
   useEffect(() => {
     cb.current = onCursor
+    changeCb.current = onChange
+    runCb.current = onRun
   })
 
   useEffect(() => {
@@ -56,12 +64,19 @@ export function SqlEditor({ initialValue, onCursor, ...rest }: SqlEditorProps) {
       state: EditorState.create({
         doc: initialValue,
         extensions: [
+          Prec.highest(
+            keymap.of([
+              { key: 'Mod-Enter', run: (v) => (runCb.current?.({ all: false, text: v.state.doc.toString(), pos: v.state.selection.main.head }), true) },
+              { key: 'Shift-Mod-Enter', run: (v) => (runCb.current?.({ all: true, text: v.state.doc.toString(), pos: v.state.selection.main.head }), true) },
+            ]),
+          ),
           basicSetup,
           sql({ dialect: Cassandra }),
           syntaxHighlighting(oneTheme),
           tokenTheme,
           EditorView.contentAttributes.of({ 'aria-label': rest['aria-label'] ?? 'CQL editor' }),
           EditorView.updateListener.of((u) => {
+            if (u.docChanged) changeCb.current?.(u.state.doc.toString())
             if (u.selectionSet || u.docChanged || u.focusChanged) {
               const pos = u.state.selection.main.head
               const line = u.state.doc.lineAt(pos)

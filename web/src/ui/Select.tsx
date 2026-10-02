@@ -7,6 +7,10 @@ import { cn } from '../lib/cn'
 export interface SelectOption {
   value: string
   label: string
+  /** Not pickable; shown dimmed. */
+  disabled?: boolean
+  /** Explains why the option is disabled. */
+  title?: string
 }
 
 export interface SelectProps {
@@ -58,7 +62,7 @@ export function Select({ value, options, onChange, label, mono, className, ...re
       setActive((a) => (a - 1 + options.length) % options.length)
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      pick(options[active].value)
+      if (!options[active].disabled) pick(options[active].value)
     } else if (e.key === 'Tab') {
       setOpen(false)
     }
@@ -89,8 +93,10 @@ export function Select({ value, options, onChange, label, mono, className, ...re
               role="option"
               aria-selected={o.value === value}
               onMouseEnter={() => setActive(i)}
-              onClick={() => pick(o.value)}
-              className={cn('flex h-6 cursor-default items-center gap-2 whitespace-nowrap rounded px-2', mono && 'font-mono', i === active && 'bg-selected')}
+              aria-disabled={o.disabled || undefined}
+              title={o.title}
+              onClick={() => !o.disabled && pick(o.value)}
+              className={cn('flex h-6 cursor-default items-center gap-2 whitespace-nowrap rounded px-2', mono && 'font-mono', i === active && 'bg-selected', o.disabled && 'opacity-50')}
             >
               <span className="w-3">{o.value === value && <Check size={12} />}</span>
               {o.label}

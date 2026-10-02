@@ -20,15 +20,17 @@ export function describeError(e: unknown): string {
 }
 
 /** Call `/api/v1{path}` with JSON in and out. 204 resolves to undefined. */
-export async function api<T>(path: string, init: { method?: string; body?: unknown; form?: FormData } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; form?: FormData; signal?: AbortSignal } = {}): Promise<T> {
   let res: Response
   try {
     res = await fetch(`/api/v1${path}`, {
       method: init.method ?? (init.body !== undefined || init.form ? 'POST' : 'GET'),
       headers: init.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
       body: init.form ?? (init.body !== undefined ? JSON.stringify(init.body) : undefined),
+      signal: init.signal,
     })
   } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') throw new ApiError(499, 'cancelled', 'Cancelled')
     throw new ApiError(0, 'network_error', e instanceof Error ? e.message : 'Network error')
   }
   if (res.status === 204) return undefined as T

@@ -1,0 +1,16 @@
+[
+  {
+    "text": "BEGIN BATCH\n INSERT INTO t (a) VALUES (1);\n INSERT INTO t (a) VALUES (2);\nAPPLY BATCH;",
+    "start": 0,
+    "end": 86,
+    "line": 1,
+    "complete": true
+  },
+  {
+    "text": "SELECT 1;",
+    "start": 87,
+    "end": 96,
+    "line": 5,
+    "complete": true
+  }
+]

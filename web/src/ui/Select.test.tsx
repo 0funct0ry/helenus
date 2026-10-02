@@ -34,3 +34,16 @@ describe('Select', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 })
+
+describe('Select disabled options', () => {
+  it('cannot pick a disabled option and shows its title', async () => {
+    const onChange = vi.fn()
+    render(<Select label="C" value="B" onChange={onChange} options={[{ value: 'A', label: 'A', disabled: true, title: 'nope' }, { value: 'B', label: 'B' }]} />)
+    await userEvent.click(screen.getByRole('button', { name: /C/ }))
+    const a = screen.getByRole('option', { name: 'A' })
+    expect(a).toHaveAttribute('aria-disabled', 'true')
+    expect(a).toHaveAttribute('title', 'nope')
+    await userEvent.click(a)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})

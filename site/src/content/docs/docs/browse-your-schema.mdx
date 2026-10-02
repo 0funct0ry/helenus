@@ -22,7 +22,7 @@ The schema tree shows what is in the cluster you are connected to: keyspaces, an
 
     Select a table to open it in a tab. The tab has these views:
 
-    - **Data**. Sample rows. Reading real rows arrives in a later release.
+    - **Data**. The table's rows, read-only, a page at a time. Use **Previous** and **Next**, change the page size, or choose **Count rows** to count them. See [Page through large results](/helenus/docs/page-through-large-results/).
     - **Schema**. The primary key, every column with its type, the table options, and any indexes, including SAI indexes.
     - **DDL**. The `CREATE TABLE` statement, taken from the cluster with `DESCRIBE`. Select **Copy DDL** to copy it, or **Open in query tab** to paste it into a new query.
     - **Views**. The materialized views built on this table, with their key layout and filter. Select **Open** to go to one.

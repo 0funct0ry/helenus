@@ -1,0 +1,9 @@
+[
+  {
+    "text": "BEGIN BATCH INSERT INTO t(a) VALUES(1);",
+    "start": 0,
+    "end": 39,
+    "line": 1,
+    "complete": false
+  }
+]

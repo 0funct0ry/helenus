@@ -1,0 +1,16 @@
+[
+  {
+    "text": "SELECT 1;",
+    "start": 22,
+    "end": 31,
+    "line": 2,
+    "complete": true
+  },
+  {
+    "text": "SELECT   2;",
+    "start": 71,
+    "end": 91,
+    "line": 4,
+    "complete": true
+  }
+]

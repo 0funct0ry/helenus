@@ -1,0 +1,31 @@
+---
+title: Page through large results
+description: Read a big table a page at a time, go back, change the page size, and count rows.
+---
+
+Helenus never loads a whole table into the browser. It asks Cassandra for one page of rows at a time, and you move through the pages.
+
+## Move between pages
+
+1. Run a `SELECT` in a query tab, or open a table and stay on its **Data** view.
+2. Choose **Next page** (the arrow at the right of the footer) to load the next page. It is available when Cassandra has more rows.
+3. Choose **Previous page** to go back. Helenus remembers where each page started, so going back loads that page again.
+
+The footer shows the page number and how many rows are on the page.
+
+## Change the page size
+
+Use **Page size** in the query toolbar, or the size picker in the footer of a table's **Data** view. The choices are 50, 100, 500 and 1000. The default is 100.
+
+Page size is how many rows Cassandra returns per request. It is not a `LIMIT`. A query with `LIMIT 50` stops after 50 rows in total, however the pages are sized.
+
+## Count the rows
+
+Paging does not tell you the total. Choose **Count rows** in the footer to run `SELECT COUNT(*)` with the same `WHERE` clause. Helenus asks you to confirm because the count reads every matching row. On a table with billions of rows it can take a long time and put load on the cluster.
+
+## Good to know
+
+- Pages come from Cassandra's own paging, so there are no offsets and nothing is kept on the server between pages.
+- Changing the query text, consistency or page size starts again from the first page.
+- **Cancel** stops a slow page request. Closing the tab does too.
+- The **Data** view is read-only. To change data, use a query tab.

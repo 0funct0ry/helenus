@@ -1,0 +1,16 @@
+[
+  {
+    "text": "INSERT INTO t (a) VALUES ('x;y''z;');",
+    "start": 0,
+    "end": 37,
+    "line": 1,
+    "complete": true
+  },
+  {
+    "text": "SELECT \"we;ird\" FROM t;",
+    "start": 38,
+    "end": 61,
+    "line": 2,
+    "complete": true
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "text": "BEGIN UNLOGGED BATCH INSERT INTO t(a) VALUES(1); APPLY BATCH;",
+    "start": 0,
+    "end": 61,
+    "line": 1,
+    "complete": true
+  },
+  {
+    "text": "BEGIN COUNTER BATCH UPDATE c SET n=n+1 WHERE k=1; APPLY BATCH;",
+    "start": 62,
+    "end": 124,
+    "line": 1,
+    "complete": true
+  }
+]

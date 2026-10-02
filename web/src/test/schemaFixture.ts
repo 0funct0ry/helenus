@@ -1,7 +1,7 @@
 import { mockApi } from './api'
 import type { Call } from './api'
 import { useWorkspace } from '../store/workspace'
-import type { SchemaColumn, SchemaKeyspace, SchemaSnapshot, SchemaTable, TypeDesc } from '../api/types'
+import type { QueryResponse, SchemaColumn, SchemaKeyspace, SchemaSnapshot, SchemaTable, TypeDesc } from '../api/types'
 import type { WorkspaceTab } from '../store/workspace'
 
 const t = (name: string): TypeDesc => ({ name })
@@ -102,6 +102,7 @@ export function mockSchemaApi(extra: Record<string, unknown> = {}): Call[] {
     'GET /p/local/keyspaces/payments/ddl?object=table&name=transactions_by_merchant': { ddl: DDL },
     'GET /p/local/keyspaces/payments/ddl?object=view&name=transactions_by_status': { ddl: 'CREATE MATERIALIZED VIEW payments.transactions_by_status AS SELECT 1;' },
     'GET /p/local/keyspaces/payments/ddl?object=type&name=address': { ddl: 'CREATE TYPE payments.address (\n    street text\n);' },
+    'POST /p/local/query': { body: rowsResponse({ executed_cql: 'SELECT * FROM payments.transactions_by_merchant;' }) },
     ...extra,
   })
 }
@@ -116,6 +117,7 @@ export function connectedWorkspace(tabs: WorkspaceTab[] = [], activeId = tabs[0]
     paletteOpen: false,
     profileDialogOpen: false,
     queryCount: 0,
+    queryStates: {},
   })
 }
 
@@ -123,3 +125,20 @@ export const tableTab: WorkspaceTab = { id: 'table:payments.transactions_by_merc
 export const viewTab: WorkspaceTab = { id: 'view:payments.transactions_by_status', kind: 'view', title: 'transactions_by_status', keyspace: 'payments', object: 'transactions_by_status', closable: true }
 export const typeTab: WorkspaceTab = { id: 'type:payments.address', kind: 'type', title: 'address', keyspace: 'payments', object: 'address', closable: true }
 export const queryTab: WorkspaceTab = { id: 'query-1', kind: 'query', title: 'query-1.cql', keyspace: 'payments', object: '', closable: true }
+
+/** A positional query response, as `POST /p/{profile}/query` returns it. */
+export function rowsResponse(over: Partial<QueryResponse> = {}): QueryResponse {
+  return {
+    kind: 'rows',
+    executed_cql: 'SELECT status, amount FROM payments.merchants;',
+    columns: [
+      { name: 'status', type: { name: 'text' }, kind: 'regular' },
+      { name: 'amount', type: { name: 'decimal' }, kind: 'regular' },
+    ],
+    rows: [['SETTLED', '49.99'], [null, '1180.00']],
+    has_more: false,
+    warnings: [],
+    timing: { client_ms: 12.5 },
+    ...over,
+  }
+}

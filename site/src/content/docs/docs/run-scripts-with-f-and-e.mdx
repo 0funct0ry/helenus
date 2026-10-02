@@ -1,0 +1,99 @@
+---
+title: Run scripts with -f and -e
+description: Run CQL from a file or the command line without opening the prompt, send results to other programs, and read the exit code.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Use `-e` to run a statement and `-f` to run a file. Helenus connects, runs the CQL, and exits, so you can use it in scripts, build jobs, and shell pipelines.
+
+<Tabs>
+  <TabItem label="Web UI">
+    The web UI has no command-line mode. To run several statements at once, paste them into the query editor and choose **Run all**.
+  </TabItem>
+  <TabItem label="Shell">
+    ## Run one statement
+
+    ```bash
+    helenus --profile local -e "SELECT name FROM payments.merchants LIMIT 5"
+    ```
+
+    Give several statements separated by semicolons to run them in order. The last semicolon is optional.
+
+    ```bash
+    helenus -e "USE payments; SELECT count(*) FROM merchants;"
+    ```
+
+    ## Run a file
+
+    ```bash
+    helenus --profile local -f testdata/fixture.cql
+    ```
+
+    The file can hold comments, multi-line statements, and `BEGIN BATCH … APPLY BATCH` blocks. Use `-f -` to read the file from standard input.
+
+    To see each statement as it runs, add `-E, --echo`:
+
+    ```bash
+    helenus -f schema.cql --echo
+    ```
+
+    ## Handle errors
+
+    A file stops at the first statement that fails. Add `-x, --continue-on-error` to run the rest anyway:
+
+    ```bash
+    helenus -f seed.cql --continue-on-error
+    ```
+
+    The message names the file and line, for example `seed.cql:12: Error: …`.
+
+    ## Choose the output format
+
+    Results are printed as a table unless you ask for something else with `-F, --format`:
+
+    ```bash
+    helenus -e "SELECT merchant_id, name FROM payments.merchants" --format raw > merchants.tsv
+    ```
+
+    | Format | Output |
+    |---|---|
+    | `table` | A box-drawn grid. |
+    | `expanded` | One block per row. |
+    | `raw` | Tab-separated, column names on the first line, nulls empty, no footer. |
+
+    With `raw`, the number of lines is the number of rows plus one for the header, so `| wc -l` counts as you expect. Tabs and line breaks inside a value are written as `\t` and `\n` so each row stays on one line.
+
+    ## Pages and timing
+
+    `-g, --paging` sets how many rows are fetched at a time (0 uses the driver default). Helenus reads every page and never stops to ask. `-m, --timing` prints the time each statement took.
+
+    ## What goes where
+
+    Results go to standard output. Errors, warnings, and timing go to standard error, so a pipeline sees only data:
+
+    ```bash
+    helenus -e "SELECT * FROM payments.merchants" -F raw 2>errors.log | sort
+    ```
+
+    ## Exit codes
+
+    | Code | Meaning |
+    |---|---|
+    | 0 | Everything succeeded. |
+    | 1 | Cassandra returned an error for a `-e` statement, or `-x` let a file finish with failures. |
+    | 2 | The command line was wrong: a bad flag, an unknown profile, or both `-e` and `-f`. |
+    | 3 | Helenus could not connect or sign in. |
+    | 4 | A `-f` file stopped at a failing statement. |
+
+    In a shell script, test the code with `$?`:
+
+    ```bash
+    helenus -f schema.cql || echo "schema failed with code $?"
+    ```
+
+    ## Use environment variables
+
+    Every flag has an environment variable: `HELENUS_` followed by the flag name in capitals, with `_` for `-`. For example `HELENUS_FORMAT=raw` and `HELENUS_CONTINUE_ON_ERROR=true`. `-F`, `-E`, `-x`, `-q`, `-g`, and `-m` also have config keys under `shell:`.
+  </TabItem>
+</Tabs>

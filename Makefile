@@ -57,6 +57,17 @@ test:
 	$(GO) test -short $(GOPKGS)
 	@if [ -d "web" ]; then cd web && $(NPM) test; fi
 
+
+.PHONY: golden
+## golden: Rewrite the statement splitter golden files
+golden:
+	$(GO) test ./internal/cql -run TestSplitGolden -update
+
+.PHONY: golden-shell
+## golden-shell: Rewrite the shell renderer golden files
+golden-shell:
+	$(GO) test ./internal/shell -run TestRenderGolden -update
+
 .PHONY: lint
 ## lint: Run linters (Go and web)
 lint:

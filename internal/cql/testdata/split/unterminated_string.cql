@@ -1,0 +1,2 @@
+SELECT 'oops;
+SELECT 2;

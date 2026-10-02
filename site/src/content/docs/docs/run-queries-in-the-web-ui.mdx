@@ -1,0 +1,54 @@
+---
+title: Run queries in the web UI
+description: Write CQL in a query tab, run one statement or a whole script, and read the results.
+---
+
+A **query tab** is an editor with a results panel underneath. Use it to run any CQL statement against the connected cluster.
+
+## Open a query tab
+
+1. Connect to a profile. See [Connect to a cluster](/helenus/docs/connect-to-a-cluster/).
+2. Choose **New query** in the tab bar. To start from a table, right-click it in the schema tree and choose **New query here**. The tab opens with a `SELECT` for that table and its keyspace already chosen.
+
+## Run statements
+
+- **Run** (`⌘↵` on Mac, `Ctrl+Enter` elsewhere) runs the statement your cursor is in. Statements are separated by semicolons, so you can keep several in one tab and run them one at a time.
+- **Run all** (`⇧⌘↵` or `Shift+Ctrl+Enter`) runs every statement in order. Each statement gets its own result tab, named **Statement 1**, **Statement 2**, and so on. Helenus stops at the first statement that fails, and the tabs after it are not created.
+- **Cancel** appears while a statement is running. It stops the request, and Cassandra stops working on it.
+
+If you run `USE keyspace;`, the **Keyspace** picker follows. Running `CREATE`, `ALTER` or `DROP` refreshes the schema tree on its own.
+
+## Set how a query runs
+
+The toolbar settings belong to the tab, so two tabs can use different ones.
+
+| Setting | What it does |
+|---|---|
+| **Consistency** | How many replicas must answer. See [Consistency levels](/helenus/docs/consistency-levels/). |
+| **Serial** | Appears only when the text has an `INSERT`, `UPDATE` or `DELETE` with `IF`. Chooses `SERIAL` or `LOCAL_SERIAL` for the conditional part. |
+| **Page size** | Rows fetched per page: 50, 100, 500 or 1000. |
+| **Allow filtering** | Adds `ALLOW FILTERING` to `SELECT` statements that do not already have it. |
+| **Trace** | Asks Cassandra to record a trace of the request. |
+| **Keyspace** | The keyspace used for unqualified table names. |
+
+## Read the results
+
+The grid shows each column's key marker and type. Empty values show as a dim `null`. Collections show as CQL literals, such as `{'a', 'b'}`. A blob shows its first bytes and its length. Hover a `timeuuid` to see the time inside it.
+
+The footer shows how many rows are on the page, the page number, how long the request took, and the consistency level used.
+
+To copy data, select a cell or click a row number (hold **Shift** to select several rows), then choose **Copy**:
+
+- **Copy cell** copies the value.
+- **Copy row as JSON** copies the row as a JSON object.
+- **Copy selection as TSV** copies the selected rows with a header row, ready to paste into a spreadsheet.
+
+The **Messages** tab lists the exact CQL that ran, any warnings from Cassandra, and any error. If you turned on **Allow filtering**, the text you see there includes the added `ALLOW FILTERING`.
+
+## When a query needs ALLOW FILTERING
+
+If Cassandra refuses a query because it would have to scan data, the results panel explains why and offers **Run with ALLOW FILTERING**. That runs the statement once with the clause added. The **Allow filtering** toggle stays off.
+
+## Count rows
+
+Choose **Count rows** in the footer of a `SELECT` result. Helenus asks you to confirm first, because `SELECT COUNT(*)` reads every matching row and can be slow on a large table. After you confirm, the count appears in the same window.

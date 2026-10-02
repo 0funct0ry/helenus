@@ -8,7 +8,9 @@ import { ResultsGrid } from './ResultsGrid'
 import { SchemaSheet } from './SchemaSheet'
 import { DdlView } from './DdlView'
 import { ViewsSheet } from './ViewsSheet'
-import { generateRows } from '../mocks/rows'
+import { CountRowsDialog } from './CountRowsDialog'
+import { usePagedSelect } from '../api/usePagedSelect'
+import { rowToJson, toGridColumns, toGridRows } from '../lib/rows'
 import { useDdl, useSchema } from '../api/hooks'
 import { describeError } from '../api/client'
 import { useWorkspace } from '../store/workspace'
@@ -23,8 +25,8 @@ export interface TableViewProps {
 
 /**
  * Table (or materialized view) tab body with Data, Schema, DDL and Views sub-views. Views are
- * read-only and have no Views sub-view. Schema, DDL and Views come from the connected cluster; the
- * Data rows are still generated sample values until query execution lands.
+ * read-only and have no Views sub-view. Everything comes from the connected cluster; Data runs a
+ * read-only `SELECT *` with native paging (Previous/Next, page size, Count rows) at the tab's consistency.
  */
 export function TableView({ tab }: TableViewProps) {
   const [sub, setSub] = useState('data')
@@ -41,7 +43,12 @@ export function TableView({ tab }: TableViewProps) {
   const view = ks?.views.find((v) => v.name === tab.object)
   const columns = useMemo(() => table?.columns ?? view?.columns ?? [], [table, view])
   const views = useMemo(() => (table && ks ? ks.views.filter((v) => v.baseTable === table.name) : []), [table, ks])
-  const rows = useMemo(() => generateRows(columns), [columns])
+  const [pageSize, setPageSize] = useState(100)
+  const [counting, setCounting] = useState(false)
+  const ident = (n: string) => (/^[a-z][a-z0-9_]*$/.test(n) ? n : `"${n.replace(/"/g, '""')}"`)
+  const data = usePagedSelect(profileId, tab.keyspace, `SELECT * FROM ${ident(tab.keyspace)}.${ident(tab.object)};`, consistency, pageSize, sub === 'data' && connected && !!(table || view))
+  const dataColumns = useMemo(() => (data.response ? toGridColumns(data.response.columns) : columns), [data.response, columns])
+  const dataRows = useMemo(() => (data.response ? toGridRows(data.response) : []), [data.response])
   const ddlQuery = useDdl(profileId, tab.keyspace, isView ? 'view' : 'table', tab.object, sub === 'ddl' && !!(table || view))
 
   const items = [
@@ -70,9 +77,29 @@ export function TableView({ tab }: TableViewProps) {
           Insert row
         </Button>
         <Select label="Consistency" value={consistency} onChange={setConsistency} options={CONSISTENCY_LEVELS} />
-        <IconButton label="Refresh" icon={<RefreshCw size={14} />} />
+        <IconButton label="Refresh" icon={<RefreshCw size={14} />} onClick={data.reload} />
       </div>
-      {sub === 'data' && <ResultsGrid columns={columns} rows={rows} elapsedMs={41} consistency={consistency} pageSize={100} onPageSize={() => {}} hasNext showCount />}
+      {sub === 'data' && data.error && <p role="alert" className="m-3 rounded-md bg-err-bg px-3 py-2 text-[12.5px] text-danger">{data.error}</p>}
+      {sub === 'data' && !data.error && !data.response && <p className="p-4 text-muted">{data.loading ? 'Reading rows…' : 'Connect to read rows.'}</p>}
+      {sub === 'data' && !data.error && data.response && (
+        <ResultsGrid
+          columns={dataColumns}
+          rows={dataRows}
+          page={data.page}
+          elapsedMs={data.response.timing.client_ms}
+          consistency={consistency}
+          hasPrev={data.page > 1}
+          hasNext={data.response.has_more}
+          onPrev={data.prev}
+          onNext={data.next}
+          pageSize={pageSize}
+          onPageSize={setPageSize}
+          showCount
+          onCount={() => setCounting(true)}
+          rowJson={(i) => rowToJson(data.response!, i)}
+        />
+      )}
+      <CountRowsDialog open={counting} onClose={() => setCounting(false)} onRun={data.count} />
       {sub === 'schema' && <SchemaSheet columns={columns} options={table?.options} indexes={table?.indexes} />}
       {sub === 'ddl' && (
         <DdlView

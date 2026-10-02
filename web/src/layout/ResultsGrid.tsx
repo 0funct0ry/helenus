@@ -1,13 +1,16 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { Select } from '../ui/Select'
+import { Popover } from '../ui/Popover'
 import { typeFamily } from '../lib/typeFamily'
+import { timeuuidTime } from '../lib/cellFormat'
+import { rowsToTsv } from '../lib/rows'
 import { cn } from '../lib/cn'
 import type { CellValue, Column, Row } from '../mocks/types'
 
@@ -25,8 +28,11 @@ export interface ResultsGridProps {
   /** When both are set, a page-size Select is shown in the footer. */
   pageSize?: number
   onPageSize?: (n: number) => void
-  /** Shows a (disabled in the preview) Count rows button. */
+  /** Shows a Count rows button; it calls `onCount` (disabled when there is no handler). */
   showCount?: boolean
+  onCount?: () => void
+  /** JSON text for the row at an index, used by "Copy row as JSON". Falls back to the displayed values. */
+  rowJson?: (index: number) => string
 }
 
 const ROW_H = 26
@@ -46,6 +52,10 @@ function widthFor(c: Column): number {
 function Cell({ column, value }: { column: Column; value: CellValue }) {
   if (value === null) return <span className="italic text-dim">null</span>
   const f = typeFamily(column.type)
+  if (column.type === 'timeuuid') {
+    const when = timeuuidTime(String(value))
+    return <span className={column.kind === 'regular' ? 'text-syn-str' : 'text-muted'} title={when}>{String(value)}</span>
+  }
   if (column.kind === 'partition' || column.kind === 'clustering') return <span className="text-muted">{String(value)}</span>
   if (f === 'num' || f === 'counter') return <span className="text-syn-num">{String(value)}</span>
   if (f === 'coll' || f === 'udt' || f === 'vec') return <span className="text-syn-const">{String(value)}</span>
@@ -57,8 +67,18 @@ function Cell({ column, value }: { column: Column; value: CellValue }) {
  * italic "null"; collections and UDTs render as CQL literals. The footer shows row count, page,
  * elapsed time, consistency and paging controls. Row numbers stick to the left, headers to the top.
  */
-export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, hasPrev, hasNext, onPrev, onNext, pageSize, onPageSize, showCount }: ResultsGridProps) {
+export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, hasPrev, hasNext, onPrev, onNext, pageSize, onPageSize, showCount, onCount, rowJson }: ResultsGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const copyRef = useRef<HTMLSpanElement>(null)
+  const [copyOpen, setCopyOpen] = useState(false)
+  const [picked, setPicked] = useState<{ row: number; col: string } | null>(null)
+  const [range, setRange] = useState<{ from: number; to: number } | null>(null)
+  const inRange = (i: number) => !!range && i >= Math.min(range.from, range.to) && i <= Math.max(range.from, range.to)
+  const selectedRows = range ? rows.slice(Math.min(range.from, range.to), Math.max(range.from, range.to) + 1) : []
+  const copy = (text: string) => {
+    void navigator.clipboard?.writeText(text)
+    setCopyOpen(false)
+  }
 
   const defs = useMemo(
     () =>
@@ -123,11 +143,28 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
                   className="group absolute left-0 top-0 w-full font-mono"
                   style={{ height: ROW_H, transform: `translateY(${v.start}px)`, display: 'grid', gridTemplateColumns: template }}
                 >
-                  <div role="rowheader" className="sticky left-0 z-[1] truncate border-b border-r border-line bg-surface pr-2 text-right leading-[26px] text-faint group-hover:bg-hover">
+                  <div
+                    role="rowheader"
+                    aria-selected={inRange(v.index)}
+                    onClick={(e) => {
+                      setPicked(null)
+                      setRange((r) => (e.shiftKey && r ? { from: r.from, to: v.index } : { from: v.index, to: v.index }))
+                    }}
+                    className="sticky left-0 z-[1] truncate border-b border-r border-line bg-surface pr-2 text-right leading-[26px] text-faint cursor-pointer group-hover:bg-hover">
                     {v.index + 1}
                   </div>
                   {row.getVisibleCells().map((cell) => (
-                    <div key={cell.id} role="cell" className={cn('truncate border-b border-r px-2.5 leading-[26px] group-hover:bg-[var(--active-line)]')} style={{ borderColor: 'var(--border-variant)' }}>
+                    <div
+                      key={cell.id}
+                      role="cell"
+                      aria-selected={picked ? picked.row === v.index && picked.col === cell.column.id : undefined}
+                      onClick={() => {
+                        setPicked({ row: v.index, col: cell.column.id })
+                        setRange({ from: v.index, to: v.index })
+                      }}
+                      className={cn('truncate border-b border-r px-2.5 leading-[26px] group-hover:bg-[var(--active-line)]', inRange(v.index) && 'bg-[var(--active-line)]', picked?.row === v.index && picked.col === cell.column.id && 'outline outline-1 -outline-offset-1 outline-accent')}
+                      style={{ borderColor: 'var(--border-variant)' }}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}
@@ -143,10 +180,26 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
         {elapsedMs !== undefined && <span>{elapsedMs} ms</span>}
         {consistency && <span>{consistency}</span>}
         {showCount && (
-          <Button variant="ghost" className="h-5" disabled title="Counting rows is not available in the preview">
+          <Button variant="ghost" className="h-5" disabled={!onCount} onClick={onCount}>
             Count rows
           </Button>
         )}
+        <span ref={copyRef} className="inline-flex">
+          <Button variant="ghost" className="h-5" icon={<Copy size={12} />} disabled={!range} aria-haspopup="menu" aria-expanded={copyOpen} onClick={() => setCopyOpen((o) => !o)}>
+            Copy
+          </Button>
+        </span>
+        <Popover open={copyOpen} onClose={() => setCopyOpen(false)} anchorRef={copyRef} role="menu" aria-label="Copy" className="p-1">
+          {[
+            { label: 'Copy cell', disabled: !picked, run: () => picked && copy(String(rows[picked.row][picked.col] ?? '')) },
+            { label: 'Copy row as JSON', disabled: !range, run: () => range && copy(rowJson ? rowJson(range.to) : JSON.stringify(rows[range.to], null, 2)) },
+            { label: 'Copy selection as TSV', disabled: !range, run: () => copy(rowsToTsv(columns, selectedRows)) },
+          ].map((m) => (
+            <button key={m.label} role="menuitem" type="button" disabled={m.disabled} onClick={m.run} className="flex h-6 w-full items-center whitespace-nowrap rounded px-2 text-left hover:bg-hover disabled:opacity-50">
+              {m.label}
+            </button>
+          ))}
+        </Popover>
         <div className="ml-auto flex items-center gap-1">
           <IconButton label="Previous page" icon={<ChevronLeft size={14} />} disabled={!hasPrev} onClick={onPrev} />
           {pageSize !== undefined && onPageSize && (

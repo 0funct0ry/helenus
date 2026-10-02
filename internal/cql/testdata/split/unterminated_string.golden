@@ -1,0 +1,9 @@
+[
+  {
+    "text": "SELECT 'oops;\nSELECT 2;",
+    "start": 0,
+    "end": 23,
+    "line": 1,
+    "complete": false
+  }
+]

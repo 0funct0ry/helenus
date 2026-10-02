@@ -1,0 +1,37 @@
+---
+title: Consistency levels
+description: Choose how many replicas must answer a read or write, and when serial consistency applies.
+---
+
+The **consistency level** decides how many replicas must respond before Cassandra reports success. A lower level is faster and more available. A higher level is more likely to return the latest data.
+
+## Choose a level
+
+In a query tab, use the **Consistency** menu in the toolbar. On a table's **Data** view, use the same menu at the top. The setting applies to the statements you run from that tab. New tabs start at `LOCAL_QUORUM`.
+
+| Level | What must answer |
+|---|---|
+| `ANY` | Writes only. Succeeds once any node, even one that only stores a hint, has the write. |
+| `ONE`, `TWO`, `THREE` | That many replicas, in any data center. |
+| `QUORUM` | A majority of all replicas, across all data centers. |
+| `LOCAL_ONE` | One replica in the local data center. |
+| `LOCAL_QUORUM` | A majority of replicas in the local data center. |
+| `EACH_QUORUM` | A majority in every data center. Writes only. |
+| `ALL` | Every replica. One node down makes the request fail. |
+
+## ANY is for writes only
+
+`ANY` is dimmed in the menu while the tab contains a `SELECT`. Hover it to see why: Cassandra cannot read at `ANY`. Pick `ONE` or higher for reads.
+
+## Serial consistency
+
+A conditional statement, such as `INSERT ... IF NOT EXISTS` or `UPDATE ... IF col = value`, runs a lightweight transaction. It uses two levels:
+
+- **Consistency** applies to the commit phase.
+- **Serial** applies to the check of the condition. Choose `SERIAL` to check across all data centers, or `LOCAL_SERIAL` to check in the local one.
+
+The **Serial** menu appears in the toolbar only when the tab contains a statement with `IF`.
+
+## Check what ran
+
+The footer of the results grid shows the consistency level used for that page, and the **Messages** tab repeats it with the exact CQL.

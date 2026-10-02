@@ -1,0 +1,57 @@
+[
+  {
+    "text": "USE ks",
+    "start": 0,
+    "end": 6,
+    "line": 1,
+    "complete": true,
+    "meta": true
+  },
+  {
+    "text": "CONSISTENCY QUORUM;",
+    "start": 7,
+    "end": 26,
+    "line": 2,
+    "complete": true,
+    "meta": true
+  },
+  {
+    "text": "SELECT 1;",
+    "start": 27,
+    "end": 36,
+    "line": 3,
+    "complete": true
+  },
+  {
+    "text": "DESCRIBE TABLE t",
+    "start": 37,
+    "end": 53,
+    "line": 4,
+    "complete": true,
+    "meta": true
+  },
+  {
+    "text": "EXPAND ON",
+    "start": 54,
+    "end": 63,
+    "line": 5,
+    "complete": true,
+    "meta": true
+  },
+  {
+    "text": "\\alias foo = bar",
+    "start": 64,
+    "end": 80,
+    "line": 6,
+    "complete": true,
+    "meta": true
+  },
+  {
+    "text": "SOURCE 'a;b.cql'",
+    "start": 81,
+    "end": 97,
+    "line": 7,
+    "complete": true,
+    "meta": true
+  }
+]

@@ -20,3 +20,10 @@ describe('api client', () => {
     expect(describeError(new Error('plain'))).toBe('plain')
   })
 })
+
+describe('api abort', () => {
+  it('maps an aborted request to a cancelled ApiError', async () => {
+    globalThis.fetch = (() => Promise.reject(new DOMException('aborted', 'AbortError'))) as typeof fetch
+    await expect(api('/x', { body: {}, signal: new AbortController().signal })).rejects.toMatchObject({ code: 'cancelled', status: 499 })
+  })
+})

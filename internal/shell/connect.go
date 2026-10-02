@@ -1,5 +1,5 @@
-// Package shell is the interactive CQL shell. Until M4 it holds the connect
-// banner and a line prompt that accepts DESCRIBE, SHOW and EXIT (shell.go).
+// Package shell is the interactive CQL shell: the readline REPL, meta-commands,
+// result renderers, and the -e/-f script runner (SPEC §8).
 package shell
 
 import (

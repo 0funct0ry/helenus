@@ -1,0 +1,4 @@
+merchant_id	txn_time	amount	tags	note
+m-1001	2026-03-01 10:15:00.000Z	12.50	{'a', 'b'}	paid\nby card
+m-1002	2026-03-02 08:00:00.000Z	7	{}	
+m-ünï-1003	2026-03-03 23:59:59.999Z	1234567.89	{'x'}	a very long note that will not fit in a narrow terminal window at all

@@ -18,6 +18,7 @@ import (
 
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -28,6 +29,9 @@ type fakeConn struct {
 	described []schema.Target
 	failWith  error
 	lastTest  config.Profile
+	queries   []exec.Request
+	queryRes  *exec.Result
+	queryErr  error
 }
 
 func (f *fakeConn) Connect(_ context.Context, name string, _ config.Profile) (*conn.ClusterInfo, []string, error) {
@@ -58,6 +62,10 @@ func (f *fakeConn) Schema(_ context.Context, _ string, _ config.Profile, refresh
 func (f *fakeConn) Describe(_ context.Context, _ string, _ config.Profile, t schema.Target) (string, error) {
 	f.described = append(f.described, t)
 	return "CREATE TABLE " + t.Keyspace + "." + t.Name + ";", nil
+}
+func (f *fakeConn) Query(_ context.Context, _ string, _ config.Profile, req exec.Request) (*exec.Result, error) {
+	f.queries = append(f.queries, req)
+	return f.queryRes, f.queryErr
 }
 func (f *fakeConn) CloseAll() {}
 
