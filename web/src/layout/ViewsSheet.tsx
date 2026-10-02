@@ -1,6 +1,6 @@
 import { Eye, Info } from 'lucide-react'
 import { Button } from '../ui/Button'
-import type { MaterializedView } from '../mocks/types'
+import type { MaterializedView } from '../lib/schemaModel'
 
 export interface ViewsSheetProps {
   views: MaterializedView[]

@@ -1,5 +1,5 @@
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, KeyRound } from 'lucide-react'
-import type { ColumnKind } from '../mocks/types'
+import type { ColumnKind } from '../lib/schemaModel'
 
 export interface KeyMarkerProps {
   /** Column kind. `regular` renders nothing. */

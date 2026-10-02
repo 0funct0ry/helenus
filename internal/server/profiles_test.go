@@ -18,10 +18,14 @@ import (
 
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/schema"
 )
 
 type fakeConn struct {
 	connected map[string]bool
+	snap      *schema.Snapshot
+	refreshed int
+	described []schema.Target
 	failWith  error
 	lastTest  config.Profile
 }
@@ -41,6 +45,19 @@ func (f *fakeConn) Test(_ context.Context, p config.Profile) *conn.TestResult {
 		return &conn.TestResult{FailedStage: conn.StageAuth, Error: f.failWith.Error(), Stages: []conn.StageResult{{Name: conn.StageAuth, Detail: "bad"}}}
 	}
 	return &conn.TestResult{OK: true, Stages: []conn.StageResult{{Name: conn.StageAuth, OK: true}}}
+}
+func (f *fakeConn) Schema(_ context.Context, _ string, _ config.Profile, refresh bool) (*schema.Snapshot, error) {
+	if refresh {
+		f.refreshed++
+	}
+	if f.failWith != nil {
+		return nil, f.failWith
+	}
+	return f.snap, nil
+}
+func (f *fakeConn) Describe(_ context.Context, _ string, _ config.Profile, t schema.Target) (string, error) {
+	f.described = append(f.described, t)
+	return "CREATE TABLE " + t.Keyspace + "." + t.Name + ";", nil
 }
 func (f *fakeConn) CloseAll() {}
 

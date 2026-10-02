@@ -1,16 +1,22 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { TypeView } from './TypeView'
-import { initialTabs } from '../store/workspace'
+import { renderWithClient as render } from '../test/api'
+import { connectedWorkspace, mockSchemaApi, typeTab } from '../test/schemaFixture'
 
 describe('TypeView', () => {
-  it('lists fields and usages and blocks drop when in use', () => {
-    render(<TypeView tab={initialTabs[2]} />)
-    expect(screen.getByText('postal_code')).toBeInTheDocument()
-    expect(screen.getByText('customers.home_address')).toBeInTheDocument()
+  beforeEach(() => {
+    connectedWorkspace([typeTab])
+    mockSchemaApi()
+  })
+  it('lists fields and usages, shows server DDL and blocks drop when in use', async () => {
+    render(<TypeView tab={typeTab} />)
+    expect(await screen.findByText('postal_code')).toBeInTheDocument()
+    expect(screen.getByText('merchants.hq')).toBeInTheDocument()
+    expect(await screen.findByText(/CREATE TYPE payments.address/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Drop type/ })).toBeDisabled()
   })
-  it('handles unknown types', () => {
-    render(<TypeView tab={{ ...initialTabs[2], object: 'nope' }} />)
-    expect(screen.getByText('Type not found.')).toBeInTheDocument()
+  it('handles unknown types', async () => {
+    render(<TypeView tab={{ ...typeTab, object: 'nope' }} />)
+    expect(await screen.findByText('Type not found.')).toBeInTheDocument()
   })
 })

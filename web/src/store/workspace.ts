@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ProfileStatus } from '../mocks/types'
+import type { ProfileStatus } from '../lib/schemaModel'
 
 export type TabKind = 'table' | 'view' | 'query' | 'type'
 
@@ -11,6 +11,8 @@ export interface WorkspaceTab {
   /** Table, view or type name; empty for query tabs. */
   object: string
   closable: boolean
+  /** Text a query tab starts with. */
+  initialCql?: string
 }
 
 export interface Connection {
@@ -34,7 +36,7 @@ interface WorkspaceState {
   setConsistency: (c: string) => void
   setCursor: (line: number, col: number) => void
   open: (kind: Exclude<TabKind, 'query'>, keyspace: string, object: string) => void
-  newQuery: () => void
+  newQuery: (opts?: { keyspace?: string; cql?: string }) => void
   close: (id: string) => void
   activate: (id: string) => void
   setProfile: (id: string) => void
@@ -42,15 +44,9 @@ interface WorkspaceState {
   setProfileDialogOpen: (open: boolean) => void
 }
 
-export const initialTabs: WorkspaceTab[] = [
-  { id: 'table:payments.transactions_by_merchant', kind: 'table', title: 'transactions_by_merchant', keyspace: 'payments', object: 'transactions_by_merchant', closable: true },
-  { id: 'query-1', kind: 'query', title: 'query-1.cql', keyspace: 'payments', object: '', closable: true },
-  { id: 'type:payments.address', kind: 'type', title: 'address', keyspace: 'payments', object: 'address', closable: true },
-]
-
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
-  tabs: initialTabs,
-  activeId: initialTabs[0].id,
+  tabs: [],
+  activeId: '',
   profileId: '',
   connections: {},
   setConnection: (name, status, error) => set((s) => ({ connections: { ...s.connections, [name]: { status, error } } })),
@@ -62,7 +58,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     }),
   paletteOpen: false,
   profileDialogOpen: false,
-  queryCount: 1,
+  queryCount: 0,
   consistency: 'LOCAL_QUORUM',
   cursor: { line: 1, col: 1 },
   setConsistency: (consistency) => set({ consistency }),
@@ -75,12 +71,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       activeId: id,
     }))
   },
-  newQuery: () => {
+  newQuery: (opts) => {
     const n = get().queryCount + 1
     const id = `query-${n}`
     set((s) => ({
       queryCount: n,
-      tabs: [...s.tabs, { id, kind: 'query', title: `query-${n}.cql`, keyspace: 'payments', object: '', closable: true }],
+      tabs: [...s.tabs, { id, kind: 'query', title: `query-${n}.cql`, keyspace: opts?.keyspace ?? '', object: '', closable: true, initialCql: opts?.cql }],
       activeId: id,
     }))
   },

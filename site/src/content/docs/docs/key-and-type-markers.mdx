@@ -1,0 +1,34 @@
+---
+title: Understand key and type markers
+description: What the key icons and colored type badges next to columns mean.
+---
+
+Everywhere a column appears — the schema tree, the **Schema** view, and the header of the data grid — Helenus marks its role in the primary key and its type in the same way.
+
+## Key markers
+
+| Marker | Meaning |
+|---|---|
+| Filled key icon with a number | **Partition key.** The number is the column's place in the partition key. Rows with the same partition key are stored together. |
+| Sort icon with a number | **Clustering key.** The arrow shows the order, ascending or descending, and the number is the column's place among the clustering columns. |
+| `S` in a small box | **Static column.** It holds one value shared by every row in the partition. |
+| Nothing | A regular column. |
+
+A table whose key is `((merchant_id, txn_day), txn_time)` with `txn_time` descending shows `merchant_id` as partition key 1, `txn_day` as partition key 2, and `txn_time` as clustering key 1 descending.
+
+## Type badges
+
+A badge shows the column's full CQL type. Its color tells you the family at a glance:
+
+| Color | Types |
+|---|---|
+| Blue | `uuid`, `timeuuid` |
+| Orange | `int`, `bigint`, `smallint`, `tinyint`, `decimal`, `varint`, `float`, `double` |
+| Purple | `counter` |
+| Grey | `blob` |
+| Teal | `timestamp`, `date`, `time`, `duration` |
+| Yellow | `list`, `set`, `map`, `tuple` |
+| Green | A user-defined type, shown with its name |
+| Pink | `vector` |
+
+A snowflake on a badge means the type is **frozen**: Cassandra stores it as a single value, so you replace it as a whole instead of changing part of it. Nested types are shown in full, for example `map<text, frozen<list<frozen<tuple<int, text>>>>>`.

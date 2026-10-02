@@ -70,3 +70,90 @@ export interface BundleInfo {
   keyspace: string
   local_dc: string
 }
+
+/** CQL type descriptor (SPEC §7.3). */
+export interface TypeDesc {
+  name: string
+  frozen?: boolean
+  args?: TypeDesc[]
+  udt?: { keyspace: string; name: string }
+  size?: number
+}
+
+export interface SchemaColumn {
+  name: string
+  type: TypeDesc
+  /** The type rendered as CQL, e.g. `frozen<address>`. */
+  cql: string
+  kind: 'partition' | 'clustering' | 'static' | 'regular'
+  position?: number
+  order?: 'ASC' | 'DESC'
+}
+
+export interface SchemaOption {
+  name: string
+  value: string
+}
+
+export interface SchemaIndex {
+  name: string
+  kind: string
+  target: string
+  column: string
+  class?: string
+  sai?: boolean
+  options?: Record<string, string>
+}
+
+export interface SchemaTable {
+  keyspace: string
+  name: string
+  columns: SchemaColumn[]
+  options: SchemaOption[]
+  indexes: SchemaIndex[]
+  views: string[]
+  counter?: boolean
+}
+
+export interface SchemaView {
+  keyspace: string
+  name: string
+  base_table: string
+  columns: SchemaColumn[]
+  options: SchemaOption[]
+  where_clause: string
+  include_all_columns: boolean
+}
+
+export interface SchemaUdt {
+  keyspace: string
+  name: string
+  fields: { name: string; type: TypeDesc; cql: string }[]
+  used_by: string[]
+}
+
+export interface SchemaFunction {
+  keyspace: string
+  name: string
+  arg_types: string[]
+  return_type: string
+}
+
+export interface SchemaKeyspace {
+  name: string
+  system: boolean
+  replication: Record<string, string>
+  durable_writes: boolean
+  tables: SchemaTable[]
+  views: SchemaView[]
+  types: SchemaUdt[]
+  functions: SchemaFunction[]
+  aggregates: SchemaFunction[]
+}
+
+/** `GET /p/{profile}/schema`. */
+export interface SchemaSnapshot {
+  keyspaces: SchemaKeyspace[]
+  version: string
+  generated_at: string
+}

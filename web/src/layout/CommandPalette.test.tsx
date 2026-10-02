@@ -1,10 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CommandPalette } from './CommandPalette'
+import { renderWithClient as render } from '../test/api'
+import { connectedWorkspace, mockSchemaApi } from '../test/schemaFixture'
 import { useWorkspace } from '../store/workspace'
 
 describe('CommandPalette', () => {
-  beforeEach(() => useWorkspace.setState({ paletteOpen: true }))
+  beforeEach(() => {
+    connectedWorkspace()
+    mockSchemaApi()
+    useWorkspace.setState({ paletteOpen: true })
+  })
 
   it('is hidden when closed', () => {
     useWorkspace.setState({ paletteOpen: false })
@@ -13,12 +19,14 @@ describe('CommandPalette', () => {
   })
   it('filters actions', async () => {
     render(<CommandPalette />)
+    await screen.findByText('payments.ledger_counters')
     await userEvent.type(screen.getByRole('combobox', { name: 'Command' }), 'ledger')
     expect(screen.getAllByRole('option')).toHaveLength(1)
     expect(screen.getByRole('option')).toHaveTextContent('payments.ledger_counters')
   })
   it('runs the highlighted action with Enter and closes', async () => {
     render(<CommandPalette />)
+    await screen.findByText('payments.ledger_counters')
     await userEvent.type(screen.getByRole('combobox'), 'ledger{Enter}')
     expect(useWorkspace.getState().activeId).toBe('table:payments.ledger_counters')
     expect(useWorkspace.getState().paletteOpen).toBe(false)

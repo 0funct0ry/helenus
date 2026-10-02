@@ -2,18 +2,23 @@ import { Copy, Info, Trash2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { TypeBadge } from '../ui/TypeBadge'
-import { findType } from '../mocks/schema'
+import { useDdl, useSchema } from '../api/hooks'
+import { useWorkspace } from '../store/workspace'
 import type { WorkspaceTab } from '../store/workspace'
 
 export interface TypeViewProps {
   tab: WorkspaceTab
 }
 
-/** Type tab body: a read-only UDT inspector listing fields and the columns that use the type. */
+/** Type tab body: a read-only UDT inspector listing fields, the columns that use the type, and its DDL. */
 export function TypeView({ tab }: TypeViewProps) {
-  const udt = findType(tab.keyspace, tab.object)
+  const profileId = useWorkspace((s) => s.profileId)
+  const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
+  const { data: keyspaces } = useSchema(profileId, connected)
+  const udt = keyspaces?.find((k) => k.name === tab.keyspace)?.types.find((t) => t.name === tab.object)
+  const { data: described } = useDdl(profileId, tab.keyspace, 'type', tab.object, !!udt)
   if (!udt) return <p className="p-6 text-muted">Type not found.</p>
-  const ddl = `CREATE TYPE ${udt.keyspace}.${udt.name} (\n${udt.fields.map((f) => `    ${f.name} ${f.type}`).join(',\n')}\n);`
+  const ddl = (described ?? `CREATE TYPE ${udt.keyspace}.${udt.name} (\n${udt.fields.map((f) => `    ${f.name} ${f.type}`).join(',\n')}\n);`).trim()
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-none items-center gap-2 border-b border-line2 px-2.5 py-[5px]">

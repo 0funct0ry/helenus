@@ -8,6 +8,7 @@ import (
 
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/schema"
 )
 
 // Connector is what the API needs from the connection layer. conn.Manager
@@ -18,10 +19,21 @@ type Connector interface {
 	Connected(name string) bool
 	Disconnect(name string)
 	Test(ctx context.Context, p config.Profile) *conn.TestResult
+	// Schema returns the cached schema snapshot, re-reading it first when refresh is set.
+	Schema(ctx context.Context, name string, p config.Profile, refresh bool) (*schema.Snapshot, error)
+	// Describe renders a DESCRIBE target for the profile's cluster.
+	Describe(ctx context.Context, name string, p config.Profile, t schema.Target) (string, error)
 	CloseAll()
 }
 
-type managerConnector struct{ m *conn.Manager }
+type managerConnector struct {
+	m     *conn.Manager
+	cache *schema.Cache
+}
+
+func newManagerConnector() managerConnector {
+	return managerConnector{m: conn.NewManager(), cache: schema.NewCache()}
+}
 
 func (c managerConnector) Connect(ctx context.Context, name string, p config.Profile) (*conn.ClusterInfo, []string, error) {
 	sess, warnings, err := c.m.Session(ctx, name, p)
@@ -32,10 +44,32 @@ func (c managerConnector) Connect(ctx context.Context, name string, p config.Pro
 	return info, warnings, err
 }
 func (c managerConnector) Connected(name string) bool { return c.m.Connected(name) }
-func (c managerConnector) Disconnect(name string)     { c.m.Close(name) }
+func (c managerConnector) Disconnect(name string) {
+	c.m.Close(name)
+	c.cache.Invalidate(name)
+}
 func (c managerConnector) Test(ctx context.Context, p config.Profile) *conn.TestResult {
 	return conn.Test(ctx, p)
 }
+func (c managerConnector) Schema(ctx context.Context, name string, p config.Profile, refresh bool) (*schema.Snapshot, error) {
+	sess, _, err := c.m.Session(ctx, name, p)
+	if err != nil {
+		return nil, err
+	}
+	if refresh {
+		return c.cache.Refresh(ctx, name, sess)
+	}
+	return c.cache.Get(ctx, name, sess)
+}
+
+func (c managerConnector) Describe(ctx context.Context, name string, p config.Profile, t schema.Target) (string, error) {
+	sess, _, err := c.m.Session(ctx, name, p)
+	if err != nil {
+		return "", err
+	}
+	return c.cache.Describe(ctx, name, sess, t, "")
+}
+
 func (c managerConnector) CloseAll() { c.m.CloseAll() }
 
 // api carries the dependencies shared by the handlers.
@@ -75,4 +109,8 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/connect", a.connect)
 	p.DELETE("/connect", a.disconnect)
 	p.GET("/cluster", a.cluster)
+	p.GET("/schema", a.schema)
+	p.POST("/schema/refresh", a.refreshSchema)
+	p.GET("/keyspaces/:ks/tables/:t", a.tableDetail)
+	p.GET("/keyspaces/:ks/ddl", a.ddl)
 }

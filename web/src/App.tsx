@@ -44,11 +44,11 @@ export function App() {
       <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
         <SchemaTree />
         <main className="flex min-h-0 min-w-0 flex-col">
-          <TabBar tabs={tabs} activeId={activeId} onSelect={activate} onClose={close} onNew={newQuery} />
+          <TabBar tabs={tabs} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (
             <TableView key={active.id} tab={active} />
           ) : active?.kind === 'query' ? (
-            <QueryView key={active.id} />
+            <QueryView key={active.id} tab={active} />
           ) : active?.kind === 'type' ? (
             <TypeView key={active.id} tab={active} />
           ) : (

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"os"
 
+	gocql "github.com/apache/cassandra-gocql-driver/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/0funct0ry/helenus/internal/cli"
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
+	"github.com/0funct0ry/helenus/internal/schema"
 	"github.com/0funct0ry/helenus/internal/shell"
 )
 
@@ -76,8 +78,28 @@ func runShell(cmd *cobra.Command, args []string) error {
 			Name: name, Cluster: info, Version: Version, Consistency: p.Consistency,
 		})
 	}
-	shell.Placeholder(cmd.InOrStdin(), cmd.OutOrStdout())
+	port := p.Port
+	if port == 0 {
+		port = 9042
+	}
+	sh := &shell.Shell{
+		In: cmd.InOrStdin(), Out: cmd.OutOrStdout(), Err: cmd.ErrOrStderr(),
+		Describer: &sessionDescriber{name: name, sess: sess, cache: schema.NewCache()},
+		Cluster:   info, Version: Version, Host: p.Hosts[0], Port: port,
+	}
+	sh.Run(ctx)
 	return nil
+}
+
+// sessionDescriber answers the shell's DESCRIBE statements from the live session.
+type sessionDescriber struct {
+	name  string
+	sess  *gocql.Session
+	cache *schema.Cache
+}
+
+func (d *sessionDescriber) Describe(ctx context.Context, t schema.Target, currentKS string) (string, error) {
+	return d.cache.Describe(ctx, d.name, d.sess, t, currentKS)
 }
 
 // describeFailure re-runs the staged test to name the stage that failed.

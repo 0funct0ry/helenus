@@ -13,6 +13,14 @@ export default defineConfig({
       sidebar: [
         { label: 'Get started', items: [{ label: 'Install Helenus', slug: 'docs/install' }] },
         {
+          label: 'Explore',
+          items: [
+            { label: 'Browse your schema', slug: 'docs/browse-your-schema' },
+            { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
+            { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
+          ],
+        },
+        {
           label: 'Connect',
           items: [
             { label: 'Connect to a cluster', slug: 'docs/connect-to-a-cluster' },

@@ -1,4 +1,4 @@
-import type { ProfileStatus } from '../mocks/types'
+import type { ProfileStatus } from '../lib/schemaModel'
 
 type Status = ProfileStatus | 'idle'
 

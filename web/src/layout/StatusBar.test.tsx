@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react'
 import { StatusBar } from './StatusBar'
 import { useWorkspace } from '../store/workspace'
+import { queryTab, typeTab } from '../test/schemaFixture'
 import { apiProfile, cluster, mockApi, renderWithClient as render } from '../test/api'
 
 const reset = { profileId: '', connections: {}, consistency: 'LOCAL_QUORUM' }
@@ -35,7 +36,7 @@ describe('StatusBar', () => {
   })
   it('shows the cursor position on query tabs only', () => {
     mockApi({})
-    useWorkspace.setState({ activeId: 'query-1', cursor: { line: 4, col: 12 } })
+    useWorkspace.setState({ tabs: [queryTab, typeTab], activeId: 'query-1', cursor: { line: 4, col: 12 } })
     const { unmount } = render(<StatusBar />)
     expect(screen.getByText('Ln 4, Col 12')).toBeInTheDocument()
     unmount()

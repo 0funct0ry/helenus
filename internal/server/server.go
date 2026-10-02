@@ -20,7 +20,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/0funct0ry/helenus/internal/config"
-	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/web"
 )
 
@@ -53,7 +52,7 @@ func Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("listen on %s: %w", opts.Addr, err)
 	}
 	if opts.Connector == nil {
-		opts.Connector = managerConnector{conn.NewManager()}
+		opts.Connector = newManagerConnector()
 	}
 	defer opts.Connector.CloseAll()
 	srv := &http.Server{Handler: NewRouter(opts), ReadHeaderTimeout: 10 * time.Second}
@@ -93,7 +92,7 @@ func NewRouter(opts Options) http.Handler {
 		opts.Stderr = os.Stderr
 	}
 	if opts.Connector == nil {
-		opts.Connector = managerConnector{conn.NewManager()}
+		opts.Connector = newManagerConnector()
 	}
 	if opts.DataDir == "" {
 		opts.DataDir = config.DataDir()

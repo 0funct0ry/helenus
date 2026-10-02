@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Database, Eye, Moon, Plus, Table2 } from 'lucide-react'
 import { Dialog } from '../ui/Dialog'
-import { keyspaces } from '../mocks/schema'
+import { useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
 import { useThemeStore } from '../store/theme'
 import { cn } from '../lib/cn'
@@ -34,6 +34,9 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const newQuery = useWorkspace((s) => s.newQuery)
   const openProfiles = useWorkspace((s) => s.setProfileDialogOpen)
   const cycleTheme = useThemeStore((s) => s.cycle)
+  const profileId = useWorkspace((s) => s.profileId)
+  const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
+  const { data: keyspaces = [] } = useSchema(profileId, connected)
 
   const actions: Action[] = useMemo(
     () => [
@@ -43,11 +46,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
           ...k.tables.map<Action>((t) => ({ id: `t:${k.name}.${t.name}`, group: 'Tables and views', label: `${k.name}.${t.name}`, mono: true, icon: <Table2 size={14} />, run: () => open('table', k.name, t.name) })),
           ...k.views.map<Action>((v) => ({ id: `v:${k.name}.${v.name}`, group: 'Tables and views', label: `${k.name}.${v.name}`, mono: true, icon: <Eye size={14} />, run: () => open('view', k.name, v.name) })),
         ]),
-      { id: 'new-query', group: 'Commands', label: 'New query', icon: <Plus size={14} />, run: newQuery },
+      { id: 'new-query', group: 'Commands', label: 'New query', icon: <Plus size={14} />, run: () => newQuery() },
       { id: 'profiles', group: 'Commands', label: 'Switch profile…', icon: <Database size={14} />, run: () => openProfiles(true) },
       { id: 'theme', group: 'Commands', label: 'Toggle light and dark theme', icon: <Moon size={14} />, run: cycleTheme },
     ],
-    [open, newQuery, openProfiles, cycleTheme],
+    [keyspaces, open, newQuery, openProfiles, cycleTheme],
   )
   const q = query.trim().toLowerCase()
   const shown = actions.filter((a) => a.label.toLowerCase().includes(q))

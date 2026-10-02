@@ -2,18 +2,21 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { renderWithClient as render } from './test/api'
-import { initialTabs, useWorkspace } from './store/workspace'
+import { connectedWorkspace, mockSchemaApi, queryTab, tableTab, typeTab } from './test/schemaFixture'
 
 describe('App', () => {
-  beforeEach(() => useWorkspace.setState({ tabs: initialTabs, activeId: initialTabs[0].id, paletteOpen: false, profileDialogOpen: false }))
+  beforeEach(() => {
+    connectedWorkspace([tableTab, queryTab, typeTab])
+    mockSchemaApi({ 'GET /profiles': { profiles: [] } })
+  })
 
-  it('renders the shell regions', () => {
+  it('renders the shell regions', async () => {
     render(<App />)
     expect(screen.getByRole('banner')).toBeInTheDocument()
     expect(screen.getByRole('complementary', { name: 'Schema' })).toBeInTheDocument()
     expect(screen.getByRole('tablist', { name: 'Open tabs' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toBeInTheDocument()
-    expect(screen.getByRole('table', { name: 'Results' })).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Results' })).toBeInTheDocument()
   })
   it('switches tabs and closes them', async () => {
     render(<App />)

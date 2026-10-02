@@ -1,6 +1,6 @@
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
-import type { Column, Index } from '../mocks/types'
+import type { Column, Index } from '../lib/schemaModel'
 
 export interface SchemaSheetProps {
   columns: Column[]

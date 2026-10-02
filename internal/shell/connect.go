@@ -1,9 +1,8 @@
-// Package shell is the interactive CQL shell. Until M4 it holds only the
-// connect banner and a placeholder prompt that accepts EXIT.
+// Package shell is the interactive CQL shell. Until M4 it holds the connect
+// banner and a line prompt that accepts DESCRIBE, SHOW and EXIT (shell.go).
 package shell
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"runtime"
@@ -50,23 +49,4 @@ func PrintBanner(w io.Writer, b BannerInfo) {
 	fmt.Fprintf(w, "Cluster %s · %s · %s · local dc %s\n", c.Name, plural(len(c.Datacenters), "datacenter"), plural(c.NodeCount, "node"), c.LocalDC)
 	fmt.Fprintf(w, "helenus %s · %s · cassandra-gocql-driver %s\n", b.Version, runtime.Version(), driverVersion())
 	fmt.Fprintf(w, "Type HELP for commands. Consistency: %s\n", b.Consistency)
-}
-
-// Placeholder reads lines until EXIT or QUIT (or EOF). The real shell arrives in M4.
-func Placeholder(in io.Reader, out io.Writer) {
-	sc := bufio.NewScanner(in)
-	for {
-		fmt.Fprint(out, "helenus> ")
-		if !sc.Scan() {
-			fmt.Fprintln(out)
-			return
-		}
-		switch strings.ToUpper(strings.TrimSuffix(strings.TrimSpace(sc.Text()), ";")) {
-		case "":
-		case "EXIT", "QUIT":
-			return
-		default:
-			fmt.Fprintln(out, "not implemented yet (planned for M4); type EXIT to leave")
-		}
-	}
 }

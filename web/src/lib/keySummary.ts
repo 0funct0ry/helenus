@@ -1,4 +1,4 @@
-import type { Column } from '../mocks/types'
+import type { Column } from './schemaModel'
 
 /** `PK (a, b) · CK c DESC` summary shown on table hover. */
 export function keySummary(columns: Column[]): string {

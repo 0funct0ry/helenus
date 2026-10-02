@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, BundleInfo, ClusterInfo, ConnectResult, TestResult } from './types'
+import type { ApiProfile, BundleInfo, ClusterInfo, ConnectResult, SchemaSnapshot, TestResult } from './types'
+import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
 const enc = encodeURIComponent
@@ -26,6 +27,7 @@ export function useConnect() {
     onSuccess: (res, name) => {
       setConnection(name, 'connected')
       qc.setQueryData(['cluster', name], res.cluster)
+      void qc.invalidateQueries({ queryKey: schemaKey(name) })
       void qc.invalidateQueries({ queryKey: profilesKey })
     },
     onError: (e, name) => setConnection(name, 'error', describeError(e)),
@@ -40,6 +42,7 @@ export function useDisconnect() {
     mutationFn: (name: string) => api<void>(`/p/${enc(name)}/connect`, { method: 'DELETE' }),
     onSuccess: (_r, name) => {
       clear(name)
+      qc.removeQueries({ queryKey: schemaKey(name) })
       void qc.invalidateQueries({ queryKey: profilesKey })
     },
   })
@@ -86,4 +89,52 @@ export function useUploadBundle() {
       return api<BundleInfo>('/profiles/astra/bundle', { form })
     },
   })
+}
+
+export const schemaKey = (profile: string) => ['schema', profile] as const
+
+/** The schema snapshot of a connected profile, converted to the explorer's model. */
+export function useSchema(profile: string, enabled: boolean) {
+  return useQuery({
+    queryKey: schemaKey(profile),
+    enabled: enabled && !!profile,
+    staleTime: Infinity,
+    queryFn: () => api<SchemaSnapshot>(`/p/${enc(profile)}/schema`),
+    select: toKeyspaces,
+  })
+}
+
+/** Re-read the cluster's metadata and replace the cached snapshot. */
+export function useRefreshSchema(profile: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api<SchemaSnapshot>(`/p/${enc(profile)}/schema/refresh`, { method: 'POST' }),
+    onSuccess: (snap) => {
+      qc.setQueryData(schemaKey(profile), snap)
+      void qc.invalidateQueries({ queryKey: ['ddl', profile] })
+    },
+  })
+}
+
+export type DdlObject = 'keyspace' | 'table' | 'view' | 'type' | 'function' | 'aggregate' | 'index'
+
+function ddlQuery(profile: string, keyspace: string, object: DdlObject, name: string) {
+  return {
+    queryKey: ['ddl', profile, keyspace, object, name] as const,
+    queryFn: async () => (await api<{ ddl: string }>(`/p/${enc(profile)}/keyspaces/${enc(keyspace)}/ddl?object=${object}&name=${enc(name)}`)).ddl,
+  }
+}
+
+/** DESCRIBE output for one object. Fetched on demand, so `enabled` gates it (e.g. while a sub-view is closed). */
+export function useDdl(profile: string, keyspace: string, object: DdlObject, name: string, enabled = true) {
+  return useQuery({ ...ddlQuery(profile, keyspace, object, name), enabled: enabled && !!profile && !!keyspace })
+}
+
+/** Returns a function that fetches an object's DDL and puts it on the clipboard. */
+export function useCopyDdl(profile: string) {
+  const qc = useQueryClient()
+  return async (keyspace: string, object: DdlObject, name: string) => {
+    const ddl = await qc.fetchQuery(ddlQuery(profile, keyspace, object, name))
+    await navigator.clipboard?.writeText(ddl)
+  }
 }

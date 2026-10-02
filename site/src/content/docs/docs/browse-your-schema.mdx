@@ -1,0 +1,66 @@
+---
+title: Browse your schema
+description: Explore keyspaces, tables, views, and types in the schema tree, and read their columns, DDL, and materialized views.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The schema tree shows what is in the cluster you are connected to: keyspaces, and under each one its tables, materialized views, types, and functions. You can read how a table is defined without writing a query.
+
+<Tabs>
+  <TabItem label="Web UI">
+    ## Find an object
+
+    1. Connect a profile. The tree fills in a moment later.
+    2. Select the arrow next to a keyspace to open or close it. Under each keyspace, **Tables**, **Views**, **Types**, and **Functions** open and close the same way.
+    3. Type in **Filter keyspaces, tables, types** to narrow the tree. Matching keyspaces open on their own.
+    4. Hold the pointer over a table to see its key: `PK (merchant_id, txn_day) · CK txn_time DESC`.
+
+    System keyspaces such as `system` and `system_schema` are grouped under **System** at the bottom and start closed.
+
+    ## Open a table
+
+    Select a table to open it in a tab. The tab has these views:
+
+    - **Data**. Sample rows. Reading real rows arrives in a later release.
+    - **Schema**. The primary key, every column with its type, the table options, and any indexes, including SAI indexes.
+    - **DDL**. The `CREATE TABLE` statement, taken from the cluster with `DESCRIBE`. Select **Copy DDL** to copy it, or **Open in query tab** to paste it into a new query.
+    - **Views**. The materialized views built on this table, with their key layout and filter. Select **Open** to go to one.
+
+    A materialized view also appears under its base table in the tree, and under **Views** for its keyspace.
+
+    ## Open a type
+
+    Select a type under **Types**. The tab lists its fields, the columns that use it, and its `CREATE TYPE` statement. A type that is in use cannot be dropped.
+
+    ## Use the right-click menu
+
+    Right-click a table, view, or type for these actions:
+
+    - **Open**. Opens the object in a tab.
+    - **New query here**. Opens a query tab with `SELECT * FROM keyspace.table LIMIT 100;` already typed in.
+    - **Copy name**. Copies `keyspace.name`.
+    - **Copy DDL**. Copies the object's `CREATE` statement.
+    - **Refresh**. Reads the schema from the cluster again.
+
+    ## Refresh the schema
+
+    Helenus reads the schema when you connect and keeps it until you ask for it again. If someone adds a table while you are working, select the refresh button at the top of the tree.
+  </TabItem>
+  <TabItem label="Shell">
+    Use `DESCRIBE` to read the same information in the shell:
+
+    ```text
+    helenus> DESCRIBE KEYSPACES;
+    helenus> DESCRIBE TABLES;
+    helenus> DESCRIBE TABLE payments.transactions_by_merchant;
+    ```
+
+    See the [DESCRIBE reference](/helenus/docs/describe-reference/) for every form.
+  </TabItem>
+</Tabs>
+
+## If the tree is empty
+
+- **Connect a profile to browse its schema.** No profile is connected yet. Pick one in the title bar.
+- **Could not read the schema.** The message says why, for example a login without permission to read `system_schema`. Fix the cause and select **Try again**.
