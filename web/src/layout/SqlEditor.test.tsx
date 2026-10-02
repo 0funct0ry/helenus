@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SqlEditor } from './SqlEditor'
 
@@ -28,5 +28,22 @@ describe('SqlEditor callbacks', () => {
     expect(onRun).toHaveBeenLastCalledWith(expect.objectContaining({ all: true }))
     await userEvent.keyboard('x')
     expect(onChange).toHaveBeenLastCalledWith(expect.stringContaining('x'))
+  })
+})
+
+describe('SqlEditor completion', () => {
+  it('asks the server with the profile and keyspace while typing', async () => {
+    const calls: { path: string; body: unknown }[] = []
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ path: String(input), body: JSON.parse(String(init?.body)) })
+      return new Response(JSON.stringify({ from: 0, items: [{ label: 'SELECT', kind: 'keyword', insert: 'SELECT' }] }), { status: 200 })
+    }) as typeof fetch
+    render(<SqlEditor initialValue="" profile="local" keyspace="payments" />)
+    const box = screen.getByRole('textbox', { name: 'CQL editor' })
+    box.focus()
+    await userEvent.keyboard('s')
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0))
+    expect(calls[0].path).toBe('/api/v1/p/local/complete')
+    expect(calls[0].body).toMatchObject({ text: 's', cursor: 1, keyspace: 'payments' })
   })
 })

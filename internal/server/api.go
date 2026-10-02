@@ -126,6 +126,7 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.GET("/cluster", a.cluster)
 	p.POST("/query", a.query)
 	p.POST("/split", a.split)
+	p.POST("/complete", a.complete)
 	p.GET("/schema", a.schema)
 	p.POST("/schema/refresh", a.refreshSchema)
 	p.GET("/keyspaces/:ks/tables/:t", a.tableDetail)

@@ -26,6 +26,7 @@ func (s *Shell) Run(ctx context.Context) error {
 		Stdin:                  s.In,
 		Stdout:                 s.Out,
 		Stderr:                 s.Err,
+		AutoComplete:           completer{s},
 	}
 	if s.ReadlineConfig != nil {
 		s.ReadlineConfig(cfg)
@@ -45,7 +46,9 @@ func (s *Shell) Run(ctx context.Context) error {
 	defer func() { s.Pause = nil }()
 
 	var lines []string
+	defer func() { s.pending = nil }()
 	for {
+		s.pending = lines
 		if len(lines) == 0 {
 			rl.SetPrompt(s.Prompt())
 		} else {

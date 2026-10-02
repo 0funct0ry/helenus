@@ -11,3 +11,4 @@
 | `@vitejs/plugin-react`, `@types/react*`, `@eslint/js`, `globals`, `eslint-plugin-react-hooks` | web (dev) | Vite React build and lint tooling. |
 | `github.com/ergochat/readline` | Go | Line editing, history, Ctrl-R and vi mode for the shell (listed in SPEC §3.2; recorded here for the M4 REPL). |
 | (none: no pty library) | Go (test) | The REPL tests drive the real readline editor over `io.Pipe` with `FuncIsTerminal` forced on, so they send keystrokes without a pseudo-terminal. A pty library such as `creack/pty` is not in SPEC §3.2, so none was added. |
+| `@codemirror/autocomplete` | web | Direct import of `autocompletion` and `CompletionSource` for the schema-aware completion source (M5). Already installed as a dependency of `codemirror`; now declared because the editor imports it directly. |

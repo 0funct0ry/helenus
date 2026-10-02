@@ -201,3 +201,33 @@ export interface SplitStatement {
   line: number
   complete: boolean
 }
+
+/** Kinds of completion candidate (SPEC §10). */
+export type CompleteKind = 'keyword' | 'keyspace' | 'table' | 'view' | 'column' | 'function' | 'type' | 'command'
+
+/** One candidate from `POST /p/{profile}/complete`. */
+export interface CompleteItem {
+  label: string
+  kind: CompleteKind
+  /** Column type, table key summary or a short description. */
+  detail?: string
+  /** Text that replaces the word being typed, with identifier quoting applied. */
+  insert: string
+  /** Set on key columns: the column kind, its 1-based position and clustering order. */
+  key?: 'partition' | 'clustering' | 'static'
+  position?: number
+  order?: 'ASC' | 'DESC'
+}
+
+export interface CompleteRequest {
+  text: string
+  /** UTF-16 index of the cursor in `text`. */
+  cursor: number
+  keyspace: string
+}
+
+export interface CompleteResponse {
+  /** UTF-16 index where the insert text starts replacing the document. */
+  from: number
+  items: CompleteItem[]
+}

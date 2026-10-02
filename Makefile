@@ -58,6 +58,16 @@ test:
 	@if [ -d "web" ]; then cd web && $(NPM) test; fi
 
 
+.PHONY: test-pkg
+## test-pkg: Run Go tests for one package, e.g. make test-pkg PKG=./internal/complete
+test-pkg:
+	$(GO) test -short -count=1 $(PKG) $(TESTFLAGS)
+
+.PHONY: bench
+## bench: Run Go benchmarks for one package, e.g. make bench PKG=./internal/complete
+bench:
+	$(GO) test -run '^$$' -bench . -benchmem $(PKG)
+
 .PHONY: golden
 ## golden: Rewrite the statement splitter golden files
 golden:

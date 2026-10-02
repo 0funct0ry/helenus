@@ -41,6 +41,9 @@ func Dial(ctx context.Context, mgr *conn.Manager, cache *schema.Cache, name stri
 		Consistency: p.Consistency,
 		Serial:      p.SerialConsistency,
 		UDTFields:   udtFields(name, sess, cache),
+		Schema: func(ctx context.Context) (*schema.Snapshot, error) {
+			return cache.Get(ctx, name, sess)
+		},
 	}, warnings, nil
 }
 

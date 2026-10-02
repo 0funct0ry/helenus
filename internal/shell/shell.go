@@ -45,6 +45,9 @@ type Backend struct {
 	Serial      string
 	// UDTFields resolves UDT field types for text rendering; may be nil.
 	UDTFields func(codec.UDTRef) map[string]codec.TypeDesc
+	// Schema returns the cached schema snapshot for tab-completion; may be nil, in which case
+	// only keywords are offered.
+	Schema func(ctx context.Context) (*schema.Snapshot, error)
 }
 
 // ErrExit is returned by Execute when the user asked to leave the shell.
@@ -93,6 +96,8 @@ type Shell struct {
 	ReadlineConfig func(*readline.Config)
 
 	sourceDepth int
+	// pending holds the earlier lines of the statement being typed, for tab-completion.
+	pending []string
 }
 
 // Prompt returns the primary prompt for the current keyspace.

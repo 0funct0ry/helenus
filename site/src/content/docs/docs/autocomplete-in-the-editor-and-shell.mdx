@@ -1,0 +1,52 @@
+---
+title: Autocomplete in the editor and shell
+description: Get suggestions for keywords, keyspaces, tables, columns, functions and types as you type, in the web editor and the shell.
+---
+
+Helenus suggests what can come next at the cursor. The web editor and the shell use the same engine, so they offer the same candidates.
+
+## Use it in the web editor
+
+Start typing in a query tab. A list appears below the cursor after a short pause. Press **Tab** or **Enter** to accept the highlighted item, **↑** and **↓** to move, and **Esc** to close the list. Press **Ctrl+Space** to open it on demand.
+
+Each item shows an icon for its kind, and a detail that depends on the kind:
+
+| Kind | Detail |
+|---|---|
+| Column | The column type. Key columns also show a marker: `PK1` for the first partition key column, `CK1↓` for a descending clustering column, `S` for a static column. |
+| Table | The primary key, for example `PK (merchant_id, txn_day) · CK (txn_time)`. |
+| View | The table it is built on. |
+| Function | The type it returns. |
+
+Typing never waits for the list. If suggestions can't be fetched, the editor falls back to plain keyword completion.
+
+## Use it in the shell
+
+Press **Tab** after any text. If one candidate fits, the shell completes it. If several do, press **Tab** again to list them in columns and cycle through them. The shell keeps your case: type `sel` and Tab gives `select`, type `SEL` and you get `SELECT`.
+
+Completion also works on the continuation lines of a statement that spans several lines.
+
+## What gets suggested
+
+| Where the cursor is | Suggestions |
+|---|---|
+| Start of a statement | Statement keywords and shell commands such as `CONSISTENCY` and `DESCRIBE`. |
+| After `FROM`, `INTO`, `UPDATE`, `TRUNCATE`, `DROP TABLE` | Keyspaces, then tables and views in the current keyspace. After `keyspace.`, the tables and views of that keyspace. |
+| In a `SELECT` list | Columns of the table named in `FROM`, built-in functions, then `FROM`. |
+| After `WHERE` | Partition key columns first, then clustering columns in order, then the other columns. |
+| After `ORDER BY` | Clustering columns, in order. |
+| After `SET` | The columns you can update (not the primary key). |
+| In an `INSERT` column list | Columns, primary key first. After `VALUES (`, built-in functions. |
+| After `USING` | `TTL` and `TIMESTAMP`. |
+| After a column name in `CREATE TABLE` or `ALTER TABLE ... ADD` | Native types, user-defined types of the keyspace, and `list`, `set`, `map`, `tuple`, `frozen`. |
+| After `WITH` | Table options, or `replication` and `durable_writes` for a keyspace. |
+| After `CONSISTENCY` | The valid consistency levels. After `SERIAL CONSISTENCY`, `SERIAL` and `LOCAL_SERIAL`. |
+| After `USE` or `DESCRIBE` | Keyspaces and the objects to describe. |
+
+Names that need quoting are inserted with quotes: a table called `Orders` completes to `"Orders"`. Start a name with `"` to match its exact case.
+
+## When suggestions are missing
+
+- **Tables and columns are missing.** Completion reads the schema Helenus loaded when you connected. After changing the schema from another client, refresh the schema in the explorer. Statements you run in Helenus refresh it for you.
+- **Nothing is suggested.** The cursor may be inside a comment or a string literal, where nothing is offered. Or the statement names a table that doesn't exist yet.
+- **Only keywords appear in the editor.** The profile isn't connected. Connect, then keep typing.

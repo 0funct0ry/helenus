@@ -18,6 +18,7 @@
   --hover: #363c46;
   --selected: #454a56;
   --active-line: rgba(47, 52, 62, 0.75);
+  --selection: rgba(116, 173, 232, 0.5);
   --error: #d07277;
   --warning: #dec184;
   --success: #a1c181;
@@ -64,6 +65,7 @@
   --hover: #e3e3e4;
   --selected: #d3d3d4;
   --active-line: rgba(235, 235, 236, 0.8);
+  --selection: rgba(92, 120, 226, 0.4);
   --error: #d36151;
   --warning: #a48819;
   --success: #669f59;

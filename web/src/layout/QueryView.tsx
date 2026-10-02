@@ -90,7 +90,7 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
       </div>
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(160px,54%)_1px_1fr]">
         <div className="min-h-0 py-2">
-          <SqlEditor initialValue={initialText} onCursor={setCursor} onChange={(text) => patch(id, { text })} onRun={onRun} />
+          <SqlEditor initialValue={initialText} profile={connected ? profileId : ''} keyspace={st.keyspace} onCursor={setCursor} onChange={(text) => patch(id, { text })} onRun={onRun} />
         </div>
         <div role="separator" aria-orientation="horizontal" className="bg-line" />
         <ResultsPanel

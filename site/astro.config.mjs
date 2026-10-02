@@ -26,6 +26,7 @@ export default defineConfig({
             { label: 'Run queries in the web UI', slug: 'docs/run-queries-in-the-web-ui' },
             { label: 'Page through large results', slug: 'docs/page-through-large-results' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
+            { label: 'Autocomplete in the editor and shell', slug: 'docs/autocomplete-in-the-editor-and-shell' },
             { label: 'Use the shell', slug: 'docs/use-the-shell' },
             { label: 'Run scripts with -f and -e', slug: 'docs/run-scripts-with-f-and-e' },
             { label: 'Shell command reference', slug: 'docs/shell-command-reference' },

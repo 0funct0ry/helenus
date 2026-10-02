@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
+import { autocompletion } from '@codemirror/autocomplete'
 import { basicSetup } from 'codemirror'
 import { EditorState, Prec } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { Cassandra, sql } from '@codemirror/lang-sql'
 import { tags as t } from '@lezer/highlight'
+import { createCompletionSource, keyMarkerOption } from '../lib/cqlCompletion'
 
 const oneTheme = HighlightStyle.define([
   { tag: [t.keyword, t.operatorKeyword], color: 'var(--syn-kw)' },
@@ -26,6 +28,28 @@ const tokenTheme = EditorView.theme({
     color: 'var(--text-disabled)',
     border: 'none',
   },
+  // The selection layer is drawn behind the text, so the active-line background (almost opaque)
+  // hid it on the cursor's line. Raise the layer above the content; the colour is translucent so
+  // the text stays readable underneath.
+  '.cm-selectionLayer': { zIndex: '100 !important' },
+  '.cm-selectionLayer .cm-selectionBackground': { backgroundColor: 'var(--selection) !important' },
+  '.cm-content ::selection': { backgroundColor: 'var(--selection)' },
+  // Completion popup: follow the app theme instead of CodeMirror's light default.
+  '.cm-tooltip': {
+    backgroundColor: 'var(--bg-elevated)',
+    color: 'var(--text)',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+  },
+  '.cm-tooltip-autocomplete > ul > li': { color: 'var(--text)' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+    backgroundColor: 'var(--accent)',
+    color: 'var(--on-accent)',
+  },
+  '.cm-completionDetail': { color: 'var(--text-muted)', fontStyle: 'italic' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail': { color: 'var(--on-accent)' },
+  '.cm-completionMatchedText': { textDecoration: 'none', fontWeight: '600' },
+  '.cm-completionIcon': { opacity: '0.7' },
   '.cm-activeLine': { backgroundColor: 'var(--active-line)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--active-line)', color: 'var(--text)' },
 })
@@ -39,19 +63,29 @@ export interface SqlEditorProps {
   onChange?: (text: string) => void
   /** Called on Mod-Enter (`all` false) or Shift-Mod-Enter (`all` true) with the text and the cursor's UTF-16 index. */
   onRun?: (run: { all: boolean; text: string; pos: number }) => void
+  /** Profile whose schema drives completion. Without one, only keywords are offered. */
+  profile?: string
+  /** Current keyspace, which unqualified table names resolve in. */
+  keyspace?: string
   'aria-label'?: string
 }
 
 /**
  * CodeMirror 6 editor with the Cassandra SQL dialect and One-theme highlighting driven by CSS
- * variables, so it follows the light/dark theme without reconfiguration.
+ * variables, so it follows the light/dark theme without reconfiguration. Completion comes from the
+ * server's schema-aware engine (debounced and cancellable) and falls back to keywords on failure;
+ * `profile` and `keyspace` are read at request time, so changing them does not recreate the editor.
  */
-export function SqlEditor({ initialValue, onCursor, onChange, onRun, ...rest }: SqlEditorProps) {
+export function SqlEditor({ initialValue, onCursor, onChange, onRun, profile, keyspace, ...rest }: SqlEditorProps) {
   const host = useRef<HTMLDivElement>(null)
   const cb = useRef(onCursor)
   const changeCb = useRef(onChange)
   const runCb = useRef(onRun)
+  const profileRef = useRef(profile)
+  const keyspaceRef = useRef(keyspace)
   useEffect(() => {
+    profileRef.current = profile
+    keyspaceRef.current = keyspace
     cb.current = onCursor
     changeCb.current = onChange
     runCb.current = onRun
@@ -72,6 +106,10 @@ export function SqlEditor({ initialValue, onCursor, onChange, onRun, ...rest }: 
           ),
           basicSetup,
           sql({ dialect: Cassandra }),
+          autocompletion({
+            override: [createCompletionSource({ profile: () => profileRef.current ?? '', keyspace: () => keyspaceRef.current ?? '' })],
+            addToOptions: [keyMarkerOption],
+          }),
           syntaxHighlighting(oneTheme),
           tokenTheme,
           EditorView.contentAttributes.of({ 'aria-label': rest['aria-label'] ?? 'CQL editor' }),
