@@ -54,13 +54,21 @@ type Index struct {
 	Options map[string]string `json:"options,omitempty"`
 }
 
+// Trigger is a trigger attached to a table.
+type Trigger struct {
+	Name string `json:"name"`
+	// Class is the Java class that implements the trigger.
+	Class string `json:"class"`
+}
+
 // Table is a base table.
 type Table struct {
-	Keyspace string   `json:"keyspace"`
-	Name     string   `json:"name"`
-	Columns  []Column `json:"columns"`
-	Options  []Option `json:"options"`
-	Indexes  []Index  `json:"indexes"`
+	Keyspace string    `json:"keyspace"`
+	Name     string    `json:"name"`
+	Columns  []Column  `json:"columns"`
+	Options  []Option  `json:"options"`
+	Indexes  []Index   `json:"indexes"`
+	Triggers []Trigger `json:"triggers"`
 	// Views lists materialized views built on this table.
 	Views   []string `json:"views"`
 	Counter bool     `json:"counter,omitempty"`
@@ -273,6 +281,10 @@ func Build(ctx context.Context, s *gocql.Session) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	trigs, err := fetch(ctx, s, `SELECT * FROM system_schema.triggers`)
+	if err != nil {
+		return nil, err
+	}
 	if err := applyNullBoolDefaults(ctx, s, "tables", "table_name", tabs); err != nil {
 		return nil, err
 	}
@@ -280,9 +292,27 @@ func Build(ctx context.Context, s *gocql.Session) (*Snapshot, error) {
 		return nil, err
 	}
 	snap := assemble(kss, tabs, cols, views, idxs, types, funcs, aggs)
+	attachTriggers(snap, trigs)
 	snap.Version = version
 	snap.GeneratedAt = time.Now().UTC()
 	return snap, nil
+}
+
+// attachTriggers adds the rows of system_schema.triggers to their tables, sorted by name.
+func attachTriggers(snap *Snapshot, rows []row) {
+	for _, r := range rows {
+		ks := snap.Keyspace(str(r, "keyspace_name"))
+		if ks == nil {
+			continue
+		}
+		t := ks.Table(str(r, "table_name"))
+		if t == nil {
+			continue
+		}
+		opts, _ := r["options"].(map[string]string)
+		t.Triggers = append(t.Triggers, Trigger{Name: str(r, "trigger_name"), Class: opts["class"]})
+		sort.Slice(t.Triggers, func(a, b int) bool { return t.Triggers[a].Name < t.Triggers[b].Name })
+	}
 }
 
 func assemble(kss, tabs, cols, views, idxs, types, funcs, aggs []row) *Snapshot {
@@ -332,7 +362,7 @@ func assemble(kss, tabs, cols, views, idxs, types, funcs, aggs []row) *Snapshot 
 		if ks == nil {
 			continue
 		}
-		t := Table{Keyspace: ks.Name, Name: str(r, "table_name"), Options: tableOptions(r), Indexes: []Index{}, Views: []string{}}
+		t := Table{Keyspace: ks.Name, Name: str(r, "table_name"), Options: tableOptions(r), Indexes: []Index{}, Triggers: []Trigger{}, Views: []string{}}
 		t.Columns = colsBy[ks.Name+"."+t.Name]
 		if t.Columns == nil {
 			t.Columns = []Column{}

@@ -44,7 +44,7 @@ func TestCompleterReturnsSuffixesAfterTheWord(t *testing.T) {
 	if strings.Join(got, ",") != "merchant_id,txn_day,txn_time,amount,token()" && !strings.HasPrefix(strings.Join(got, ","), "merchant_id,txn_day,txn_time") {
 		t.Errorf("where: %q", got)
 	}
-	got, _ = doTab(c, "CONSISTENCY ")
+	got, _ = doTab(c, ".consistency ")
 	if len(got) != 9 || got[0] != "ANY" || got[8] != "LOCAL_ONE" {
 		t.Errorf("consistency: %q", got)
 	}
@@ -87,7 +87,7 @@ func TestCompleterWithoutSchemaOffersKeywords(t *testing.T) {
 
 func TestREPLTabCompletesConsistencyLevel(t *testing.T) {
 	h := newHarness(nil)
-	runREPL(t, h, "CONSISTENCY LOCAL_O\t", "\n", ctrlD)
+	runREPL(t, h, ".consistency LOCAL_O\t", "\n", ctrlD)
 	if h.sh.Consistency != "LOCAL_ONE" {
 		t.Errorf("consistency = %q; output %q", h.sh.Consistency, h.out)
 	}

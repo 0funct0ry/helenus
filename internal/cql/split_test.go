@@ -78,3 +78,16 @@ func TestRenderLiteral(t *testing.T) {
 	require.Equal(t, "{'a': 1}", RenderLiteral(map[string]int32{"a": 1}, codec.TypeDesc{Name: "map", Args: []codec.TypeDesc{{Name: "text"}, {Name: "int"}}}))
 	require.Equal(t, "'2026-09-30'", RenderLiteral(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC), codec.TypeDesc{Name: "date"}))
 }
+
+func TestSplitSlashCommandTakesWholeLine(t *testing.T) {
+	got := Split(".alias a = SELECT 'x;y' -- keep\n:a 1;\nSELECT 1;")
+	want := []string{".alias a = SELECT 'x;y' -- keep", ":a 1;", "SELECT 1;"}
+	if len(got) != len(want) {
+		t.Fatalf("got %+v", got)
+	}
+	for i, w := range want {
+		if got[i].Text != w {
+			t.Errorf("stmt %d = %q, want %q", i, got[i].Text, w)
+		}
+	}
+}

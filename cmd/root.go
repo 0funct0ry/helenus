@@ -97,6 +97,15 @@ func runShell(cmd *cobra.Command, args []string) error {
 		},
 	}
 
+	sh.Abbreviations = s.Config.Shell.Abbreviations
+	sh.ConfigPath = s.Path
+	if sh.ConfigPath == "" {
+		sh.ConfigPath, _ = config.ConfigPath("")
+	}
+	for name, body := range s.Config.Shell.Aliases {
+		sh.DefineAlias(name, body)
+	}
+
 	switch {
 	case opts.execute != "":
 		return sh.RunScript(ctx, "", opts.execute, shell.ScriptOptions{ContinueOnError: opts.continueOnError, AbortCode: cli.ExitCQL})

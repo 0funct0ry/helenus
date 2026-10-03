@@ -48,5 +48,5 @@ func PrintBanner(w io.Writer, b BannerInfo) {
 	fmt.Fprintf(w, "Connected to %s (Cassandra %s, CQL spec %s%s)\n", b.Name, c.ReleaseVersion, c.CQLVersion, proto)
 	fmt.Fprintf(w, "Cluster %s · %s · %s · local dc %s\n", c.Name, plural(len(c.Datacenters), "datacenter"), plural(c.NodeCount, "node"), c.LocalDC)
 	fmt.Fprintf(w, "helenus %s · %s · cassandra-gocql-driver %s\n", b.Version, runtime.Version(), driverVersion())
-	fmt.Fprintf(w, "Type HELP for commands. Consistency: %s\n", b.Consistency)
+	fmt.Fprintf(w, "Type .help for commands. Consistency: %s\n", b.Consistency)
 }

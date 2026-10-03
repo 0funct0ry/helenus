@@ -59,7 +59,7 @@ func (s *Shell) RunScript(ctx context.Context, name, input string, o ScriptOptio
 			return &cli.ExitError{Code: o.AbortCode, Err: ErrReported}
 		}
 		if o.Echo {
-			fmt.Fprintln(s.Out, st.Text)
+			fmt.Fprintln(s.Out, highlightCQL(st.Text, s.Styled))
 		}
 		err := s.Execute(ctx, st.Text)
 		if errors.Is(err, ErrExit) {

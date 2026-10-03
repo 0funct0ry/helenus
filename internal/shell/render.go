@@ -34,6 +34,8 @@ func (s *Shell) cells(res *exec.Result) [][]Cell {
 type Cell struct {
 	Text string
 	Null bool
+	// Code marks CQL text, which is syntax highlighted in styled tables.
+	Code bool
 }
 
 // render prints one page. offset is the number of rows already printed and
@@ -41,7 +43,7 @@ type Cell struct {
 func (s *Shell) render(res *exec.Result, rows [][]Cell, offset int, first bool) {
 	switch s.Format {
 	case "expanded":
-		RenderExpanded(s.Out, res.Columns, rows, offset)
+		RenderExpandedStyled(s.Out, res.Columns, rows, offset, s.Styled)
 	case "raw":
 		RenderRaw(s.Out, res.Columns, rows, first)
 	default:
@@ -99,15 +101,59 @@ func pad(s string, w int, right bool) string {
 	return s + strings.Repeat(" ", n)
 }
 
+// ANSI styling for tables. Only used when TableOptions.Styled is set.
+const (
+	ansiReset  = "\x1b[0m"
+	ansiDim    = "\x1b[90m"
+	ansiHeader = "\x1b[36m"
+	ansiNull   = "\x1b[2;3m"
+	ansiNumber = "\x1b[33m"
+	ansiBool   = "\x1b[35m"
+	ansiID     = "\x1b[32m"
+	ansiTime   = "\x1b[34m"
+)
+
+func paint(code, text string, styled bool) string {
+	if !styled || text == "" {
+		return text
+	}
+	return code + text + ansiReset
+}
+
+// styleHeader colors a column name; partition keys are bold and clustering keys underlined.
 func styleHeader(c exec.Column, text string, styled bool) string {
 	if !styled {
 		return text
 	}
 	switch c.Kind {
 	case "partition":
-		return "\x1b[1m" + text + "\x1b[0m"
+		return paint(ansiHeader+"\x1b[1m", text, true)
 	case "clustering":
-		return "\x1b[4m" + text + "\x1b[0m"
+		return paint(ansiHeader+"\x1b[4m", text, true)
+	}
+	return paint(ansiHeader, text, true)
+}
+
+// styleCell colors a value by its CQL type; nulls are dimmed.
+func styleCell(td codec.TypeDesc, c Cell, text string, styled bool) string {
+	if !styled {
+		return text
+	}
+	switch {
+	case c.Null:
+		return paint(ansiNull, text, true)
+	case c.Code:
+		return highlightCQL(text, true)
+	case numeric(td):
+		return paint(ansiNumber, text, true)
+	}
+	switch td.Name {
+	case "boolean":
+		return paint(ansiBool, text, true)
+	case "uuid", "timeuuid":
+		return paint(ansiID, text, true)
+	case "timestamp", "date", "time", "duration":
+		return paint(ansiTime, text, true)
 	}
 	return text
 }
@@ -119,6 +165,7 @@ func RenderTable(w io.Writer, cols []exec.Column, rows [][]Cell, opts TableOptio
 		widths[i] = runeLen(c.Name)
 	}
 	texts := make([][]string, len(rows))
+	cellsOf := rows
 	for i, r := range rows {
 		texts[i] = make([]string, len(r))
 		for j, c := range r {
@@ -136,22 +183,28 @@ func RenderTable(w io.Writer, cols []exec.Column, rows [][]Cell, opts TableOptio
 		for i, n := range widths {
 			parts[i] = strings.Repeat("─", n+2)
 		}
-		fmt.Fprintln(w, l+strings.Join(parts, m)+r)
+		fmt.Fprintln(w, paint(ansiDim, l+strings.Join(parts, m)+r, opts.Styled))
 	}
+	bar := paint(ansiDim, "│", opts.Styled)
 	line("┌", "┬", "┐")
 	hdr := make([]string, len(cols))
 	for i, c := range cols {
 		name := truncate(c.Name, widths[i])
 		hdr[i] = " " + styleHeader(c, name, opts.Styled) + strings.Repeat(" ", widths[i]-runeLen(name)) + " "
 	}
-	fmt.Fprintln(w, "│"+strings.Join(hdr, "│")+"│")
+	fmt.Fprintln(w, bar+strings.Join(hdr, bar)+bar)
 	line("├", "┼", "┤")
-	for _, r := range texts {
+	for i, r := range texts {
 		parts := make([]string, len(r))
 		for j, t := range r {
-			parts[j] = " " + pad(truncate(t, widths[j]), widths[j], numeric(cols[j].Type)) + " "
+			t = truncate(t, widths[j])
+			padded := pad(t, widths[j], numeric(cols[j].Type))
+			if opts.Styled {
+				padded = strings.Replace(padded, t, styleCell(cols[j].Type, cellsOf[i][j], t, true), 1)
+			}
+			parts[j] = " " + padded + " "
 		}
-		fmt.Fprintln(w, "│"+strings.Join(parts, "│")+"│")
+		fmt.Fprintln(w, bar+strings.Join(parts, bar)+bar)
 	}
 	line("└", "┴", "┘")
 }
@@ -185,6 +238,12 @@ func fit(widths []int, total int) {
 
 // RenderExpanded prints one block per row: "@ Row n" then "column | value".
 func RenderExpanded(w io.Writer, cols []exec.Column, rows [][]Cell, offset int) {
+	RenderExpandedStyled(w, cols, rows, offset, false)
+}
+
+// RenderExpandedStyled is RenderExpanded with colors: dim row headers, colored column names and
+// values styled by type like the table renderer.
+func RenderExpandedStyled(w io.Writer, cols []exec.Column, rows [][]Cell, offset int, styled bool) {
 	nameW := 0
 	for _, c := range cols {
 		if n := runeLen(c.Name); n > nameW {
@@ -192,12 +251,14 @@ func RenderExpanded(w io.Writer, cols []exec.Column, rows [][]Cell, offset int) 
 		}
 	}
 	for i, r := range rows {
-		fmt.Fprintf(w, "@ Row %d\n", offset+i+1)
+		fmt.Fprintln(w, paint(ansiDim+"\x1b[1m", fmt.Sprintf("@ Row %d", offset+i+1), styled))
 		for j, c := range r {
 			lines := strings.Split(strings.ReplaceAll(c.Text, "\r\n", "\n"), "\n")
-			fmt.Fprintf(w, " %s | %s\n", pad(cols[j].Name, nameW, false), lines[0])
+			bar := paint(ansiDim, "|", styled)
+			name := styleHeader(cols[j], cols[j].Name, styled) + strings.Repeat(" ", nameW-runeLen(cols[j].Name))
+			fmt.Fprintf(w, " %s %s %s\n", name, bar, styleCell(cols[j].Type, c, lines[0], styled))
 			for _, l := range lines[1:] {
-				fmt.Fprintf(w, " %s | %s\n", strings.Repeat(" ", nameW), l)
+				fmt.Fprintf(w, " %s %s %s\n", strings.Repeat(" ", nameW), bar, styleCell(cols[j].Type, c, l, styled))
 			}
 		}
 		fmt.Fprintln(w)

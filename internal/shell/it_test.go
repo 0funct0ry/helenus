@@ -108,9 +108,9 @@ func TestFixtureLoadsViaScript(t *testing.T) {
 		t.Fatalf("%v\n%s", err, errOut)
 	}
 	out.Reset()
-	mustRun(t, s, errOut, "DESCRIBE TABLES;")
+	mustRun(t, s, errOut, ".describe tables")
 	if !strings.Contains(out.String(), "transactions_by_merchant") || !strings.Contains(out.String(), "merchants") {
-		t.Errorf("DESCRIBE TABLES = %q", out)
+		t.Errorf(".describe tables = %q", out)
 	}
 	// A failing statement aborts with exit code 4.
 	err = s.RunScript(context.Background(), "bad.cql", "SELECT * FROM nope.nothing;\nSELECT 1;", ScriptOptions{})

@@ -34,6 +34,7 @@ Each file holds 17 or 18 schema objects, counting the keyspace: 2 UDTs, 4 or 5 t
   ```
 
   Wait until `docker logs helenus-cass` shows "Starting listening for CQL clients".
+- If a file stops with `Materialized views are disabled. Enable in cassandra.yaml to use.` (or a similar error about user-defined functions), the setting above is still off on the server. Enable it and restart the node, then load the file again. It is safe to repeat because the files use `IF NOT EXISTS`. `.source` and `-f` stop at the first error; add `-x` to `-f` to carry on past failing statements.
 - The keyspaces use `SimpleStrategy` with replication factor 1, which suits a single local node. Change it before using a multi-node cluster.
 
 ## Load a file
@@ -56,7 +57,7 @@ With `cqlsh`, for comparison:
 cqlsh -f examples/01_ecommerce.cql
 ```
 
-From inside the shell, use `SOURCE 'examples/01_ecommerce.cql';`.
+From inside the shell, use `.source 'examples/01_ecommerce.cql';`.
 
 The files use `IF NOT EXISTS` and `OR REPLACE`, so loading one twice is safe. The sample `INSERT` statements are upserts, except the ones using `uuid()` or `now()`, which add a new row each time. The counter update in the social example also adds to the counts on every run.
 
@@ -66,7 +67,7 @@ After loading, refresh the schema tree in the web UI to see the new keyspaces.
 
 ```sql
 USE shop;
-DESCRIBE KEYSPACE shop;
+.describe keyspace shop
 SELECT * FROM customers_by_email WHERE email = 'ada@example.com';
 SELECT shop.total_qty(qty) FROM order_items WHERE order_id = 11111111-1111-1111-1111-111111111111;
 

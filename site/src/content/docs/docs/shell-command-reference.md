@@ -3,31 +3,40 @@ title: Shell command reference
 description: Every shell command, the flags that control the shell, and the keys that edit a line.
 ---
 
-Shell commands are case-insensitive. A trailing semicolon is optional. Anything that is not a shell command is sent to Cassandra as CQL and needs a semicolon at the end. Type `HELP` for this list in the shell, or `HELP <command>` for one entry.
+Shell commands are lowercase and start with a dot. A trailing semicolon is optional. Anything that does not start with a dot is sent to Cassandra as CQL and needs a semicolon at the end. Type `.help` for this list in the shell, or `.help <command>` for one entry.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `USE <keyspace>` | Switches the current keyspace and updates the prompt. |
-| `CONSISTENCY [level]` | Shows or sets the consistency level: `ANY`, `ONE`, `TWO`, `THREE`, `QUORUM`, `ALL`, `LOCAL_QUORUM`, `EACH_QUORUM`, `SERIAL`, `LOCAL_SERIAL`, or `LOCAL_ONE`. |
-| `SERIAL CONSISTENCY [SERIAL\|LOCAL_SERIAL]` | Shows or sets the level used by lightweight transactions. |
-| `EXPAND ON\|OFF` | Turns the expanded row format on or off. |
-| `FORMAT table\|expanded\|raw` | Chooses the output format. |
-| `PAGING ON\|OFF\|<rows>` | Sets the page size. At a terminal the shell asks before each further page. `OFF` fetches everything. |
-| `DESCRIBE …`, `DESC …` | Prints schema definitions. See the [DESCRIBE reference](/helenus/docs/describe-reference/). |
-| `SHOW VERSION` | Prints the Helenus, Cassandra, CQL, and protocol versions. |
-| `SHOW HOST` | Prints the connected cluster name and contact point. |
-| `SHOW SESSION <trace-id>` | Prints a stored trace as a table. |
-| `TRACING ON\|OFF` | Traces every statement and prints the trace table after its results. With no argument, shows the state. |
-| `TIMING ON\|OFF` | Prints `Time: 38.2 ms` to stderr after each statement. With tracing on, it adds the coordinator time: `Time: 38.2 ms (coordinator 31.7 ms)`. |
-| `SOURCE '<file>'` | Runs the statements in a file. Stops at the first error. |
-| `CLEAR`, `CLS` | Clears the screen. |
-| `HELP [topic]` | Lists commands, or explains one. |
-| `EXIT`, `QUIT` | Leaves the shell. |
-| `\profile [name]` | Shows the current profile, or reconnects with another one from the config file. |
+| `.use <keyspace>` | Switches the current keyspace and updates the prompt. A plain `USE <keyspace>;` statement works too. |
+| `.consistency [level]` | Shows or sets the consistency level: `ANY`, `ONE`, `TWO`, `THREE`, `QUORUM`, `ALL`, `LOCAL_QUORUM`, `EACH_QUORUM`, `SERIAL`, `LOCAL_SERIAL`, or `LOCAL_ONE`. |
+| `.serial consistency [SERIAL\|LOCAL_SERIAL]` | Shows or sets the level used by lightweight transactions. |
+| `.expand on\|off` | Turns the expanded row format on or off. |
+| `.format table\|expanded\|raw` | Chooses the output format. |
+| `.paging on\|off\|<rows>` | Sets the page size. At a terminal the shell asks before each further page. `OFF` fetches everything. |
+| `.describe …`, `.desc …` | Prints schema definitions. See the [DESCRIBE reference](/helenus/docs/describe-reference/). |
+| `.tables`, `.views`, `.types`, `.functions`, `.aggregates`, `.indexes`, `.triggers` | Lists that kind of object in the current keyspace as a colored table. Select a keyspace with `.use` first, otherwise the shell asks you to. |
+| `.show version` | Prints the Helenus, Cassandra, CQL, and protocol versions. |
+| `.show host` | Prints the connected cluster name and contact point. |
+| `.show session <trace-id>` | Prints a stored trace as a table. |
+| `.tracing on\|off` | Traces every statement and prints the trace table after its results. With no argument, shows the state. |
+| `.timing on\|off` | Prints `Time: 38.2 ms` to stderr after each statement. With tracing on, it adds the coordinator time: `Time: 38.2 ms (coordinator 31.7 ms)`. |
+| `.source '<file>'` | Runs the statements in a file. Stops at the first error. |
+| `.clear`, `.cls` | Clears the screen. |
+| `.help [topic]` | Lists commands, or explains one. |
+| `.exit`, `.quit` | Leaves the shell. |
+| `.profile [name]` | Shows the current profile, or reconnects with another one from the config file. |
+| `.alias [name [= body]]` | Lists aliases, shows one, or defines one for this session. See [Save time with aliases and abbreviations](/helenus/docs/save-time-with-aliases-and-abbreviations/). |
+| `.alias --save [name]` | Writes one alias (or all of them) to the config file. |
+| `.alias --dry-run :name [args]` | Prints the CQL an alias expands to without running it. |
+| `.unalias <name>` | Removes an alias for this session. |
+| `:name [args]` | Runs an alias. |
+| `.set [name [value]]` | Lists or sets a template variable. |
+| `.unset <name>` | Removes a template variable. |
+| `.abbrev` | Lists abbreviations. |
 
-Aliases and variables (`\alias`, `\set`) are not available yet. The `--timing` flag starts the shell with `TIMING ON`. See [Trace a slow query](/helenus/docs/trace-a-slow-query/).
+The `--timing` flag starts the shell with `.timing on`. See [Trace a slow query](/helenus/docs/trace-a-slow-query/).
 
 ## Output formats
 
@@ -36,6 +45,8 @@ Aliases and variables (`\alias`, `\set`) are not available yet. The `--timing` f
 | `table` | A box-drawn grid sized to the terminal. Values that do not fit end in `…`. Collections print as CQL literals. Partition key headers are bold and clustering key headers are underlined when the terminal supports it. |
 | `expanded` | `@ Row 1`, then one `column \| value` line per column. |
 | `raw` | Tab-separated values. Column names first, nulls empty, no footer. |
+
+On a terminal, tables and expanded rows are colored: dim borders, cyan column names, and separate colors for numbers, booleans, UUIDs, timestamps, and nulls. Anything the shell lists (`.help`, `.alias`, `.set`, `.abbrev`, `.show`, `.describe` lists, and the `.tables` family) uses the same table, and CQL such as DDL, alias bodies, and echoed script statements is syntax highlighted. Colors are off when output is piped or `NO_COLOR` is set.
 
 After `table` and `expanded` results, a footer shows the row count, for example `(3 rows)`. Warnings from Cassandra and timing print to standard error.
 

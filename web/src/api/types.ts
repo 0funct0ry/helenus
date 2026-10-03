@@ -111,8 +111,14 @@ export interface SchemaTable {
   columns: SchemaColumn[]
   options: SchemaOption[]
   indexes: SchemaIndex[]
+  triggers?: SchemaTrigger[]
   views: string[]
   counter?: boolean
+}
+
+export interface SchemaTrigger {
+  name: string
+  class: string
 }
 
 export interface SchemaView {

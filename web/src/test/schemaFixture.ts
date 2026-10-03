@@ -57,7 +57,9 @@ export const snapshot: SchemaSnapshot = {
     emptyKs('payments', {
       tables: [
         table('payments', 'ledger_counters', [col('account_id', 'uuid', 'partition', 1), col('day', 'date', 'clustering', 1, 'DESC'), col('debits', 'counter')], { counter: true }),
-        table('payments', 'merchants', [col('merchant_id', 'uuid', 'partition', 1), col('name', 'text'), col('hq', 'frozen<address>')]),
+        table('payments', 'merchants', [col('merchant_id', 'uuid', 'partition', 1), col('name', 'text'), col('hq', 'frozen<address>')], {
+          triggers: [{ name: 'audit_merchants', class: 'org.example.AuditTrigger' }],
+        }),
         table('payments', 'transactions_by_merchant', txnColumns, {
           views: ['transactions_by_status'],
           indexes: [{ name: 'txn_by_currency_sai', kind: 'custom', target: 'currency', column: 'currency', sai: true, class: 'StorageAttachedIndex' }],

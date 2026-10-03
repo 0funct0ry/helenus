@@ -1,7 +1,7 @@
-USE ks
-CONSISTENCY QUORUM;
+.use ks
+.consistency QUORUM;
 SELECT 1;
-DESCRIBE TABLE t
-EXPAND ON
-\alias foo = bar
-SOURCE 'a;b.cql'
+.describe TABLE t
+.expand ON
+.alias foo = bar
+.source 'a;b.cql'

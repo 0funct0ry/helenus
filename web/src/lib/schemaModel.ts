@@ -20,12 +20,20 @@ export interface Index {
   kind: string
 }
 
+export interface Trigger {
+  name: string
+  table: string
+  /** The Java class that implements the trigger. */
+  class: string
+}
+
 export interface Table {
   name: string
   keyspace: string
   columns: Column[]
   options: Record<string, string>
   indexes: Index[]
+  triggers?: Trigger[]
   views: string[]
   counter?: boolean
 }
@@ -53,6 +61,8 @@ export interface Keyspace {
   views: MaterializedView[]
   types: Udt[]
   functions: string[]
+  /** Every trigger on the keyspace's tables. */
+  triggers?: Trigger[]
 }
 
 export type ProfileStatus = 'connected' | 'connecting' | 'error'

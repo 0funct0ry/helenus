@@ -7,8 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/0funct0ry/helenus/internal/schema"
 )
 
 var consistencyLevels = []string{"ANY", "ONE", "TWO", "THREE", "QUORUM", "ALL", "LOCAL_QUORUM", "EACH_QUORUM", "SERIAL", "LOCAL_SERIAL", "LOCAL_ONE"}
@@ -21,64 +19,64 @@ type syntaxErr string
 func (e syntaxErr) Error() string { return "SyntaxError: " + string(e) }
 
 // meta runs a meta-command. handled is false when the line is really CQL
-// (USE and DESCRIBE-less CQL fall through to the executor).
+// (anything that is not a dot command or an alias invocation falls through to the executor).
 func (s *Shell) meta(ctx context.Context, line string) (handled bool, err error) {
 	words := strings.Fields(line)
-	cmd := strings.ToUpper(words[0])
+	cmd := strings.ToLower(words[0])
 	args := words[1:]
-	switch {
-	case cmd == "EXIT" || cmd == "QUIT":
+	switch cmd {
+	case ".exit", ".quit":
 		return true, ErrExit
-	case cmd == "USE":
-		return false, nil
-	case cmd == "DESCRIBE" || cmd == "DESC":
-		return true, s.describe(ctx, line)
-	case cmd == "SHOW":
+	case ".use":
+		if len(args) != 1 {
+			return true, syntaxErr("usage: .use <keyspace>")
+		}
+		return true, s.query(ctx, "USE "+args[0])
+	case ".describe", ".desc":
+		return true, s.describe(ctx, "DESCRIBE "+rawArgs(line))
+	case ".tables", ".views", ".types", ".functions", ".aggregates", ".indexes", ".triggers":
+		return true, s.listObjects(ctx, cmd, args)
+	case ".show":
 		return true, s.show(ctx, args)
-	case cmd == "CONSISTENCY":
+	case ".consistency":
 		return true, s.consistency(args)
-	case cmd == "SERIAL":
+	case ".serial":
 		return true, s.serial(args)
-	case cmd == "EXPAND":
+	case ".expand":
 		return true, s.expand(args)
-	case cmd == "FORMAT":
+	case ".format":
 		return true, s.format(args)
-	case cmd == "PAGING":
+	case ".paging":
 		return true, s.paging(args)
-	case cmd == "SOURCE":
+	case ".source":
 		return true, s.source(ctx, line)
-	case cmd == "CLEAR" || cmd == "CLS":
+	case ".clear", ".cls":
 		s.clear()
 		return true, nil
-	case cmd == "HELP":
+	case ".help":
 		s.help(args)
 		return true, nil
-	case cmd == `\PROFILE`:
+	case ".profile":
 		return true, s.profile(ctx, args)
-	case cmd == "TRACING":
+	case ".tracing":
 		return true, s.toggle("Tracing", &s.Tracing, args)
-	case cmd == "TIMING":
+	case ".timing":
 		return true, s.toggle("Timing", &s.Timing, args)
-	case strings.HasPrefix(cmd, `\`) || strings.HasPrefix(cmd, ":"):
-		return true, errors.New("aliases and variables are not available yet (planned for M8)")
+	case ".alias":
+		return true, s.aliasCmd(line)
+	case ".unalias":
+		return true, s.unalias(line)
+	case ".set":
+		return true, s.setVar(line)
+	case ".unset":
+		return true, s.unsetVar(line)
+	case ".abbrev":
+		return true, s.abbrevCmd()
 	}
-	return false, nil
-}
-
-func (s *Shell) describe(ctx context.Context, stmt string) error {
-	t, err := schema.ParseDescribe(stmt)
-	if err != nil {
-		return syntaxErr(err.Error())
+	if strings.HasPrefix(cmd, ":") {
+		return true, s.invokeAlias(ctx, line)
 	}
-	if s.Describer == nil {
-		return errors.New("not connected")
-	}
-	out, err := s.Describer.Describe(ctx, t, s.Keyspace)
-	if err != nil {
-		return err
-	}
-	fmt.Fprint(s.Out, out)
-	return nil
+	return true, syntaxErr("unknown command " + words[0] + "; .help lists the commands")
 }
 
 func (s *Shell) show(ctx context.Context, args []string) error {
@@ -88,21 +86,22 @@ func (s *Shell) show(ctx context.Context, args []string) error {
 	if len(args) == 1 && s.Cluster != nil {
 		switch strings.ToUpper(args[0]) {
 		case "VERSION":
-			proto := ""
-			if p := s.Cluster.ProtocolVersion; p != "" {
-				proto = " | Native protocol v" + strings.TrimPrefix(p, "v")
+			proto := s.Cluster.ProtocolVersion
+			rows := [][]string{{"helenus", s.Version}, {"Cassandra", s.Cluster.ReleaseVersion}, {"CQL spec", s.Cluster.CQLVersion}}
+			if proto != "" {
+				rows = append(rows, []string{"Native protocol", "v" + strings.TrimPrefix(s.Cluster.ProtocolVersion, "v")})
 			}
-			fmt.Fprintf(s.Out, "[helenus %s | Cassandra %s | CQL spec %s%s]\n", s.Version, s.Cluster.ReleaseVersion, s.Cluster.CQLVersion, proto)
+			s.printTable([]string{"component", "version"}, rows)
 			return nil
 		case "HOST":
-			fmt.Fprintf(s.Out, "Connected to %s at %s:%d\n", s.Cluster.Name, s.Host, s.Port)
+			s.printTable([]string{"cluster", "host", "port"}, [][]string{{s.Cluster.Name, s.Host, strconv.Itoa(s.Port)}})
 			return nil
 		}
 	}
-	return syntaxErr("SHOW supports VERSION, HOST and SESSION <trace-id>")
+	return syntaxErr(".show supports version, host and session <trace-id>")
 }
 
-// toggle implements TRACING and TIMING: no argument shows the state.
+// toggle implements .tracing and .timing: no argument shows the state.
 func (s *Shell) toggle(name string, flag *bool, args []string) error {
 	switch len(args) {
 	case 0:
@@ -118,7 +117,7 @@ func (s *Shell) toggle(name string, flag *bool, args []string) error {
 		case "OFF":
 			*flag = false
 		default:
-			return syntaxErr("usage: " + strings.ToUpper(name) + " ON|OFF")
+			return syntaxErr("usage: ." + strings.ToLower(name) + " on|off")
 		}
 		state := "off"
 		if *flag {
@@ -126,7 +125,7 @@ func (s *Shell) toggle(name string, flag *bool, args []string) error {
 		}
 		fmt.Fprintf(s.Out, "%s is now %s.\n", name, state)
 	default:
-		return syntaxErr("usage: " + strings.ToUpper(name) + " ON|OFF")
+		return syntaxErr("usage: ." + strings.ToLower(name) + " on|off")
 	}
 	return nil
 }
@@ -153,14 +152,14 @@ func (s *Shell) consistency(args []string) error {
 		s.Consistency = l
 		fmt.Fprintf(s.Out, "Consistency level set to %s.\n", l)
 	default:
-		return syntaxErr("usage: CONSISTENCY [level]")
+		return syntaxErr("usage: .consistency [level]")
 	}
 	return nil
 }
 
 func (s *Shell) serial(args []string) error {
 	if len(args) == 0 || !strings.EqualFold(args[0], "CONSISTENCY") || len(args) > 2 {
-		return syntaxErr("usage: SERIAL CONSISTENCY [SERIAL|LOCAL_SERIAL]")
+		return syntaxErr("usage: .serial consistency [serial|local_serial]")
 	}
 	if len(args) == 1 {
 		fmt.Fprintf(s.Out, "Current serial consistency level is %s.\n", s.Serial)
@@ -191,7 +190,7 @@ func onOff(args []string, usage string) (on, show bool, err error) {
 }
 
 func (s *Shell) expand(args []string) error {
-	on, show, err := onOff(args, "EXPAND ON|OFF")
+	on, show, err := onOff(args, ".expand on|off")
 	if err != nil {
 		return err
 	}
@@ -219,12 +218,12 @@ func (s *Shell) format(args []string) error {
 	case 1:
 		f := strings.ToLower(args[0])
 		if f != "table" && f != "expanded" && f != "raw" {
-			return syntaxErr("FORMAT must be table, expanded or raw")
+			return syntaxErr(".format must be table, expanded or raw")
 		}
 		s.Format = f
 		fmt.Fprintf(s.Out, "Output format is %s.\n", f)
 	default:
-		return syntaxErr("usage: FORMAT table|expanded|raw")
+		return syntaxErr("usage: .format table|expanded|raw")
 	}
 	return nil
 }
@@ -239,7 +238,7 @@ func (s *Shell) paging(args []string) error {
 		return nil
 	}
 	if len(args) != 1 {
-		return syntaxErr("usage: PAGING ON|OFF|<rows>")
+		return syntaxErr("usage: .paging on|off|<rows>")
 	}
 	switch a := strings.ToUpper(args[0]); a {
 	case "ON":
@@ -251,28 +250,28 @@ func (s *Shell) paging(args []string) error {
 	default:
 		n, err := strconv.Atoi(a)
 		if err != nil || n < 0 {
-			return syntaxErr("usage: PAGING ON|OFF|<rows>")
+			return syntaxErr("usage: .paging on|off|<rows>")
 		}
 		s.Paging = n
 	}
 	return s.paging(nil)
 }
 
-// maxSourceDepth stops SOURCE files that include themselves.
+// maxSourceDepth stops .source files that include themselves.
 const maxSourceDepth = 10
 
 func (s *Shell) source(ctx context.Context, line string) error {
-	rest := strings.TrimSpace(line[len("SOURCE"):])
+	rest := rawArgs(line)
 	rest = strings.TrimSuffix(rest, ";")
 	rest = strings.TrimSpace(rest)
 	if len(rest) >= 2 && (rest[0] == '\'' && rest[len(rest)-1] == '\'' || rest[0] == '"' && rest[len(rest)-1] == '"') {
 		rest = rest[1 : len(rest)-1]
 	}
 	if rest == "" {
-		return syntaxErr("usage: SOURCE '<file>'")
+		return syntaxErr("usage: .source '<file>'")
 	}
 	if s.sourceDepth >= maxSourceDepth {
-		return errors.New("SOURCE nested too deeply")
+		return errors.New(".source nested too deeply")
 	}
 	b, err := os.ReadFile(expandHome(rest))
 	if err != nil {
@@ -315,7 +314,7 @@ func (s *Shell) profile(ctx context.Context, args []string) error {
 		return nil
 	}
 	if len(args) != 1 {
-		return syntaxErr(`usage: \profile [name]`)
+		return syntaxErr(`usage: .profile [name]`)
 	}
 	if s.Connect == nil {
 		return errors.New(`\profile is not available here`)

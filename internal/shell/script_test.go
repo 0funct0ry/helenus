@@ -70,15 +70,15 @@ func TestExecuteSeveralStatementsWithoutFinalSemicolon(t *testing.T) {
 
 func TestScriptEcho(t *testing.T) {
 	h := newHarness(nil)
-	_ = h.sh.RunScript(context.Background(), "", "-- c\nSELECT 1;\nCONSISTENCY ONE\n", ScriptOptions{Echo: true})
-	if got := h.out.String(); !strings.HasPrefix(got, "SELECT 1;\nCONSISTENCY ONE\n") {
+	_ = h.sh.RunScript(context.Background(), "", "-- c\nSELECT 1;\n.consistency ONE\n", ScriptOptions{Echo: true})
+	if got := h.out.String(); !strings.HasPrefix(got, "SELECT 1;\n.consistency ONE\n") {
 		t.Errorf("out = %q", got)
 	}
 }
 
 func TestScriptExitStopsQuietly(t *testing.T) {
 	h := newHarness(nil)
-	if err := h.sh.RunScript(context.Background(), "", "SELECT 1;\nEXIT\nSELECT 2;", ScriptOptions{}); err != nil {
+	if err := h.sh.RunScript(context.Background(), "", "SELECT 1;\n.exit\nSELECT 2;", ScriptOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if len(h.ex.reqs) != 1 {

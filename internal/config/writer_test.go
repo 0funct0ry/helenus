@@ -110,3 +110,25 @@ func TestWriterErrorsAndNewFile(t *testing.T) {
 	}
 	mustContain(t, read(t, fresh), "profiles:", "a:")
 }
+
+func TestSetShellEntryKeepsCommentsAndUsesBlockForMultiline(t *testing.T) {
+	w := seedFile(t)
+	if err := w.SetShellEntry("aliases", "recent", "SELECT *\nFROM t\nLIMIT 5;\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.SetShellEntry("aliases", "one", "SELECT 1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.SetShellEntry("aliases", "one", "SELECT 2"); err != nil {
+		t.Fatal(err)
+	}
+	got := read(t, w)
+	for _, want := range []string{"# top comment", "# the default one", "# native port", "# keep me", "recent: |", "  SELECT *", "one: SELECT 2"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "SELECT 1") {
+		t.Errorf("old value kept:\n%s", got)
+	}
+}

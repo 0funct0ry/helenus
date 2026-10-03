@@ -21,7 +21,7 @@ var traceColumns = []exec.Column{
 
 // renderTrace prints a cqlsh-style trace: a header line followed by the events table.
 func (s *Shell) renderTrace(tr *trace.Trace) {
-	fmt.Fprintf(s.Out, "\nTracing session: %s\n\n", tr.ID)
+	fmt.Fprintf(s.Out, "\n%s %s\n\n", paint(ansiHeader+"\x1b[1m", "Tracing session:", s.Styled), paint(ansiID, tr.ID, s.Styled))
 	rows := make([][]Cell, len(tr.Events))
 	for i, e := range tr.Events {
 		ts := tr.StartedAt
@@ -35,7 +35,7 @@ func (s *Shell) renderTrace(tr *trace.Trace) {
 		rows[i] = []Cell{{Text: e.Activity}, {Text: stamp}, {Text: e.Source}, {Text: strconv.FormatInt(e.ElapsedUS, 10)}}
 	}
 	RenderTable(s.Out, traceColumns, rows, TableOptions{Width: s.width(), Styled: s.Styled})
-	fmt.Fprintf(s.Out, "\n(%d %s)\n", len(rows), plural1(len(rows), "event"))
+	s.footer(fmt.Sprintf("(%d %s)", len(rows), plural1(len(rows), "event")))
 	if s.Interactive {
 		fmt.Fprintln(s.Out)
 	}
@@ -43,7 +43,7 @@ func (s *Shell) renderTrace(tr *trace.Trace) {
 
 // printTrace fetches and prints the trace for id, returning the coordinator
 // duration in ms (nil when there is none). An unavailable trace is reported on
-// stderr with the SHOW SESSION hint.
+// stderr with the .show session hint.
 func (s *Shell) printTrace(ctx context.Context, id string) *float64 {
 	if id == "" || s.Tracer == nil {
 		return nil
@@ -51,7 +51,7 @@ func (s *Shell) printTrace(ctx context.Context, id string) *float64 {
 	tr, err := s.Tracer(ctx, id)
 	if err != nil {
 		if errors.Is(err, trace.ErrNotAvailable) {
-			fmt.Fprintf(s.Err, "Trace not yet available; try SHOW SESSION %s\n", id)
+			fmt.Fprintf(s.Err, "Trace not yet available; try .show session %s\n", id)
 		} else {
 			fmt.Fprintf(s.Err, "Could not fetch trace %s: %v\n", id, err)
 		}
@@ -62,10 +62,10 @@ func (s *Shell) printTrace(ctx context.Context, id string) *float64 {
 	return &ms
 }
 
-// showSession implements SHOW SESSION <trace-id>.
+// showSession implements .show session <trace-id>.
 func (s *Shell) showSession(ctx context.Context, args []string) error {
 	if len(args) != 1 {
-		return syntaxErr("usage: SHOW SESSION <trace-id>")
+		return syntaxErr("usage: .show session <trace-id>")
 	}
 	if s.Tracer == nil {
 		return errors.New("not connected")

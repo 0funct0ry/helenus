@@ -19,7 +19,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/trace"
 )
 
-// Describer answers DESCRIBE statements. currentKS is the keyspace set by USE.
+// Describer answers .describe statements. currentKS is the keyspace set by USE.
 type Describer interface {
 	Describe(ctx context.Context, t schema.Target, currentKS string) (string, error)
 }
@@ -36,7 +36,7 @@ type Backend struct {
 	Exec      Executor
 	Describer Describer
 	Cluster   *conn.ClusterInfo
-	// Host and Port are the contact point shown by SHOW HOST.
+	// Host and Port are the contact point shown by .show host.
 	Host string
 	Port int
 	// Keyspace is the profile's initial keyspace.
@@ -61,7 +61,7 @@ var ErrExit = errors.New("exit")
 var ErrReported = errors.New("error already reported")
 
 // Shell is the CQL shell: meta-commands, statement execution and rendering.
-// The interactive loop is Run (repl.go); RunScript runs -e, -f and SOURCE.
+// The interactive loop is Run (repl.go); RunScript runs -e, -f and .source.
 type Shell struct {
 	In  io.Reader
 	Out io.Writer
@@ -70,7 +70,7 @@ type Shell struct {
 	Backend
 	// Connect opens another profile for \profile; nil disables switching.
 	Connect func(ctx context.Context, name string) (*Backend, error)
-	// Version is the helenus version shown by SHOW VERSION.
+	// Version is the helenus version shown by .show version.
 	Version string
 	// Profile is the current profile name.
 	Profile string
@@ -99,6 +99,12 @@ type Shell struct {
 	// ReadlineConfig lets tests adjust the readline config (for example to run
 	// the editor over pipes instead of a terminal).
 	ReadlineConfig func(*readline.Config)
+
+	// Aliases and abbreviations come from the config file; ConfigPath is where --save writes.
+	Abbreviations map[string]string
+	ConfigPath    string
+
+	aliasState
 
 	sourceDepth int
 	// pending holds the earlier lines of the statement being typed, for tab-completion.
@@ -195,7 +201,7 @@ func (s *Shell) query(ctx context.Context, stmt string) error {
 		req.PageState = ps
 	}
 	if sawRows && s.Format != "raw" {
-		fmt.Fprintf(s.Out, "\n(%d %s)\n", total, plural1(total, "row"))
+		s.footer(fmt.Sprintf("(%d %s)", total, plural1(total, "row")))
 		if s.Interactive {
 			fmt.Fprintln(s.Out)
 		}

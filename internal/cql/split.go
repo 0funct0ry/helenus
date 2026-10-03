@@ -24,22 +24,13 @@ type Statement struct {
 	Meta bool `json:"meta,omitempty"`
 }
 
-var metaWords = map[string]bool{
-	"CONSISTENCY": true, "SERIAL": true, "TRACING": true, "TIMING": true, "EXPAND": true,
-	"FORMAT": true, "PAGING": true, "DESCRIBE": true, "DESC": true, "SHOW": true, "SOURCE": true,
-	"CLEAR": true, "CLS": true, "HELP": true, "EXIT": true, "QUIT": true, "USE": true,
-}
-
 // IsMetaStart reports whether line begins with a shell meta-command.
 func IsMetaStart(line string) bool {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return false
 	}
-	if line[0] == '\\' || line[0] == ':' {
-		return true
-	}
-	return metaWords[strings.ToUpper(firstWord(line))]
+	return line[0] == '.' || line[0] == ':'
 }
 
 func firstWord(s string) string {
@@ -150,12 +141,6 @@ func (s *splitter) run() []Statement {
 			for j < len(in) && isWordByte(in[j]) {
 				j++
 			}
-			if s.start < 0 {
-				// Start of a statement: meta-command lines need no semicolon.
-				if IsMetaStart(in[i:lineEnd(in, i)]) {
-					s.meta = true
-				}
-			}
 			s.begin(i, line)
 			w := strings.ToUpper(in[i:j])
 			s.words = append(s.words, w)
@@ -164,11 +149,14 @@ func (s *splitter) run() []Statement {
 			}
 			s.buf.WriteString(in[i:j])
 			i = j
-		case (c == '\\' || c == ':') && s.start < 0 && IsMetaStart(in[i:lineEnd(in, i)]):
+		case (c == '.' || c == ':') && s.start < 0 && IsMetaStart(in[i:lineEnd(in, i)]):
+			// A dot or colon command takes the rest of the line verbatim: alias bodies
+			// contain quotes, semicolons and "--" that must not be read as CQL.
 			s.begin(i, line)
 			s.meta = true
-			s.buf.WriteByte(c)
-			i++
+			end := lineEnd(in, i)
+			s.buf.WriteString(strings.TrimRight(in[i:end], "\r"))
+			i = end
 		default:
 			s.begin(i, line)
 			s.buf.WriteByte(c)

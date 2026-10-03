@@ -79,6 +79,61 @@ func (w Writer) RenameProfile(from, to string) error {
 }
 
 func (w Writer) edit(fn func(profiles *yaml.Node) error) error {
+	return w.editRoot(func(top *yaml.Node) error {
+		profiles := findKey(top, "profiles")
+		if profiles == nil || profiles.Kind != yaml.MappingNode {
+			profiles = &yaml.Node{Kind: yaml.MappingNode}
+			if existing := findKey(top, "profiles"); existing != nil {
+				*existing = *profiles
+				profiles = existing
+			} else {
+				top.Content = append(top.Content, scalar("profiles"), profiles)
+			}
+		}
+		if profiles.Style&yaml.FlowStyle != 0 && len(profiles.Content) == 0 {
+			profiles.Style = 0 // `profiles: {}` becomes a block mapping once it has entries
+		}
+		return fn(profiles)
+	})
+}
+
+// SetShellEntry sets shell.<section>.<key> (for example shell.aliases.recent) to value,
+// keeping comments and the rest of the file. Multi-line values use a block literal.
+func (w Writer) SetShellEntry(section, key, value string) error {
+	return w.editRoot(func(top *yaml.Node) error {
+		sh := findKey(top, "shell")
+		if sh == nil || sh.Kind != yaml.MappingNode {
+			child := &yaml.Node{Kind: yaml.MappingNode}
+			if sh != nil {
+				*sh = *child
+				child = sh
+			} else {
+				top.Content = append(top.Content, scalar("shell"), child)
+			}
+			sh = child
+		}
+		sec := findKey(sh, section)
+		if sec == nil || sec.Kind != yaml.MappingNode {
+			child := &yaml.Node{Kind: yaml.MappingNode}
+			if sec != nil {
+				*sec = *child
+				child = sec
+			} else {
+				sh.Content = append(sh.Content, scalar(section), child)
+			}
+			sec = child
+		}
+		if err := setPath(sec, []string{key}, value); err != nil {
+			return err
+		}
+		if n := findKey(sec, key); n != nil && strings.Contains(strings.TrimRight(value, "\n"), "\n") {
+			n.Style = yaml.LiteralStyle
+		}
+		return nil
+	})
+}
+
+func (w Writer) editRoot(fn func(top *yaml.Node) error) error {
 	var root yaml.Node
 	data, err := os.ReadFile(w.Path)
 	switch {
@@ -97,20 +152,7 @@ func (w Writer) edit(fn func(profiles *yaml.Node) error) error {
 	if top.Kind != yaml.MappingNode {
 		return fmt.Errorf("%s: top level is not a mapping", w.Path)
 	}
-	profiles := findKey(top, "profiles")
-	if profiles == nil || profiles.Kind != yaml.MappingNode {
-		profiles = &yaml.Node{Kind: yaml.MappingNode}
-		if existing := findKey(top, "profiles"); existing != nil {
-			*existing = *profiles
-			profiles = existing
-		} else {
-			top.Content = append(top.Content, scalar("profiles"), profiles)
-		}
-	}
-	if profiles.Style&yaml.FlowStyle != 0 && len(profiles.Content) == 0 {
-		profiles.Style = 0 // `profiles: {}` becomes a block mapping once it has entries
-	}
-	if err := fn(profiles); err != nil {
+	if err := fn(top); err != nil {
 		return err
 	}
 	var buf bytes.Buffer

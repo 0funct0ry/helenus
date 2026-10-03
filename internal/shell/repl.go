@@ -27,6 +27,7 @@ func (s *Shell) Run(ctx context.Context) error {
 		Stdout:                 s.Out,
 		Stderr:                 s.Err,
 		AutoComplete:           completer{s},
+		Listener:               s.abbreviationListener,
 	}
 	if s.ReadlineConfig != nil {
 		s.ReadlineConfig(cfg)
@@ -81,7 +82,14 @@ func (s *Shell) Run(ctx context.Context) error {
 		if entry := historyEntry(input); entry != "" {
 			_ = rl.SaveToHistory(entry)
 		}
-		if s.runLine(ctx, stmts) {
+		s.expansions = nil
+		exit := s.runLine(ctx, stmts)
+		for _, ex := range s.expansions {
+			if entry := historyEntry(ex); entry != "" {
+				_ = rl.SaveToHistory(entry)
+			}
+		}
+		if exit {
 			return nil
 		}
 	}

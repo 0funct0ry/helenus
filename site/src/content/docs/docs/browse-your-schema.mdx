@@ -12,7 +12,7 @@ The schema tree shows what is in the cluster you are connected to: keyspaces, an
     ## Find an object
 
     1. Connect a profile. The tree fills in a moment later.
-    2. Select the arrow next to a keyspace to open or close it. Under each keyspace, **Tables**, **Views**, **Types**, and **Functions** open and close the same way.
+    2. Select the arrow next to a keyspace to open or close it. Under each keyspace, **Tables**, **Views**, **Types**, **Functions**, and **Triggers** open and close the same way. Triggers are listed as `table.trigger`; hover one to see its Java class.
     3. Type in **Filter keyspaces, tables, types** to narrow the tree. Matching keyspaces open on their own.
     4. Hold the pointer over a table to see its key: `PK (merchant_id, txn_day) · CK txn_time DESC`.
 
@@ -24,7 +24,7 @@ The schema tree shows what is in the cluster you are connected to: keyspaces, an
 
     - **Data**. The table's rows, read-only, a page at a time. Use **Previous** and **Next**, change the page size, or choose **Count rows** to count them. See [Page through large results](/helenus/docs/page-through-large-results/).
     - **Schema**. The primary key, every column with its type, the table options, and any indexes, including SAI indexes.
-    - **DDL**. The `CREATE TABLE` statement, taken from the cluster with `DESCRIBE`. Select **Copy DDL** to copy it, or **Open in query tab** to paste it into a new query.
+    - **DDL**. The `CREATE TABLE` statement, taken from the cluster with `.describe`. Select **Copy DDL** to copy it, or **Open in query tab** to paste it into a new query.
     - **Views**. The materialized views built on this table, with their key layout and filter. Select **Open** to go to one.
 
     A materialized view also appears under its base table in the tree, and under **Views** for its keyspace.
@@ -48,12 +48,12 @@ The schema tree shows what is in the cluster you are connected to: keyspaces, an
     Helenus reads the schema when you connect and keeps it until you ask for it again. If someone adds a table while you are working, select the refresh button at the top of the tree.
   </TabItem>
   <TabItem label="Shell">
-    Use `DESCRIBE` to read the same information in the shell:
+    Use `.use payments` then `.tables`, `.views`, `.types`, `.functions`, `.aggregates`, `.indexes` or `.triggers` to list one keyspace's objects. Use `.describe` to read the full definitions in the shell:
 
     ```text
-    helenus> DESCRIBE KEYSPACES;
-    helenus> DESCRIBE TABLES;
-    helenus> DESCRIBE TABLE payments.transactions_by_merchant;
+    helenus> .describe keyspaces;
+    helenus> .describe tables;
+    helenus> .describe table payments.transactions_by_merchant;
     ```
 
     See the [DESCRIBE reference](/helenus/docs/describe-reference/) for every form.

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { Braces, Copy, Database, ExternalLink, Eye, FileText, FunctionSquare, Lock, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { Braces, Copy, Database, ExternalLink, Eye, FileText, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
 import { NewTypeDialog } from './NewTypeDialog'
@@ -15,7 +15,7 @@ import { keySummary } from '../lib/keySummary'
 import { useWorkspace } from '../store/workspace'
 import type { Keyspace, Table } from '../lib/schemaModel'
 
-const defaultClosed = (key: string) => key.startsWith('fn:') || key === 'system'
+const defaultClosed = (key: string) => key.startsWith('fn:') || key.startsWith('trg:') || key === 'system'
 
 type ObjectKind = 'table' | 'view' | 'type' | 'keyspace'
 interface MenuState {
@@ -28,7 +28,7 @@ interface MenuState {
 
 /**
  * The left dock: a filter box and the keyspace tree built from the connected profile's real schema
- * (Tables, Views, Types, Functions per keyspace, with system keyspaces collapsed under a System
+ * (Tables, Views, Types, Functions, Triggers per keyspace, with system keyspaces collapsed under a System
  * group). Table rows show a key summary on hover, list their materialized views as children and
  * expand to columns with key markers and type badges while selected. Right-click opens a context
  * menu (Open, New query here, Copy name, Copy DDL, Refresh); the toolbar button re-reads metadata.
@@ -113,7 +113,8 @@ export function SchemaTree() {
     const views = k.views.filter((v) => match(v.name) || match(k.name))
     const types = k.types.filter((t) => match(t.name) || match(k.name))
     const fns = k.functions.filter((f) => match(f) || match(k.name))
-    if (q && !tables.length && !views.length && !types.length && !fns.length && !match(k.name)) return null
+    const triggers = (k.triggers ?? []).filter((g) => match(g.name) || match(g.table) || match(k.name))
+    if (q && !tables.length && !views.length && !types.length && !fns.length && !triggers.length && !match(k.name)) return null
     const kOpen = isOpen(`ks:${k.name}`)
     const group = (id: string, name: string, count: number, children: ReactNode, add?: { label: string; run: () => void }) =>
       count > 0 || !q ? (
@@ -186,6 +187,14 @@ export function SchemaTree() {
               'Functions',
               fns.length,
               fns.map((f) => <TreeRow key={f} indent={40} label={f} mono icon={<FunctionSquare size={14} />} />),
+            )}
+            {group(
+              `trg:${k.name}`,
+              'Triggers',
+              triggers.length,
+              triggers.map((g) => (
+                <TreeRow key={`${g.table}/${g.name}`} indent={40} label={`${g.table}.${g.name}`} mono icon={<Zap size={14} />} title={g.class} />
+              )),
             )}
           </>
         )}

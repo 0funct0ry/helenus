@@ -51,7 +51,7 @@ func Dial(ctx context.Context, mgr *conn.Manager, cache *schema.Cache, name stri
 	}, warnings, nil
 }
 
-// sessionDescriber answers DESCRIBE from the live session.
+// sessionDescriber answers .describe from the live session.
 type sessionDescriber struct {
 	name  string
 	sess  *gocql.Session

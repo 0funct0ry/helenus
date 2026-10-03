@@ -175,3 +175,18 @@ func lineDiff(want, got string) string {
 	}
 	return b.String()
 }
+
+func TestAttachTriggers(t *testing.T) {
+	kss := []row{{"keyspace_name": "ks", "durable_writes": true}}
+	tabs := []row{{"keyspace_name": "ks", "table_name": "t"}}
+	snap := assemble(kss, tabs, nil, nil, nil, nil, nil, nil)
+	attachTriggers(snap, []row{
+		{"keyspace_name": "ks", "table_name": "t", "trigger_name": "zeta", "options": map[string]string{"class": "org.Z"}},
+		{"keyspace_name": "ks", "table_name": "t", "trigger_name": "alpha", "options": map[string]string{"class": "org.A"}},
+		{"keyspace_name": "ks", "table_name": "gone", "trigger_name": "x"},
+	})
+	got := snap.Keyspace("ks").Table("t").Triggers
+	if len(got) != 2 || got[0].Name != "alpha" || got[0].Class != "org.A" || got[1].Name != "zeta" {
+		t.Errorf("triggers = %+v", got)
+	}
+}

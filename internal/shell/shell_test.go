@@ -20,10 +20,15 @@ type fakeDescriber struct {
 	got []schema.Target
 	ks  string
 	err error
+	// out replaces the default "DDL for <name>" answer when set.
+	out string
 }
 
 func (f *fakeDescriber) Describe(_ context.Context, t schema.Target, ks string) (string, error) {
 	f.got, f.ks = append(f.got, t), ks
+	if f.out != "" {
+		return f.out, f.err
+	}
 	return "DDL for " + t.Name + "\n", f.err
 }
 
@@ -87,7 +92,7 @@ func (h *harness) run(script string) error {
 
 func TestDescribeForms(t *testing.T) {
 	h := newHarness(nil)
-	if err := h.run("DESCRIBE TABLE payments.merchants;\ndesc keyspaces\nEXIT\n"); err != nil {
+	if err := h.run(".describe TABLE payments.merchants;\n.desc keyspaces\n.exit\n"); err != nil {
 		t.Fatal(err)
 	}
 	if h.err.Len() != 0 || !strings.Contains(h.out.String(), "DDL for merchants") {
@@ -103,13 +108,13 @@ func TestDescribeForms(t *testing.T) {
 
 func TestDescribeErrorsGoToStderr(t *testing.T) {
 	h := newHarness(nil)
-	_ = h.run("DESCRIBE\n")
+	_ = h.run(".describe\n")
 	if !strings.Contains(h.err.String(), "SyntaxError") {
 		t.Errorf("err = %q", h.err)
 	}
 	h = newHarness(nil)
 	h.desc.err = errors.New("boom")
-	_ = h.run("DESCRIBE TABLES\n")
+	_ = h.run(".describe TABLES\n")
 	if !strings.Contains(h.err.String(), "Error: boom") {
 		t.Errorf("err = %q", h.err)
 	}
@@ -117,15 +122,15 @@ func TestDescribeErrorsGoToStderr(t *testing.T) {
 
 func TestShow(t *testing.T) {
 	h := newHarness(nil)
-	_ = h.sh.Execute(context.Background(), "SHOW VERSION")
-	_ = h.sh.Execute(context.Background(), "SHOW HOST;")
-	err := h.sh.Execute(context.Background(), "SHOW NOPE")
-	for _, want := range []string{"[helenus 1.2.3 | Cassandra 5.0.2 | CQL spec 3.4.7 | Native protocol v5]", "Connected to Test Cluster at 10.0.0.1:9042"} {
+	_ = h.sh.Execute(context.Background(), ".show VERSION")
+	_ = h.sh.Execute(context.Background(), ".show HOST;")
+	err := h.sh.Execute(context.Background(), ".show NOPE")
+	for _, want := range []string{"helenus", "1.2.3", "Cassandra", "5.0.2", "3.4.7", "v5", "Test Cluster", "10.0.0.1", "9042"} {
 		if !strings.Contains(h.out.String(), want) {
 			t.Errorf("missing %q in %q", want, h.out)
 		}
 	}
-	if err == nil || !strings.Contains(err.Error(), "SHOW supports") {
+	if err == nil || !strings.Contains(err.Error(), ".show supports") {
 		t.Errorf("err = %v", err)
 	}
 }
@@ -252,11 +257,11 @@ func TestTracingToggleAndTable(t *testing.T) {
 		return r, nil
 	})
 	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return traceFixture(), nil }
-	if err := h.run("TRACING ON;\nTIMING ON;\nSELECT * FROM t;\n"); err != nil {
+	if err := h.run(".tracing ON;\n.timing ON;\nSELECT * FROM t;\n"); err != nil {
 		t.Fatal(err)
 	}
 	if !h.ex.reqs[0].Trace {
-		t.Error("TRACING ON did not set Trace on the request")
+		t.Error(".tracing ON did not set Trace on the request")
 	}
 	out := h.out.String()
 	for _, want := range []string{"Tracing session: 5b0f8a40", "Parsing SELECT", "12:00:00.000412", "(2 events)"} {
@@ -270,10 +275,10 @@ func TestTracingToggleAndTable(t *testing.T) {
 	if strings.Index(out, "(1 row)") > strings.Index(out, "Tracing session") {
 		t.Errorf("trace printed before the rows footer:\n%s", out)
 	}
-	_ = h.run("TRACING OFF;")
+	_ = h.run(".tracing OFF;")
 	_ = h.run("SELECT * FROM t;")
 	if h.ex.reqs[len(h.ex.reqs)-1].Trace {
-		t.Error("TRACING OFF still traces")
+		t.Error(".tracing OFF still traces")
 	}
 }
 
@@ -286,7 +291,7 @@ func TestTraceUnavailableHint(t *testing.T) {
 	h.sh.Tracing = true
 	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return nil, trace.ErrNotAvailable }
 	_ = h.sh.Execute(context.Background(), "SELECT * FROM t")
-	if !strings.Contains(h.err.String(), "SHOW SESSION abc") {
+	if !strings.Contains(h.err.String(), ".show session abc") {
 		t.Errorf("err = %q", h.err)
 	}
 }
@@ -294,28 +299,28 @@ func TestTraceUnavailableHint(t *testing.T) {
 func TestShowSession(t *testing.T) {
 	h := newHarness(nil)
 	h.sh.Tracer = func(_ context.Context, id string) (*trace.Trace, error) { return traceFixture(), nil }
-	if err := h.sh.Execute(context.Background(), "SHOW SESSION 5b0f8a40-9c9d-11f1-8b3a-0242ac120002"); err != nil {
+	if err := h.sh.Execute(context.Background(), ".show SESSION 5b0f8a40-9c9d-11f1-8b3a-0242ac120002"); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(h.out.String(), "Parsing SELECT") {
 		t.Errorf("out = %q", h.out)
 	}
-	if err := h.sh.Execute(context.Background(), "SHOW SESSION"); err == nil {
-		t.Error("SHOW SESSION without an id should fail")
+	if err := h.sh.Execute(context.Background(), ".show SESSION"); err == nil {
+		t.Error(".show SESSION without an id should fail")
 	}
 	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return nil, trace.ErrNotAvailable }
-	if err := h.sh.Execute(context.Background(), "SHOW SESSION abc"); err == nil || !strings.Contains(err.Error(), "not found") {
+	if err := h.sh.Execute(context.Background(), ".show session abc"); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Errorf("err = %v", err)
 	}
 }
 
 func TestToggleStateAndBadArg(t *testing.T) {
 	h := newHarness(nil)
-	_ = h.sh.Execute(context.Background(), "TRACING")
+	_ = h.sh.Execute(context.Background(), ".tracing")
 	if !strings.Contains(h.out.String(), "Tracing is off.") {
 		t.Errorf("out = %q", h.out)
 	}
-	if err := h.sh.Execute(context.Background(), "TIMING MAYBE"); err == nil {
+	if err := h.sh.Execute(context.Background(), ".timing MAYBE"); err == nil {
 		t.Error("expected syntax error")
 	}
 }

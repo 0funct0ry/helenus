@@ -1,0 +1,38 @@
+---
+title: Save time with aliases and abbreviations
+description: Turn statements you repeat into short commands with aliases, abbreviations, and template variables.
+---
+
+Aliases and abbreviations live in the shell. The web UI does not use them.
+
+## Abbreviations
+
+An abbreviation expands when you type a space right after it at the start of a statement. Define them in `config.yaml`:
+
+```yaml
+shell:
+  abbreviations:
+    sel: "SELECT * FROM "
+    lq: ".consistency LOCAL_QUORUM"
+```
+
+Type `sel ` and the prompt shows `SELECT * FROM `. Run `.abbrev` to list them.
+
+## Aliases
+
+An alias is a named shortcut whose body is a [template](/helenus/docs/template-function-reference/) that expands to CQL.
+
+1. Define one: `.alias recent = SELECT * FROM {{ .keyspace }}.txns WHERE merchant_id = {{ arg 0 }} LIMIT {{ arg 1 | default 20 }}`
+2. Run it: `:recent 7c9e…` returns 20 rows, and `:recent 7c9e… 5` returns 5.
+3. Check what it expands to without running it: `.alias --dry-run :recent 7c9e…`
+4. Keep it: `.alias --save recent` writes it to `config.yaml` and keeps your comments.
+
+`.alias` lists aliases, `.alias recent` shows one, and `.unalias recent` removes it for this session. Press Tab after `:` to complete alias names. History stores the invocation and the CQL it expanded to.
+
+Multi-line aliases are easiest to write in `config.yaml` under `shell.aliases`, using a `|` block.
+
+## Variables
+
+`.set name value` makes `{{ .name }}` available to aliases, and `.unset name` removes it. `.keyspace`, `.profile`, and `.consistency` are always available.
+
+Templates are expanded only in alias bodies. A statement you type, such as `{{'a': 1}}` in a literal, is sent as is.

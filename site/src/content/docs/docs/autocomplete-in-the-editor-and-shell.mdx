@@ -30,7 +30,7 @@ Completion also works on the continuation lines of a statement that spans severa
 
 | Where the cursor is | Suggestions |
 |---|---|
-| Start of a statement | Statement keywords and shell commands such as `CONSISTENCY` and `DESCRIBE`. |
+| Start of a statement | Statement keywords and shell commands such as `.consistency` and `.describe`. |
 | After `FROM`, `INTO`, `UPDATE`, `TRUNCATE`, `DROP TABLE` | Keyspaces, then tables and views in the current keyspace. After `keyspace.`, the tables and views of that keyspace. |
 | In a `SELECT` list | Columns of the table named in `FROM`, built-in functions, then `FROM`. |
 | After `WHERE` | Partition key columns first, then clustering columns in order, then the other columns. |
@@ -40,8 +40,8 @@ Completion also works on the continuation lines of a statement that spans severa
 | After `USING` | `TTL` and `TIMESTAMP`. |
 | After a column name in `CREATE TABLE` or `ALTER TABLE ... ADD` | Native types, user-defined types of the keyspace, and `list`, `set`, `map`, `tuple`, `frozen`. |
 | After `WITH` | Table options, or `replication` and `durable_writes` for a keyspace. |
-| After `CONSISTENCY` | The valid consistency levels. After `SERIAL CONSISTENCY`, `SERIAL` and `LOCAL_SERIAL`. |
-| After `USE` or `DESCRIBE` | Keyspaces and the objects to describe. |
+| After `.consistency` | The valid consistency levels. After `.serial consistency`, `SERIAL` and `LOCAL_SERIAL`. |
+| After `.use` or `.describe` | Keyspaces and the objects to describe. |
 
 Names that need quoting are inserted with quotes: a table called `Orders` completes to `"Orders"`. Start a name with `"` to match its exact case.
 

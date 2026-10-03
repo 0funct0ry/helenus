@@ -35,37 +35,37 @@ The shell is a prompt where you type CQL and shell commands and see the results 
                ...>   FROM merchants LIMIT 2;
     ```
 
-    Shell commands such as `USE`, `CONSISTENCY`, and `PAGING` do not need a semicolon. Everything is case-insensitive.
+    Shell commands are lowercase and start with a dot, such as `.use`, `.consistency`, and `.paging`. They do not need a semicolon. Anything else is sent to Cassandra as CQL.
 
     ## Switch keyspace
 
-    `USE payments` changes the keyspace and the prompt. Statements that name no keyspace run in it. If the keyspace does not exist, the shell says so and keeps the current one.
+    `.use payments` changes the keyspace and the prompt. Statements that name no keyspace run in it. If the keyspace does not exist, the shell says so and keeps the current one.
 
     ## Set consistency
 
     ```
-    CONSISTENCY QUORUM
-    SERIAL CONSISTENCY LOCAL_SERIAL
+    .consistency quorum
+    .serial consistency local_serial
     ```
 
-    Type `CONSISTENCY` on its own to see the current level. The setting lasts until you leave the shell. To start with a different level, use `--consistency` or the profile's `consistency` key.
+    Type `.consistency` on its own to see the current level. The setting lasts until you leave the shell. To start with a different level, use `--consistency` or the profile's `consistency` key.
 
     ## Choose how rows look
 
     | Command | Result |
     |---|---|
-    | `FORMAT table` | A box-drawn grid, fitted to the width of your terminal. Long values end in `…`. Partition key headers are bold and clustering key headers are underlined. |
-    | `FORMAT expanded` or `EXPAND ON` | One block per row, headed `@ Row 1`, with one `column | value` line per column. Good for wide rows. |
-    | `FORMAT raw` | Tab-separated values with the column names first. Nulls are empty. |
-    | `EXPAND OFF` | Back to the table format. |
+    | `.format table` | A box-drawn grid, fitted to the width of your terminal. Long values end in `…`. Partition key headers are bold and clustering key headers are underlined. |
+    | `.format expanded` or `.expand on` | One block per row, headed `@ Row 1`, with one `column | value` line per column. Good for wide rows. |
+    | `.format raw` | Tab-separated values with the column names first. Nulls are empty. |
+    | `.expand off` | Back to the table format. |
 
     ## Page through results
 
     The shell fetches 100 rows at a time. After each page it shows `--More--`. Press Enter for the next page, or type `q` and press Enter to stop.
 
-    - `PAGING 50` sets the page size.
-    - `PAGING OFF` fetches everything without stopping.
-    - `PAGING ON` turns paging back on at 100 rows.
+    - `.paging 50` sets the page size.
+    - `.paging off` fetches everything without stopping.
+    - `.paging on` turns paging back on at 100 rows.
 
     Only the page on screen is read from the cluster, so stopping early does not download the rest.
 
@@ -76,7 +76,7 @@ The shell is a prompt where you type CQL and shell commands and see the results 
     ## Cancel and exit
 
     - **Ctrl-C** while you are typing drops the statement. While a query is running, it cancels the query.
-    - **Ctrl-D** on an empty line leaves the shell. So do `EXIT` and `QUIT`.
+    - **Ctrl-D** on an empty line leaves the shell. So do `.exit` and `.quit`.
 
     ## Recall earlier statements
 
@@ -89,13 +89,13 @@ The shell is a prompt where you type CQL and shell commands and see the results 
 
     ## Switch profiles
 
-    `\profile` shows the current profile. `\profile prod-eu` reconnects using another profile from your config file.
+    `.profile` shows the current profile. `.profile prod-eu` reconnects using another profile from your config file.
 
     ## Run a file
 
-    `SOURCE 'scripts/setup.cql'` runs every statement in the file and stops at the first error. To run a file without opening the prompt, see [Run scripts with -f and -e](/helenus/docs/run-scripts-with-f-and-e/).
+    `.source 'scripts/setup.cql'` runs every statement in the file and stops at the first error. To run a file without opening the prompt, see [Run scripts with -f and -e](/helenus/docs/run-scripts-with-f-and-e/).
 
-    For the full list of commands, type `HELP` or open the [Shell command reference](/helenus/docs/shell-command-reference/).
+    For the full list of commands, type `.help` or open the [Shell command reference](/helenus/docs/shell-command-reference/).
   </TabItem>
 </Tabs>
 

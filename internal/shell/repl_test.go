@@ -60,7 +60,7 @@ func TestREPLMultiLineStatementIsOneRequestAndOneHistoryEntry(t *testing.T) {
 	h := newHarness(nil)
 	hist := filepath.Join(t.TempDir(), "history")
 	h.sh.HistoryFile = hist
-	runREPL(t, h, "SELECT id,\n", "  name\n", "FROM t;\n", "CONSISTENCY QUORUM\n", ctrlD)
+	runREPL(t, h, "SELECT id,\n", "  name\n", "FROM t;\n", ".consistency QUORUM\n", ctrlD)
 	if len(h.ex.reqs) != 1 || h.ex.reqs[0].CQL != "SELECT id,\n  name\nFROM t;" {
 		t.Fatalf("requests = %+v", h.ex.reqs)
 	}
@@ -76,7 +76,7 @@ func TestREPLMultiLineStatementIsOneRequestAndOneHistoryEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	if len(lines) != 2 || lines[0] != "SELECT id, name FROM t;" || lines[1] != "CONSISTENCY QUORUM" {
+	if len(lines) != 2 || lines[0] != "SELECT id, name FROM t;" || lines[1] != ".consistency QUORUM" {
 		t.Errorf("history = %q", lines)
 	}
 }
@@ -107,7 +107,7 @@ func TestREPLExitAndUseUpdatePrompt(t *testing.T) {
 	h := newHarness(func(req exec.Request) (*exec.Result, error) {
 		return &exec.Result{Kind: exec.KindVoid, KeyspaceAfter: "ks2"}, nil
 	})
-	runREPL(t, h, "USE ks2;\n", "EXIT\n", "SELECT never;\n")
+	runREPL(t, h, "USE ks2;\n", ".exit\n", "SELECT never;\n")
 	if len(h.ex.reqs) != 1 {
 		t.Errorf("requests = %d", len(h.ex.reqs))
 	}

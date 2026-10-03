@@ -66,44 +66,45 @@ type goldenCase struct {
 
 var goldenCases = []goldenCase{
 	// Statement start and meta-commands.
-	{in: "|", want: "SELECT,INSERT,UPDATE,DELETE,BEGIN,CREATE,ALTER,DROP,TRUNCATE,GRANT,REVOKE,LIST,CONSISTENCY"},
+	{in: "|", want: "SELECT,INSERT,UPDATE,DELETE,BEGIN,CREATE,ALTER,DROP,TRUNCATE,GRANT,REVOKE,LIST"},
 	{in: "sel|", want: "=SELECT"},
 	{in: "SEL|ECT 1", want: "=SELECT"},
 	{in: "SELECT 1; |", want: "SELECT,INSERT"},
 	{in: "SELECT 1;|", want: "SELECT,INSERT"},
-	{in: "de|", want: "=DELETE,DESCRIBE,DESC"},
-	{in: `\|`, want: `=\profile`},
-	{in: ":pro|", want: "=:profile"},
+	{in: "de|", want: "=DELETE"},
+	{in: ".|", want: ".consistency,.serial,.use,.describe"},
+	{in: ".de|", want: "=.describe,.desc"},
+	{in: ":pro|", want: "="},
 	{in: "-- sel|", want: "="},
 	{in: "-- note\n|", want: "SELECT"},
 	{in: "SELECT 'a|", want: "="},
 	{in: "/* sel|", want: "="},
-	{in: "CONSISTENCY |", want: "=ANY,ONE,TWO,THREE,QUORUM,ALL,LOCAL_QUORUM,EACH_QUORUM,LOCAL_ONE"},
-	{in: "CONSISTENCY LOCAL_|", want: "=LOCAL_QUORUM,LOCAL_ONE"},
-	{in: "consistency q|", want: "=QUORUM"},
-	{in: "USE payments; CONSISTENCY |", want: "ANY,ONE"},
-	{in: "SERIAL |", want: "=CONSISTENCY"},
-	{in: "SERIAL CONSISTENCY |", want: "=SERIAL,LOCAL_SERIAL"},
-	{in: "FORMAT |", want: "=table,expanded,raw"},
-	{in: "EXPAND |", want: "=ON,OFF"},
-	{in: "PAGING |", want: "=ON,OFF"},
-	{in: "TRACING |", want: "=ON,OFF"},
-	{in: "SHOW |", want: "=VERSION,HOST"},
-	{in: "HELP |", want: "consistency,serial consistency"},
+	{in: ".consistency |", want: "=ANY,ONE,TWO,THREE,QUORUM,ALL,LOCAL_QUORUM,EACH_QUORUM,LOCAL_ONE"},
+	{in: ".consistency LOCAL_|", want: "=LOCAL_QUORUM,LOCAL_ONE"},
+	{in: ".consistency q|", want: "=QUORUM"},
+	{in: "USE payments; .consistency |", want: "ANY,ONE"},
+	{in: ".serial |", want: "=CONSISTENCY"},
+	{in: ".serial CONSISTENCY |", want: "=SERIAL,LOCAL_SERIAL"},
+	{in: ".format |", want: "=table,expanded,raw"},
+	{in: ".expand |", want: "=ON,OFF"},
+	{in: ".paging |", want: "=ON,OFF"},
+	{in: ".tracing |", want: "=ON,OFF"},
+	{in: ".show |", want: "=VERSION,HOST"},
+	{in: ".help |", want: "consistency,serial,use,describe"},
 	{in: "USE |", want: "=payments,shop,system"},
 	{in: "USE sh|", want: "=shop"},
 
 	// DESCRIBE.
-	{in: "DESCRIBE |", want: "CLUSTER,KEYSPACES,KEYSPACE"},
-	{in: "DESC KEYSPACE |", want: "=payments,shop,system"},
-	{in: "DESCRIBE TABLE payments.|", want: "=transactions_by_merchant,ledger_counters,merchants"},
-	{in: "DESCRIBE TYPE |", want: "payments,shop,system,address"},
-	{in: "DESCRIBE MATERIALIZED VIEW payments.|", want: "=transactions_by_status"},
-	{in: "DESCRIBE FULL |", want: "=SCHEMA"},
-	{in: "DESCRIBE shop.|", want: "=Orders,order_items"},
-	{in: "DESC payments.m|", want: "=merchants"},
-	{in: "DESCRIBE INDEX payments.|", want: "=txn_by_currency"},
-	{in: "DESCRIBE FUNCTION payments.|", want: "=add_cents"},
+	{in: ".describe |", want: "CLUSTER,KEYSPACES,KEYSPACE"},
+	{in: ".desc KEYSPACE |", want: "=payments,shop,system"},
+	{in: ".describe TABLE payments.|", want: "=transactions_by_merchant,ledger_counters,merchants"},
+	{in: ".describe TYPE |", want: "payments,shop,system,address"},
+	{in: ".describe MATERIALIZED VIEW payments.|", want: "=transactions_by_status"},
+	{in: ".describe FULL |", want: "=SCHEMA"},
+	{in: ".describe shop.|", want: "=Orders,order_items"},
+	{in: ".desc payments.m|", want: "=merchants"},
+	{in: ".describe INDEX payments.|", want: "=txn_by_currency"},
+	{in: ".describe FUNCTION payments.|", want: "=add_cents"},
 
 	// SELECT list.
 	{in: "SELECT | FROM payments.transactions_by_merchant", want: "merchant_id,txn_day,txn_time,merchant_name"},
@@ -352,7 +353,7 @@ func TestFromOffset(t *testing.T) {
 		{"SELECT * FROM |", 14},
 		{`SELECT * FROM "sh|`, 14},
 		{"sel|", 0},
-		{`\pro|`, 0},
+		{".pro|", 0},
 	}
 	for _, c := range cases {
 		res, _ := run(snap, "", c.in)
@@ -396,8 +397,12 @@ func TestItemFields(t *testing.T) {
 		t.Errorf("view kind: %+v", res.Items[3])
 	}
 	res, _ = run(snap, "", "|")
-	if res.Items[0].Kind != KindKeyword || res.Items[len(res.Items)-1].Kind != KindCommand {
+	if res.Items[0].Kind != KindKeyword {
 		t.Errorf("start kinds: %+v", res.Items)
+	}
+	res, _ = run(snap, "", ".|")
+	if res.Items[0].Kind != KindCommand {
+		t.Errorf("dot kinds: %+v", res.Items)
 	}
 }
 

@@ -20,9 +20,9 @@ Cassandra writes traces after it answers, in the background. Helenus asks for up
 ## Trace a statement in the shell
 
 ```
-helenus> TRACING ON
+helenus> .tracing on
 Tracing is now on.
-helenus> TIMING ON
+helenus> .timing on
 Timing is now on.
 helenus> SELECT * FROM payments.merchants WHERE merchant_id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
 ```
@@ -40,9 +40,9 @@ Tracing session: 5b0f8a40-9c9d-11f1-8b3a-0242ac120002
 Time: 38.2 ms (coordinator 31.7 ms)
 ```
 
-`TRACING OFF` and `TIMING OFF` turn them off. Use `TRACING` or `TIMING` alone to see the current state.
+`.tracing off` and `.timing off` turn them off. Use `.tracing` or `.timing` alone to see the current state.
 
-To look at a trace again later, run `SHOW SESSION <trace-id>`. The id is the one on the `Tracing session:` line.
+To look at a trace again later, run `.show session <trace-id>`. The id is the one on the `Tracing session:` line.
 
 ## What tracing costs
 

@@ -40,6 +40,13 @@ describe('SchemaTree', () => {
     await loaded()
     expect(screen.getAllByRole('treeitem', { name: /transactions_by_status/ })).toHaveLength(2)
   })
+  it('lists triggers in a collapsed group that shows the table and class', async () => {
+    render(<SchemaTree />)
+    await loaded()
+    expect(screen.queryByText('merchants.audit_merchants')).not.toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('treeitem', { name: /^Triggers/ })[1])
+    expect(screen.getByRole('treeitem', { name: /merchants\.audit_merchants/ })).toHaveAttribute('title', 'org.example.AuditTrigger')
+  })
   it('expands System on click', async () => {
     render(<SchemaTree />)
     await loaded()

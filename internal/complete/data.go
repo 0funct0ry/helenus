@@ -27,29 +27,38 @@ var builtinFunctions = []fn{
 
 var startKeywords = []string{"SELECT", "INSERT", "UPDATE", "DELETE", "BEGIN", "CREATE", "ALTER", "DROP", "TRUNCATE", "GRANT", "REVOKE", "LIST"}
 
-// metaCommands maps each shell command to its short description. Order is display order.
+// metaCommands lists the dot commands with their short descriptions. Order is display order.
 var metaCommands = []struct{ name, detail string }{
-	{"CONSISTENCY", "show or set the consistency level"},
-	{"SERIAL CONSISTENCY", "show or set the serial consistency level"},
-	{"USE", "switch the current keyspace"},
-	{"DESCRIBE", "print schema definitions"},
-	{"DESC", "short for DESCRIBE"},
-	{"SHOW", "show version or host"},
-	{"EXPAND", "one record per block"},
-	{"FORMAT", "choose the output format"},
-	{"PAGING", "set the page size"},
-	{"TRACING", "toggle query tracing"},
-	{"TIMING", "toggle query timing"},
-	{"SOURCE", "run a script file"},
-	{"CLEAR", "clear the screen"},
-	{"HELP", "list commands"},
-	{"EXIT", "leave the shell"},
-	{"QUIT", "leave the shell"},
-}
-
-// slashCommands are the backslash/colon meta-commands.
-var slashCommands = []struct{ name, detail string }{
+	{"consistency", "show or set the consistency level"},
+	{"serial", "show or set the serial consistency level"},
+	{"use", "switch the current keyspace"},
+	{"describe", "print schema definitions"},
+	{"desc", "short for .describe"},
+	{"tables", "list tables in the current keyspace"},
+	{"views", "list materialized views in the current keyspace"},
+	{"types", "list user-defined types in the current keyspace"},
+	{"functions", "list user-defined functions in the current keyspace"},
+	{"aggregates", "list user-defined aggregates in the current keyspace"},
+	{"indexes", "list indexes in the current keyspace"},
+	{"triggers", "list triggers in the current keyspace"},
+	{"show", "show version, host or a trace"},
+	{"expand", "one record per block"},
+	{"format", "choose the output format"},
+	{"paging", "set the page size"},
+	{"tracing", "toggle query tracing"},
+	{"timing", "toggle query timing"},
+	{"source", "run a script file"},
+	{"clear", "clear the screen"},
+	{"cls", "short for .clear"},
+	{"help", "list commands"},
+	{"exit", "leave the shell"},
+	{"quit", "leave the shell"},
 	{"profile", "show or switch the connection profile"},
+	{"alias", "list, show or define an alias"},
+	{"unalias", "remove an alias"},
+	{"abbrev", "list abbreviations"},
+	{"set", "list or set template variables"},
+	{"unset", "remove a template variable"},
 }
 
 var describeTargets = []string{

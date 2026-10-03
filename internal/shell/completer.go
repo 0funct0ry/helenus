@@ -36,7 +36,7 @@ func (c completer) Do(line []rune, pos int) ([][]rune, int) {
 		snap, _ = s.Schema(ctx)
 		cancel()
 	}
-	res := complete.Complete(context.Background(), snap, s.Keyspace, text, cursor)
+	res := complete.CompleteWith(context.Background(), snap, s.Keyspace, text, cursor, s.aliasNames())
 	prefix := text[res.From:cursor]
 	lower := wantsLower(text[:cursor], prefix)
 
@@ -48,7 +48,7 @@ func (c completer) Do(line []rune, pos int) ([][]rune, int) {
 			continue
 		}
 		suffix := ins[len(prefix):]
-		if lower && (it.Kind == complete.KindKeyword || it.Kind == complete.KindCommand) {
+		if lower && (it.Kind == complete.KindKeyword || it.Kind == complete.KindCommand) && !strings.Contains(it.Detail, "consistency level") {
 			suffix = strings.ToLower(suffix)
 		}
 		if seen[suffix] {

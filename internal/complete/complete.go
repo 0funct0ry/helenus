@@ -47,7 +47,12 @@ type Result struct {
 
 // Complete returns the candidates at byte offset cursor of text. snap may be nil, in which case only
 // keywords, functions and types are offered. currentKS is the keyspace unqualified names resolve in.
-func Complete(_ context.Context, snap *schema.Snapshot, currentKS, text string, cursor int) Result {
+func Complete(ctx context.Context, snap *schema.Snapshot, currentKS, text string, cursor int) Result {
+	return CompleteWith(ctx, snap, currentKS, text, cursor, nil)
+}
+
+// CompleteWith is Complete plus the shell alias names offered after ':'.
+func CompleteWith(_ context.Context, snap *schema.Snapshot, currentKS, text string, cursor int, aliases []string) Result {
 	if cursor < 0 {
 		cursor = 0
 	}
@@ -79,9 +84,15 @@ func Complete(_ context.Context, snap *schema.Snapshot, currentKS, text string, 
 		}
 	}
 
-	// Slash commands: \profile, :profile.
-	if stmt != nil && len(all) > 0 && (all[0].IsPunct('\\') || all[0].IsPunct(':')) && !strings.ContainsAny(text[all[0].Start:cursor], " \t\n") {
-		return slashResult(text, all[0].Start, cursor)
+	// Dot commands (.use) and alias invocations (:recent).
+	if stmt != nil && len(all) > 0 && (all[0].IsPunct('.') || all[0].IsPunct(':')) {
+		if !strings.ContainsAny(text[all[0].Start:cursor], " \t\n") {
+			return slashResult(text, all[0].Start, cursor, aliases)
+		}
+		if all[0].IsPunct(':') || len(all) < 2 || !isMetaWord(all[1]) {
+			return empty
+		}
+		all = all[1:] // complete the arguments as for the bare command word
 	}
 
 	// Split the tokens at the cursor, separating the word being typed.
@@ -140,11 +151,18 @@ func typing(t cql.Token, cursor int) bool {
 	return false
 }
 
-func slashResult(text string, from, cursor int) Result {
+func slashResult(text string, from, cursor int, aliases []string) Result {
 	prefix := text[from:cursor]
 	var items []Item
-	for _, c := range slashCommands {
-		label := prefix[:1] + c.name
+	if prefix[0] == ':' {
+		for _, a := range aliases {
+			label := ":" + a
+			items = append(items, Item{Label: label, Kind: KindCommand, Detail: "alias", Insert: label, match: label})
+		}
+		return Result{From: from, Items: filter(items, prefix, false)}
+	}
+	for _, c := range metaCommands {
+		label := "." + c.name
 		items = append(items, Item{Label: label, Kind: KindCommand, Detail: c.detail, Insert: label, match: label})
 	}
 	return Result{From: from, Items: filter(items, prefix, false)}
@@ -264,11 +282,6 @@ func build(snap *schema.Snapshot, currentKS string, s spec) []Item {
 	}
 	for _, k := range s.kw {
 		items = append(items, Item{Label: k, Kind: KindKeyword, Insert: k, match: k})
-	}
-	if s.meta {
-		for _, m := range metaCommands {
-			items = append(items, Item{Label: m.name, Kind: KindCommand, Detail: m.detail, Insert: m.name, match: m.name})
-		}
 	}
 	return items
 }
@@ -452,6 +465,19 @@ func funcItems(only []string) []Item {
 func contains(l []string, s string) bool {
 	for _, x := range l {
 		if x == s {
+			return true
+		}
+	}
+	return false
+}
+
+// isMetaWord reports whether t names a dot command.
+func isMetaWord(t cql.Token) bool {
+	if t.Kind != cql.TokWord {
+		return false
+	}
+	for _, m := range metaCommands {
+		if strings.EqualFold(m.name, t.Text) {
 			return true
 		}
 	}
