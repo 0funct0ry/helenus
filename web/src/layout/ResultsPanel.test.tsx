@@ -59,13 +59,23 @@ describe('ResultsPanel', () => {
     setup([done({ response: rowsResponse({ kind: 'schema_change', columns: [], rows: [] }) })])
     expect(screen.getByText(/Schema change applied/)).toBeInTheDocument()
   })
-  it('lists executed CQL and warnings in Messages, and the trace id in Trace', async () => {
+  it('lists executed CQL and warnings in Messages', async () => {
     setup([done({ response: rowsResponse({ warnings: ['Aggregation query used without partition key'], trace_id: 'tr-1' }) })])
     await userEvent.click(screen.getByRole('tab', { name: /Messages/ }))
     expect(screen.getByText(/Aggregation query used/)).toBeInTheDocument()
     expect(screen.getByText('SELECT status, amount FROM payments.merchants;')).toBeInTheDocument()
+  })
+  it('shows the trace tab states and the coordinator time in the footer', async () => {
+    const data = { id: 'tr-1', started_at: '', duration_us: 31700, summary: { coordinator: '10.0.0.1', request: 'q', coordinator_ms: 31.7, replicas_contacted: 0, event_count: 0, node_count: 0 }, lanes: [], events: [] }
+    setup([done({ response: rowsResponse({ trace_id: 'tr-1' }) })], { trace: { data, loading: false, onRetry: vi.fn() } })
+    expect(screen.getByText(/31\.7 ms coordinator/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: /Trace/ }))
-    expect(screen.getByText(/Trace session tr-1/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Trace waterfall' })).toBeInTheDocument()
+  })
+  it('hints at the Trace toggle when the statement was not traced', async () => {
+    setup([done()])
+    await userEvent.click(screen.getByRole('tab', { name: /Trace/ }))
+    expect(screen.getByText(/Turn on Trace/)).toBeInTheDocument()
   })
 })
 

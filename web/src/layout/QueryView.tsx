@@ -6,7 +6,8 @@ import { Toggle } from '../ui/Toggle'
 import { SqlEditor } from './SqlEditor'
 import { ResultsPanel } from './ResultsPanel'
 import { CONSISTENCY_LEVELS } from './TableView'
-import { useSchema } from '../api/hooks'
+import { ApiError } from '../api/client'
+import { useSchema, useTrace } from '../api/hooks'
 import { useQueryTab } from '../api/useQueryTab'
 import { textHasIf, textHasRead } from '../lib/statements'
 import { newQueryState, useWorkspace } from '../store/workspace'
@@ -35,6 +36,13 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
   const st = useMemo(() => stored ?? newQueryState({ keyspace: tab?.keyspace ?? '', ...(tab?.initialCql !== undefined && { text: tab.initialCql }) }, globalConsistency), [stored, tab, globalConsistency])
   const [initialText] = useState(st.text)
   const q = useQueryTab(id)
+  const traceQuery = useTrace(profileId, st.results[st.activeResult]?.response?.trace_id)
+  const trace = {
+    data: traceQuery.data,
+    loading: traceQuery.isFetching,
+    error: traceQuery.error ? { code: traceQuery.error instanceof ApiError ? traceQuery.error.code : 'error', message: traceQuery.error.message } : undefined,
+    onRetry: () => void traceQuery.refetch(),
+  }
   const reads = textHasRead(st.text)
   const lwt = textHasIf(st.text)
   const ksOptions = [...new Set([...(st.keyspace ? [st.keyspace] : []), ...keyspaces.filter((k) => !k.system).map((k) => k.name)])].map((n) => ({ value: n, label: n }))
@@ -101,6 +109,7 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
           onPage={(i, d) => void q.page(i, d)}
           onRunWithFiltering={(i) => void q.runWithFiltering(i)}
           onCount={q.count}
+          trace={trace}
         />
       </div>
     </div>

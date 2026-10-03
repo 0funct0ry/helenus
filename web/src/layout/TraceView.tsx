@@ -1,14 +1,28 @@
-import type { TraceEvent } from '../mocks/types'
+import type { TraceLane, TraceResponse } from '../api/types'
 
 export interface TraceViewProps {
-  events: TraceEvent[]
-  summary: { coordinator: string; duration: string; events: number; nodes: number }
+  trace: TraceResponse
+  /** Client-measured round trip in ms, shown beside the coordinator duration. */
+  clientMs?: number
 }
 
-/** Trace panel: summary figures, a per-node waterfall of events across the request, and an event table. */
-export function TraceView({ events, summary }: TraceViewProps) {
-  const total = Math.max(...events.map((e) => e.elapsedUs), 1)
-  const nodes = [...new Set(events.map((e) => e.node))]
+const ms = (us: number) => `${(us / 1000).toFixed(1)} ms`
+
+/** The bar that gets a visible label: the longest span in the lane. */
+function longest(l: TraceLane) {
+  return l.bars.reduce((a, b) => (b.end_us - b.start_us > a.end_us - a.start_us ? b : a), l.bars[0])
+}
+
+/**
+ * Trace panel: summary figures, a waterfall with one lane per node and an events table with the cqlsh columns.
+ * Bars sit at their `source_elapsed` position, which each node measures on its own clock, so lanes are
+ * comparable by shape rather than by absolute alignment. A bar's full activity text is its tooltip, and the
+ * longest bar in each lane is labelled inline.
+ */
+export function TraceView({ trace, clientMs }: TraceViewProps) {
+  const { summary, lanes, events } = trace
+  const total = Math.max(trace.duration_us, ...events.map((e) => e.elapsed_us), 1)
+  const pct = (us: number) => (us / total) * 100
   const fig = (label: string, value: string | number) => (
     <div key={label}>
       <span className="block text-xs text-muted">{label}</span>
@@ -19,36 +33,51 @@ export function TraceView({ events, summary }: TraceViewProps) {
     <div className="flex-1 overflow-auto px-4 py-3.5">
       <div className="mb-3.5 flex flex-wrap gap-7">
         {fig('Coordinator', summary.coordinator)}
-        {fig('Duration', summary.duration)}
-        {fig('Events', summary.events)}
-        {fig('Nodes', summary.nodes)}
+        {fig('Request', summary.request)}
+        {fig('Coordinator duration', ms(trace.duration_us))}
+        {clientMs !== undefined && fig('Client round trip', `${clientMs} ms`)}
+        {fig('Replicas contacted', summary.replicas_contacted)}
       </div>
       <div role="img" aria-label="Trace waterfall" className="overflow-hidden rounded-md border border-line2">
-        {nodes.map((n, i) => {
-          const mine = events.filter((e) => e.node === n)
-          const start = (Math.min(...mine.map((e) => e.elapsedUs)) / total) * 100
-          const end = (Math.max(...mine.map((e) => e.elapsedUs)) / total) * 100
+        <div className="grid grid-cols-[160px_1fr] border-b border-line2 bg-surface text-xs text-muted">
+          <div className="px-2.5 py-1">Node</div>
+          <div className="flex justify-between px-2 py-1 font-mono">
+            <span>0 ms</span>
+            <span>{ms(total)}</span>
+          </div>
+        </div>
+        {lanes.map((l) => {
+          const top = l.bars.length ? longest(l) : undefined
           return (
-            <div key={n} className="grid grid-cols-[160px_1fr] border-b border-line2 last:border-b-0">
+            <div key={l.node} className="grid grid-cols-[160px_1fr] border-b border-line2 last:border-b-0">
               <div className="border-r border-line2 p-2.5 font-mono text-xs">
-                {n}
-                <small className="block font-sans text-faint">{i === 0 ? 'coordinator' : 'replica'}</small>
+                {l.node}
+                <small className="block font-sans text-faint">{l.role === 'coordinator' ? 'Coordinator' : 'Replica'}</small>
               </div>
               <div className="relative h-[52px]">
-                <div className="absolute top-[19px] h-3.5 rounded-[3px] bg-accent/70" style={{ left: `${start}%`, width: `${Math.max(end - start, 0.8)}%` }} />
-                {mine.map((e, k) => (
-                  <div key={k} className="absolute top-[21px] h-2.5 w-0.5 bg-muted" style={{ left: `${(e.elapsedUs / total) * 100}%` }} />
+                {l.bars.map((b, i) => (
+                  <div
+                    key={i}
+                    title={b.label}
+                    className="absolute top-[10px] h-3.5 rounded-[3px] bg-accent/70"
+                    style={{ left: `${pct(b.start_us)}%`, width: `${Math.max(pct(b.end_us - b.start_us), 0.6)}%` }}
+                  />
                 ))}
+                {top && (
+                  <span className="absolute top-[29px] max-w-[60%] truncate text-[11px] text-muted" style={{ left: `${pct(top.start_us)}%` }}>
+                    {top.label}
+                  </span>
+                )}
               </div>
             </div>
           )
         })}
       </div>
-      <table className="mt-4 w-full border-collapse text-[12.5px]">
+      <table aria-label="Trace events" className="mt-4 w-full border-collapse text-[12.5px]">
         <thead>
           <tr>
-            {['Elapsed', 'Node', 'Activity', 'Thread'].map((h) => (
-              <th key={h} className="sticky top-0 border-b border-line bg-surface px-2.5 py-1.5 text-left font-medium text-muted">
+            {['Activity', 'Source', 'Elapsed (µs)', 'Thread'].map((h, i) => (
+              <th key={h} className={`sticky top-0 border-b border-line bg-surface px-2.5 py-1.5 font-medium text-muted ${i === 2 ? 'text-right' : 'text-left'}`}>
                 {h}
               </th>
             ))}
@@ -57,9 +86,9 @@ export function TraceView({ events, summary }: TraceViewProps) {
         <tbody>
           {events.map((e, i) => (
             <tr key={i}>
-              <td className="border-b border-line2 px-2.5 py-1.5 align-top font-mono">{(e.elapsedUs / 1000).toFixed(1)} ms</td>
-              <td className="border-b border-line2 px-2.5 py-1.5 align-top font-mono">{e.node}</td>
               <td className="border-b border-line2 px-2.5 py-1.5 align-top">{e.activity}</td>
+              <td className="border-b border-line2 px-2.5 py-1.5 align-top font-mono">{e.source}</td>
+              <td className="border-b border-line2 px-2.5 py-1.5 text-right align-top font-mono">{e.elapsed_us.toLocaleString('en-US')}</td>
               <td className="border-b border-line2 px-2.5 py-1.5 align-top font-mono text-muted">{e.thread}</td>
             </tr>
           ))}

@@ -1,0 +1,37 @@
+---
+title: Read a trace
+description: What the summary, the waterfall, and the events table in the Trace tab tell you.
+---
+
+The **Trace** tab has three parts. All of them come from the `system_traces` tables, so what you see is what Cassandra recorded.
+
+## Summary
+
+| Figure | Meaning |
+|---|---|
+| **Coordinator** | The node that received the request from Helenus and managed it. |
+| **Request** | The kind of request, such as `Execute CQL3 query`. |
+| **Coordinator duration** | How long the coordinator says the whole request took. |
+| **Client round trip** | How long Helenus waited for the response. It is higher than the coordinator duration by the network time and the driver's own work. |
+| **Replicas contacted** | How many other nodes took part. |
+
+A big gap between client round trip and coordinator duration points at the network or the client, not at Cassandra.
+
+## Waterfall
+
+The waterfall has one **lane per node**, coordinator first. Each bar runs from one event to the next on that node. Hover a bar to see the full activity text. The longest bar in each lane is labelled.
+
+Each node measures time on its own clock, starting from when it first handled the request. Replica lanes therefore start near the left even though the coordinator sent them work a little later. Compare the **length** of bars across lanes, not their exact alignment.
+
+Look for one long bar in a lane. It is usually a read that had to merge many SSTables or skip many tombstones.
+
+## Events table
+
+The table lists every event in order of elapsed time:
+
+- **Activity** is what the node did, for example `Merged data from memtables and 3 sstables`.
+- **Source** is the node that logged it.
+- **Elapsed (µs)** is the time since that node started on the request.
+- **Thread** is the thread that logged it.
+
+Messages such as `Read 6 live rows and 1204 tombstone cells` show how much work a read did compared with the rows it returned. Many tombstones for few rows is a common cause of slow reads.

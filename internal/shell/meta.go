@@ -34,7 +34,7 @@ func (s *Shell) meta(ctx context.Context, line string) (handled bool, err error)
 	case cmd == "DESCRIBE" || cmd == "DESC":
 		return true, s.describe(ctx, line)
 	case cmd == "SHOW":
-		return true, s.show(args)
+		return true, s.show(ctx, args)
 	case cmd == "CONSISTENCY":
 		return true, s.consistency(args)
 	case cmd == "SERIAL":
@@ -56,9 +56,9 @@ func (s *Shell) meta(ctx context.Context, line string) (handled bool, err error)
 	case cmd == `\PROFILE`:
 		return true, s.profile(ctx, args)
 	case cmd == "TRACING":
-		return true, errors.New("TRACING is not available yet (planned for M8)")
+		return true, s.toggle("Tracing", &s.Tracing, args)
 	case cmd == "TIMING":
-		return true, errors.New("TIMING is not available yet (planned for M9); use the --timing flag")
+		return true, s.toggle("Timing", &s.Timing, args)
 	case strings.HasPrefix(cmd, `\`) || strings.HasPrefix(cmd, ":"):
 		return true, errors.New("aliases and variables are not available yet (planned for M8)")
 	}
@@ -81,7 +81,10 @@ func (s *Shell) describe(ctx context.Context, stmt string) error {
 	return nil
 }
 
-func (s *Shell) show(args []string) error {
+func (s *Shell) show(ctx context.Context, args []string) error {
+	if len(args) >= 1 && strings.EqualFold(args[0], "SESSION") {
+		return s.showSession(ctx, args[1:])
+	}
 	if len(args) == 1 && s.Cluster != nil {
 		switch strings.ToUpper(args[0]) {
 		case "VERSION":
@@ -96,7 +99,36 @@ func (s *Shell) show(args []string) error {
 			return nil
 		}
 	}
-	return syntaxErr("SHOW supports VERSION and HOST")
+	return syntaxErr("SHOW supports VERSION, HOST and SESSION <trace-id>")
+}
+
+// toggle implements TRACING and TIMING: no argument shows the state.
+func (s *Shell) toggle(name string, flag *bool, args []string) error {
+	switch len(args) {
+	case 0:
+		state := "off"
+		if *flag {
+			state = "on"
+		}
+		fmt.Fprintf(s.Out, "%s is %s.\n", name, state)
+	case 1:
+		switch strings.ToUpper(args[0]) {
+		case "ON":
+			*flag = true
+		case "OFF":
+			*flag = false
+		default:
+			return syntaxErr("usage: " + strings.ToUpper(name) + " ON|OFF")
+		}
+		state := "off"
+		if *flag {
+			state = "on"
+		}
+		fmt.Fprintf(s.Out, "%s is now %s.\n", name, state)
+	default:
+		return syntaxErr("usage: " + strings.ToUpper(name) + " ON|OFF")
+	}
+	return nil
 }
 
 func validLevel(v string, allowed []string) (string, bool) {

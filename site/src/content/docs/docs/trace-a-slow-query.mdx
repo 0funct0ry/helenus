@@ -1,0 +1,49 @@
+---
+title: Trace a slow query
+description: Record what Cassandra did for one statement, in the web UI or the shell, and see how long it took.
+---
+
+A **trace** is Cassandra's own record of how it ran one statement: which node coordinated it, which replicas it asked, and what each node did and when. Turn tracing on when a query is slower than you expect.
+
+## Trace a statement in the web UI
+
+1. Open a query tab and turn on **Trace** in the toolbar.
+2. Run the statement. Tracing applies to each statement you run while the toggle is on.
+3. Open the **Trace** tab below the editor. You see a summary, a waterfall, and the events table. [Read a trace](/helenus/docs/read-a-trace/) explains each part.
+
+The footer of the results shows the **client** time, which is how long the round trip took from Helenus. Once the trace has loaded, it adds the **coordinator** time, which is how long Cassandra itself spent.
+
+## If the trace is not available yet
+
+Cassandra writes traces after it answers, in the background. Helenus asks for up to two seconds. If the trace is still incomplete, the Trace tab says **Trace not yet available**. Choose **Retry** to ask again.
+
+## Trace a statement in the shell
+
+```
+helenus> TRACING ON
+Tracing is now on.
+helenus> TIMING ON
+Timing is now on.
+helenus> SELECT * FROM payments.merchants WHERE merchant_id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+```
+
+The shell prints the rows, then the trace as a table, then the time on stderr:
+
+```
+Tracing session: 5b0f8a40-9c9d-11f1-8b3a-0242ac120002
+
+ activity                                   | timestamp       | source    | source_elapsed
+--------------------------------------------+-----------------+-----------+----------------
+ Parsing SELECT …                           | 12:00:00.000412 | 10.0.0.1  |            412
+ …
+
+Time: 38.2 ms (coordinator 31.7 ms)
+```
+
+`TRACING OFF` and `TIMING OFF` turn them off. Use `TRACING` or `TIMING` alone to see the current state.
+
+To look at a trace again later, run `SHOW SESSION <trace-id>`. The id is the one on the `Tracing session:` line.
+
+## What tracing costs
+
+Tracing adds work for every node involved, because each one writes events to `system_traces`. Turn it off when you are done, and avoid leaving it on for production traffic.

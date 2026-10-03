@@ -18,13 +18,16 @@ Shell commands are case-insensitive. A trailing semicolon is optional. Anything 
 | `DESCRIBE …`, `DESC …` | Prints schema definitions. See the [DESCRIBE reference](/helenus/docs/describe-reference/). |
 | `SHOW VERSION` | Prints the Helenus, Cassandra, CQL, and protocol versions. |
 | `SHOW HOST` | Prints the connected cluster name and contact point. |
+| `SHOW SESSION <trace-id>` | Prints a stored trace as a table. |
+| `TRACING ON\|OFF` | Traces every statement and prints the trace table after its results. With no argument, shows the state. |
+| `TIMING ON\|OFF` | Prints `Time: 38.2 ms` to stderr after each statement. With tracing on, it adds the coordinator time: `Time: 38.2 ms (coordinator 31.7 ms)`. |
 | `SOURCE '<file>'` | Runs the statements in a file. Stops at the first error. |
 | `CLEAR`, `CLS` | Clears the screen. |
 | `HELP [topic]` | Lists commands, or explains one. |
 | `EXIT`, `QUIT` | Leaves the shell. |
 | `\profile [name]` | Shows the current profile, or reconnects with another one from the config file. |
 
-Aliases and variables (`\alias`, `\set`), `TRACING`, and `TIMING` are not available yet. Use the `--timing` flag to print the time each statement took.
+Aliases and variables (`\alias`, `\set`) are not available yet. The `--timing` flag starts the shell with `TIMING ON`. See [Trace a slow query](/helenus/docs/trace-a-slow-query/).
 
 ## Output formats
 

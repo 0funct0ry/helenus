@@ -4,11 +4,13 @@ import { Tabs } from '../ui/Tabs'
 import { ResultsGrid } from './ResultsGrid'
 import { MessagesView } from './MessagesView'
 import { FilteringError } from './FilteringError'
+import { TraceTab } from './TraceTab'
 import { CountRowsDialog } from './CountRowsDialog'
 import { rowToJson, toGridColumns, toGridRows } from '../lib/rows'
 import { isSelect } from '../lib/statements'
 import type { Message } from '../mocks/types'
 import type { StatementResult } from '../store/workspace'
+import type { TraceState } from './TraceTab'
 
 export interface ResultsPanelProps {
   results: StatementResult[]
@@ -20,6 +22,8 @@ export interface ResultsPanelProps {
   onRunWithFiltering: (index: number) => void
   /** Runs SELECT COUNT(*) for a result and resolves to the count text. */
   onCount: (index: number) => Promise<string>
+  /** Trace of the active statement; omitted when nothing was traced. */
+  trace?: TraceState
 }
 
 function messagesFor(r: StatementResult | undefined, consistency: string): Message[] {
@@ -37,9 +41,10 @@ function messagesFor(r: StatementResult | undefined, consistency: string): Messa
  * Bottom panel of a Query tab: Results, Trace and Messages views, one statement tab per executed
  * statement, and the client timing. Results render in the virtualized grid with page-state paging;
  * a filtering error shows a one-shot "Run with ALLOW FILTERING" action. The Trace tab shows the trace
- * session id only; the trace viewer lands in a later milestone.
+ * viewer for the active statement, a loading note while Cassandra writes the trace, or a retry state when
+ * it is not yet available. The footer adds the coordinator time once the trace is loaded.
  */
-export function ResultsPanel({ results, active, onActive, consistency, onPage, onRunWithFiltering, onCount }: ResultsPanelProps) {
+export function ResultsPanel({ results, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
   const [view, setView] = useState('results')
   const [counting, setCounting] = useState(false)
   const r = results[active]
@@ -98,13 +103,12 @@ export function ResultsPanel({ results, active, onActive, consistency, onPage, o
           <span className="flex items-center gap-1.5 text-xs text-muted">
             <Clock size={12} aria-hidden />
             {res.timing.client_ms} ms client
+            {trace?.data && ` · ${(trace.data.duration_us / 1000).toFixed(1)} ms coordinator`}
           </span>
         )}
       </div>
       {view === 'results' && body}
-      {view === 'trace' && (
-        <p className="p-4 text-muted">{res?.trace_id ? `Trace session ${res.trace_id} was recorded. The trace viewer arrives in a later milestone.` : 'Turn on Trace in the toolbar and run a statement to record a trace.'}</p>
-      )}
+      {view === 'trace' && <TraceTab response={res} trace={trace} />}
       {view === 'messages' && <MessagesView messages={msgs} />}
       <CountRowsDialog open={counting} onClose={() => setCounting(false)} onRun={() => onCount(active)} />
     </section>

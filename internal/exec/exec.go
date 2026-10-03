@@ -17,6 +17,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/codec"
 	"github.com/0funct0ry/helenus/internal/cql"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 // Result kinds.
@@ -52,9 +53,11 @@ type Column struct {
 	Order    string         `json:"order,omitempty"`
 }
 
-// Timing reports client-side latency.
+// Timing reports client-side latency. CoordinatorMS is set once a trace has
+// been fetched; Run itself never waits for the trace (SPEC §9.12).
 type Timing struct {
-	ClientMS float64 `json:"client_ms"`
+	ClientMS      float64  `json:"client_ms"`
+	CoordinatorMS *float64 `json:"coordinator_ms,omitempty"`
 }
 
 // Result is the outcome of one statement.
@@ -181,6 +184,21 @@ func (x *Executor) Run(ctx context.Context, req Request) (*Result, error) {
 		x.Refresh(ctx)
 	}
 	return res, nil
+}
+
+// Trace fetches and shapes the trace session id, polling up to trace.PollWindow.
+// It returns trace.ErrNotAvailable when Cassandra has not finished writing it.
+func (x *Executor) Trace(ctx context.Context, id string) (*trace.Trace, error) {
+	return trace.Fetch(ctx, trace.NewSource(x.Session), id, trace.PollWindow)
+}
+
+// WithCoordinator records the coordinator duration of tr on the result's timing.
+func (r *Result) WithCoordinator(tr *trace.Trace) {
+	if tr == nil {
+		return
+	}
+	ms := float64(tr.DurationUS) / 1000
+	r.Timing.CoordinatorMS = &ms
 }
 
 func (x *Executor) use(ctx context.Context, stmt, ks string) (*Result, error) {

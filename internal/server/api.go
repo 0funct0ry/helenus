@@ -11,6 +11,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 // Connector is what the API needs from the connection layer. conn.Manager
@@ -27,6 +28,8 @@ type Connector interface {
 	Describe(ctx context.Context, name string, p config.Profile, t schema.Target) (string, error)
 	// Query executes one statement on the profile's session.
 	Query(ctx context.Context, name string, p config.Profile, req exec.Request) (*exec.Result, error)
+	// Trace fetches the shaped trace session id, polling while Cassandra writes it.
+	Trace(ctx context.Context, name string, p config.Profile, id string) (*trace.Trace, error)
 	CloseAll()
 }
 
@@ -85,6 +88,14 @@ func (c managerConnector) Query(ctx context.Context, name string, p config.Profi
 	return exec.ForSession(sess, c.cache, name).Run(ctx, req)
 }
 
+func (c managerConnector) Trace(ctx context.Context, name string, p config.Profile, id string) (*trace.Trace, error) {
+	sess, _, err := c.m.Session(ctx, name, p)
+	if err != nil {
+		return nil, err
+	}
+	return exec.ForSession(sess, c.cache, name).Trace(ctx, id)
+}
+
 func (c managerConnector) CloseAll() { c.m.CloseAll() }
 
 // api carries the dependencies shared by the handlers.
@@ -126,6 +137,7 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.GET("/cluster", a.cluster)
 	p.POST("/query", a.query)
 	p.POST("/split", a.split)
+	p.GET("/traces/:id", a.trace)
 	p.POST("/changes/preview", a.changesPreview)
 	p.POST("/changes/apply", a.changesApply)
 	p.POST("/types/preview", a.typesPreview)

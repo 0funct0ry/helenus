@@ -7,11 +7,13 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/0funct0ry/helenus/internal/codec"
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 type fakeDescriber struct {
@@ -230,5 +232,90 @@ func TestVoidStatementPrintsNothing(t *testing.T) {
 	h := newHarness(nil)
 	if err := h.run("INSERT INTO t (a) VALUES (1);"); err != nil || h.out.Len() != 0 {
 		t.Errorf("err=%v out=%q", err, h.out)
+	}
+}
+
+func traceFixture() *trace.Trace {
+	return trace.Shape("5b0f8a40-9c9d-11f1-8b3a-0242ac120002",
+		&trace.SessionRow{Coordinator: "10.0.0.1", Request: "Execute CQL3 query", DurationUS: 31700, StartedAt: time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)},
+		[]trace.EventRow{
+			{Activity: "Parsing SELECT", Source: "10.0.0.1", ElapsedUS: 412},
+			{Activity: "READ message received", Source: "10.0.0.2", ElapsedUS: 7004},
+		})
+}
+
+func TestTracingToggleAndTable(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) {
+		r := rows([2]any{1, "a"})
+		r.TraceID = traceFixture().ID
+		r.Timing.ClientMS = 38.2
+		return r, nil
+	})
+	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return traceFixture(), nil }
+	if err := h.run("TRACING ON;\nTIMING ON;\nSELECT * FROM t;\n"); err != nil {
+		t.Fatal(err)
+	}
+	if !h.ex.reqs[0].Trace {
+		t.Error("TRACING ON did not set Trace on the request")
+	}
+	out := h.out.String()
+	for _, want := range []string{"Tracing session: 5b0f8a40", "Parsing SELECT", "12:00:00.000412", "(2 events)"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("out missing %q:\n%s", want, out)
+		}
+	}
+	if !strings.Contains(h.err.String(), "Time: 38.2 ms (coordinator 31.7 ms)") {
+		t.Errorf("err = %q", h.err)
+	}
+	if strings.Index(out, "(1 row)") > strings.Index(out, "Tracing session") {
+		t.Errorf("trace printed before the rows footer:\n%s", out)
+	}
+	_ = h.run("TRACING OFF;")
+	_ = h.run("SELECT * FROM t;")
+	if h.ex.reqs[len(h.ex.reqs)-1].Trace {
+		t.Error("TRACING OFF still traces")
+	}
+}
+
+func TestTraceUnavailableHint(t *testing.T) {
+	h := newHarness(func(exec.Request) (*exec.Result, error) {
+		r := rows([2]any{1, "a"})
+		r.TraceID = "abc"
+		return r, nil
+	})
+	h.sh.Tracing = true
+	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return nil, trace.ErrNotAvailable }
+	_ = h.sh.Execute(context.Background(), "SELECT * FROM t")
+	if !strings.Contains(h.err.String(), "SHOW SESSION abc") {
+		t.Errorf("err = %q", h.err)
+	}
+}
+
+func TestShowSession(t *testing.T) {
+	h := newHarness(nil)
+	h.sh.Tracer = func(_ context.Context, id string) (*trace.Trace, error) { return traceFixture(), nil }
+	if err := h.sh.Execute(context.Background(), "SHOW SESSION 5b0f8a40-9c9d-11f1-8b3a-0242ac120002"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h.out.String(), "Parsing SELECT") {
+		t.Errorf("out = %q", h.out)
+	}
+	if err := h.sh.Execute(context.Background(), "SHOW SESSION"); err == nil {
+		t.Error("SHOW SESSION without an id should fail")
+	}
+	h.sh.Tracer = func(context.Context, string) (*trace.Trace, error) { return nil, trace.ErrNotAvailable }
+	if err := h.sh.Execute(context.Background(), "SHOW SESSION abc"); err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestToggleStateAndBadArg(t *testing.T) {
+	h := newHarness(nil)
+	_ = h.sh.Execute(context.Background(), "TRACING")
+	if !strings.Contains(h.out.String(), "Tracing is off.") {
+		t.Errorf("out = %q", h.out)
+	}
+	if err := h.sh.Execute(context.Background(), "TIMING MAYBE"); err == nil {
+		t.Error("expected syntax error")
 	}
 }

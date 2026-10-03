@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult } from './types'
+import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult, TraceResponse } from './types'
 import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
@@ -176,4 +176,19 @@ export function useChanges(profile: string) {
     }),
     [profile],
   )
+}
+
+/**
+ * The trace session `id` of a traced statement. The server polls for up to two seconds while Cassandra writes
+ * the trace; a 404 `trace_unavailable` surfaces as an error the UI turns into a retry state. Never retried
+ * automatically, so Retry is the user's call.
+ */
+export function useTrace(profile: string, id: string | undefined) {
+  return useQuery({
+    queryKey: ['trace', profile, id],
+    enabled: !!id,
+    retry: false,
+    staleTime: Infinity,
+    queryFn: ({ signal }) => api<TraceResponse>(`/p/${enc(profile)}/traces/${enc(id ?? '')}`, { signal }),
+  })
 }

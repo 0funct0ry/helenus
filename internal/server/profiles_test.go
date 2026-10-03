@@ -20,6 +20,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 type fakeConn struct {
@@ -32,6 +33,9 @@ type fakeConn struct {
 	queries   []exec.Request
 	queryRes  *exec.Result
 	queryErr  error
+	traceRes  *trace.Trace
+	traceErr  error
+	traced    []string
 	// failOn, when set, applies queryErr only to that (1-based) query.
 	failOn int
 }
@@ -71,6 +75,10 @@ func (f *fakeConn) Query(_ context.Context, _ string, _ config.Profile, req exec
 		return f.queryRes, nil
 	}
 	return f.queryRes, f.queryErr
+}
+func (f *fakeConn) Trace(_ context.Context, _ string, _ config.Profile, id string) (*trace.Trace, error) {
+	f.traced = append(f.traced, id)
+	return f.traceRes, f.traceErr
 }
 func (f *fakeConn) CloseAll() {}
 

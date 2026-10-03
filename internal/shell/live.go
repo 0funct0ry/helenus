@@ -13,6 +13,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 // Dial opens (or reuses) the session for profile p and wraps it as a Backend.
@@ -41,6 +42,9 @@ func Dial(ctx context.Context, mgr *conn.Manager, cache *schema.Cache, name stri
 		Consistency: p.Consistency,
 		Serial:      p.SerialConsistency,
 		UDTFields:   udtFields(name, sess, cache),
+		Tracer: func(ctx context.Context, id string) (*trace.Trace, error) {
+			return trace.Fetch(ctx, trace.NewSource(sess), id, trace.PollWindow)
+		},
 		Schema: func(ctx context.Context) (*schema.Snapshot, error) {
 			return cache.Get(ctx, name, sess)
 		},

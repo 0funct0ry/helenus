@@ -208,7 +208,7 @@ export interface QueryResponse {
   has_more: boolean
   warnings: string[]
   trace_id?: string
-  timing: { client_ms: number }
+  timing: { client_ms: number; coordinator_ms?: number }
   keyspace_after?: string
 }
 
@@ -314,4 +314,37 @@ export interface ApplyResponse {
   applied: number
   /** Index of the failed change, or -1. */
   failed_at: number
+}
+
+/** One bar in a node lane of `GET /p/{profile}/traces/{id}`, in µs on that node's own clock. */
+export interface TraceBar {
+  start_us: number
+  end_us: number
+  label: string
+}
+
+/** The events of one node. */
+export interface TraceLane {
+  node: string
+  role: 'coordinator' | 'replica'
+  bars: TraceBar[]
+}
+
+/** One row of the trace events table. */
+export interface TraceEventRow {
+  activity: string
+  source: string
+  elapsed_us: number
+  thread: string
+  timestamp_ms: number
+}
+
+/** Response of `GET /p/{profile}/traces/{id}`. */
+export interface TraceResponse {
+  id: string
+  started_at: string
+  duration_us: number
+  summary: { coordinator: string; request: string; coordinator_ms: number; replicas_contacted: number; event_count: number; node_count: number }
+  lanes: TraceLane[]
+  events: TraceEventRow[]
 }

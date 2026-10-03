@@ -155,7 +155,7 @@ func TestClearAndExit(t *testing.T) {
 
 func TestDeferredCommandsSayWhen(t *testing.T) {
 	h := newHarness(nil)
-	for in, want := range map[string]string{"TRACING ON": "M8", "TIMING ON": "M9", `\alias`: "M8", `\set x 1`: "M8", ":recent": "M8"} {
+	for in, want := range map[string]string{`\alias`: "M8", `\set x 1`: "M8", ":recent": "M8"} {
 		err := h.sh.Execute(context.Background(), in)
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: err = %v", in, err)

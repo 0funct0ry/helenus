@@ -1,16 +1,4 @@
-import type { Message, TraceEvent } from './types'
-
-export const traceSummary = { coordinator: '10.20.0.11', duration: '31.7 ms', events: 7, nodes: 3 }
-
-export const traceEvents: TraceEvent[] = [
-  { node: '10.20.0.11', activity: 'Parsing SELECT statement', elapsedUs: 0, thread: 'Native-Transport-Requests-4' },
-  { node: '10.20.0.11', activity: 'Preparing statement', elapsedUs: 410, thread: 'Native-Transport-Requests-4' },
-  { node: '10.20.0.11', activity: 'Executing single-partition query on transactions_by_merchant', elapsedUs: 980, thread: 'ReadStage-2' },
-  { node: '10.20.0.12', activity: 'Acquiring sstable references', elapsedUs: 4200, thread: 'ReadStage-1' },
-  { node: '10.20.0.12', activity: 'Merged data from memtables and 2 sstables', elapsedUs: 12400, thread: 'ReadStage-1' },
-  { node: '10.20.0.11', activity: 'Read 6 live rows and 1204 tombstone cells', elapsedUs: 24100, thread: 'ReadStage-2' },
-  { node: '10.20.0.11', activity: 'Request complete', elapsedUs: 31700, thread: 'Native-Transport-Requests-4' },
-]
+import type { Message } from './types'
 
 export const messages: Message[] = [
   {

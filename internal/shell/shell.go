@@ -16,6 +16,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/cql"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/trace"
 )
 
 // Describer answers DESCRIBE statements. currentKS is the keyspace set by USE.
@@ -45,6 +46,8 @@ type Backend struct {
 	Serial      string
 	// UDTFields resolves UDT field types for text rendering; may be nil.
 	UDTFields func(codec.UDTRef) map[string]codec.TypeDesc
+	// Tracer fetches a stored trace by id; nil disables trace printing.
+	Tracer func(ctx context.Context, id string) (*trace.Trace, error)
 	// Schema returns the cached schema snapshot for tab-completion; may be nil, in which case
 	// only keywords are offered.
 	Schema func(ctx context.Context) (*schema.Snapshot, error)
@@ -77,6 +80,8 @@ type Shell struct {
 	Paging int
 	// Timing prints the client round-trip time to stderr after each statement.
 	Timing bool
+	// Tracing traces every statement and prints the trace after its results.
+	Tracing bool
 
 	// Terminal behavior.
 	Interactive bool // a human is at the prompt: enables --More--
@@ -142,8 +147,13 @@ func (s *Shell) query(ctx context.Context, stmt string) error {
 	req := exec.Request{
 		CQL: stmt, Keyspace: s.Keyspace,
 		Consistency: s.Consistency, SerialConsistency: s.Serial,
-		PageSize: s.Paging,
+		PageSize: s.Paging, Trace: s.Tracing,
 	}
+	type page struct {
+		ms      float64
+		traceID string
+	}
+	var pages []page
 	total := 0
 	first := true
 	sawRows := false
@@ -166,13 +176,11 @@ func (s *Shell) query(ctx context.Context, stmt string) error {
 			s.render(res, rows, total, first)
 			total += len(rows)
 		}
-		if s.Timing {
-			ms := res.Timing.ClientMS
-			if ms == 0 {
-				ms = float64(time.Since(started).Microseconds()) / 1000
-			}
-			fmt.Fprintf(s.Err, "Time: %.1f ms\n", ms)
+		ms := res.Timing.ClientMS
+		if ms == 0 {
+			ms = float64(time.Since(started).Microseconds()) / 1000
 		}
+		pages = append(pages, page{ms, res.TraceID})
 		first = false
 		if !res.HasMore {
 			break
@@ -192,7 +200,22 @@ func (s *Shell) query(ctx context.Context, stmt string) error {
 			fmt.Fprintln(s.Out)
 		}
 	}
+	for _, p := range pages {
+		coordinator := s.printTrace(ctx, p.traceID)
+		if s.Timing {
+			s.printTiming(p.ms, coordinator)
+		}
+	}
 	return nil
+}
+
+// printTiming writes the Time line to stderr. coordinator is nil without a trace.
+func (s *Shell) printTiming(clientMS float64, coordinator *float64) {
+	if coordinator != nil {
+		fmt.Fprintf(s.Err, "Time: %.1f ms (coordinator %.1f ms)\n", clientMS, *coordinator)
+		return
+	}
+	fmt.Fprintf(s.Err, "Time: %.1f ms\n", clientMS)
 }
 
 func plural1(n int, word string) string {

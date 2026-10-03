@@ -30,6 +30,8 @@ export default defineConfig({
             { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
             { label: 'Create and change user-defined types', slug: 'docs/create-and-change-user-defined-types' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
+            { label: 'Trace a slow query', slug: 'docs/trace-a-slow-query' },
+            { label: 'Read a trace', slug: 'docs/read-a-trace' },
             { label: 'Autocomplete in the editor and shell', slug: 'docs/autocomplete-in-the-editor-and-shell' },
             { label: 'Use the shell', slug: 'docs/use-the-shell' },
             { label: 'Run scripts with -f and -e', slug: 'docs/run-scripts-with-f-and-e' },
