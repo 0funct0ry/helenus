@@ -1,0 +1,5 @@
+-- 0 udt_field_set: set contact.city
+cql:     UPDATE labs.profiles SET contact.city = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET contact.city = 'Pune' WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    string(Pune) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

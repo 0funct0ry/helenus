@@ -1,0 +1,5 @@
+-- 0 set_add: add to scores
+cql:     UPDATE labs.profiles SET scores = scores + ? WHERE id = ?;
+preview: UPDATE labs.profiles SET scores = scores + {3, 1} WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    []interface {}([3 1]) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

@@ -81,6 +81,8 @@ func (e Encoder) enc(v any, td TypeDesc, text bool) any {
 		return e.blob(x)
 	case fmt.Stringer: // *big.Int, *inf.Dec
 		return x.String()
+	case Map:
+		return e.pairs(x, td, text)
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
@@ -124,6 +126,19 @@ func (e Encoder) enc(v any, td TypeDesc, text bool) any {
 	return fmt.Sprint(v)
 }
 
+// pairs encodes a Map in the order its entries were decoded.
+func (e Encoder) pairs(m Map, td TypeDesc, text bool) any {
+	var kt, vt TypeDesc
+	if len(td.Args) == 2 {
+		kt, vt = td.Args[0], td.Args[1]
+	}
+	out := make([]any, len(m.Keys))
+	for i := range m.Keys {
+		out[i] = []any{e.enc(m.Keys[i], kt, text), e.enc(m.Values[i], vt, text)}
+	}
+	return out
+}
+
 func (e Encoder) udt(rv reflect.Value, td TypeDesc, text bool) any {
 	var fields map[string]TypeDesc
 	if td.UDT != nil && e.UDTFields != nil {
@@ -135,7 +150,7 @@ func (e Encoder) udt(rv reflect.Value, td TypeDesc, text bool) any {
 		keys = append(keys, k.String())
 	}
 	sort.Strings(keys)
-	out := &OrderedObject{Keys: keys, Values: map[string]any{}}
+	out := &OrderedObject{Keys: keys, Values: map[string]any{}, types: fields}
 	for _, k := range keys {
 		out.Values[k] = e.enc(rv.MapIndex(reflect.ValueOf(k)).Interface(), fields[k], text)
 	}
@@ -272,7 +287,7 @@ func renderText(v any, td TypeDesc, top bool) string {
 	case *OrderedObject:
 		parts := make([]string, len(x.Keys))
 		for i, k := range x.Keys {
-			parts[i] = k + ": " + renderText(x.Values[k], TypeDesc{}, false)
+			parts[i] = k + ": " + renderText(x.Values[k], x.types[k], false)
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case Truncated:

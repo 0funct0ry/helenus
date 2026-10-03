@@ -1,0 +1,28 @@
+---
+title: How Helenus turns edits into CQL
+description: The statement each kind of grid edit produces, and how it is run.
+---
+
+Use **Review CQL** to see exactly what an edit will do. The text shown has the values filled in. When Helenus runs the statements it sends the values as bound parameters of a prepared statement.
+
+| Edit | CQL |
+|---|---|
+| Change a regular or static cell | `UPDATE ks.t SET col = ? WHERE <primary key>` |
+| Set a cell to null | `DELETE col FROM ks.t WHERE <primary key>` |
+| Insert a row | `INSERT INTO ks.t (…) VALUES (…)`, with `IF NOT EXISTS` if chosen |
+| Delete a row | `DELETE FROM ks.t WHERE <primary key>` |
+| Increment a counter | `UPDATE ks.t SET c = c + ? WHERE <primary key>` |
+| Append, prepend or set a list item | `SET l = l + ?`, `SET l = ? + l`, `SET l[i] = ?` |
+| Remove a list item | `DELETE l[i] FROM ks.t WHERE <primary key>` |
+| Add to or remove from a set | `SET s = s + ?`, `SET s = s - ?` |
+| Put or remove a map entry | `SET m[?] = ?`, `DELETE m[?] FROM ks.t WHERE <primary key>` |
+| Change a field of a non-frozen type | `SET addr.city = ?` |
+| Replace a frozen collection, tuple or type | `SET col = ?` |
+
+## Rules
+
+- A static column belongs to the partition, so its `WHERE` clause has the partition key only.
+- An insert leaves out columns you did not fill in, so no empty values are written.
+- A tuple value is written into the statement as a literal, because the driver cannot bind a tuple.
+- Statements run one at a time in the order you made the edits, and stop at the first failure. They are not wrapped in a logged batch, because a batch across partitions is slow and risky.
+- An `IF NOT EXISTS` insert that finds the row already there counts as a failure.

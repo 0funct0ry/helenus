@@ -45,3 +45,11 @@ describe('Popover', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
+
+describe('Popover stacking', () => {
+  it('can sit above a dialog', () => {
+    const anchor = { current: document.body }
+    render(<Popover open onClose={() => {}} anchorRef={anchor} aboveDialog aria-label="Above">x</Popover>)
+    expect(screen.getByRole('dialog', { name: 'Above' })).toHaveClass('z-[60]')
+  })
+})

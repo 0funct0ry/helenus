@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { ProfileStatus } from '../lib/schemaModel'
 import type { QueryResponse } from '../api/types'
 import { abortInflight } from '../api/inflight'
+import { stage, unstage } from '../lib/changes'
+import type { PendingItem } from '../lib/changes'
 
 export type TabKind = 'table' | 'view' | 'query' | 'type'
 
@@ -70,6 +72,15 @@ interface WorkspaceState {
   profileId: string
   connections: Record<string, Connection>
   queryStates: Record<string, QueryTabState>
+  /** Staged grid edits per table tab, in the order they were made. They survive tab switches. */
+  edits: Record<string, PendingItem[]>
+  /** The last apply error of each staged item, by tab then item id. */
+  editErrors: Record<string, Record<string, string>>
+  stageEdit: (tabId: string, item: PendingItem) => void
+  unstageEdit: (tabId: string, itemId: string) => void
+  /** Replace a tab's staged edits (after an apply); `errors` marks the items that failed. */
+  setEdits: (tabId: string, items: PendingItem[], errors?: Record<string, string>) => void
+  clearEdits: (tabId: string) => void
   /** Merge `patch` into a query tab's state, creating it if needed. */
   patchQuery: (id: string, patch: Partial<QueryTabState>) => void
   setConnection: (name: string, status: ProfileStatus, error?: string) => void
@@ -96,6 +107,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   profileId: '',
   connections: {},
   queryStates: {},
+  edits: {},
+  editErrors: {},
+  stageEdit: (tabId, item) =>
+    set((s) => ({ edits: { ...s.edits, [tabId]: stage(s.edits[tabId] ?? [], item) }, editErrors: { ...s.editErrors, [tabId]: {} } })),
+  unstageEdit: (tabId, itemId) => set((s) => ({ edits: { ...s.edits, [tabId]: unstage(s.edits[tabId] ?? [], itemId) } })),
+  setEdits: (tabId, items, errors = {}) => set((s) => ({ edits: { ...s.edits, [tabId]: items }, editErrors: { ...s.editErrors, [tabId]: errors } })),
+  clearEdits: (tabId) =>
+    set((s) => {
+      const edits = { ...s.edits }
+      const editErrors = { ...s.editErrors }
+      delete edits[tabId]
+      delete editErrors[tabId]
+      return { edits, editErrors }
+    }),
   patchQuery: (id, patch) =>
     set((s) => ({ queryStates: { ...s.queryStates, [id]: { ...(s.queryStates[id] ?? newQueryState({}, s.consistency)), ...patch } } })),
   setConnection: (name, status, error) => set((s) => ({ connections: { ...s.connections, [name]: { status, error } } })),
@@ -138,8 +163,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       const tabs = s.tabs.filter((t) => t.id !== id)
       const queryStates = { ...s.queryStates }
       delete queryStates[id]
+      const edits = { ...s.edits }
+      const editErrors = { ...s.editErrors }
+      delete edits[id]
+      delete editErrors[id]
       const activeId = s.activeId === id ? (tabs[Math.min(i, tabs.length - 1)]?.id ?? '') : s.activeId
-      return { tabs, activeId, queryStates }
+      return { tabs, activeId, queryStates, edits, editErrors }
     })
   },
   activate: (id) => set({ activeId: id }),

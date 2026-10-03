@@ -1,0 +1,5 @@
+-- 0 set_null: clear merchant_name
+cql:     DELETE merchant_name FROM payments.transactions_by_merchant WHERE merchant_id = ? AND txn_day = ?;
+preview: DELETE merchant_name FROM payments.transactions_by_merchant WHERE merchant_id = 7c9e6679-7425-40de-944b-e07fc1f90ae7 AND txn_day = '2026-09-30';
+args:    gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7) time.Time(2026-09-30 00:00:00 +0000 UTC)
+

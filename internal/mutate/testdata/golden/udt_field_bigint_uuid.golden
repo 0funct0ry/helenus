@@ -1,0 +1,10 @@
+-- 0 udt_field_set: set contact.visits
+cql:     UPDATE labs.profiles SET contact.visits = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET contact.visits = 9007199254740993 WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    int64(9007199254740993) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+
+-- 1 udt_field_set: set contact.id
+cql:     UPDATE labs.profiles SET contact.id = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET contact.id = 7c9e6679-7425-40de-944b-e07fc1f90ae7 WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

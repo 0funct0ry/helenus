@@ -1,0 +1,5 @@
+-- 0 insert_row: insert row
+cql:     INSERT INTO payments.transactions_by_merchant (merchant_id, txn_day, txn_time, status) VALUES (?, ?, ?, ?) IF NOT EXISTS;
+preview: INSERT INTO payments.transactions_by_merchant (merchant_id, txn_day, txn_time, status) VALUES (7c9e6679-7425-40de-944b-e07fc1f90ae7, '2026-09-30', 3f1a2b10-9d3c-11ef-8a6e-0242ac120002, 'new') IF NOT EXISTS;
+args:    gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7) time.Time(2026-09-30 00:00:00 +0000 UTC) gocql.UUID(3f1a2b10-9d3c-11ef-8a6e-0242ac120002) string(new)
+

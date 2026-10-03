@@ -15,6 +15,9 @@ func (n jsonNumber) MarshalJSON() ([]byte, error) { return []byte(n), nil }
 type OrderedObject struct {
 	Keys   []string
 	Values map[string]any
+	// types holds the field types when the encoder could resolve them, so the
+	// text renderer can quote each field correctly.
+	types map[string]TypeDesc
 }
 
 // MarshalJSON writes the object with keys in order.

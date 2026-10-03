@@ -32,6 +32,8 @@ type fakeConn struct {
 	queries   []exec.Request
 	queryRes  *exec.Result
 	queryErr  error
+	// failOn, when set, applies queryErr only to that (1-based) query.
+	failOn int
 }
 
 func (f *fakeConn) Connect(_ context.Context, name string, _ config.Profile) (*conn.ClusterInfo, []string, error) {
@@ -65,6 +67,9 @@ func (f *fakeConn) Describe(_ context.Context, _ string, _ config.Profile, t sch
 }
 func (f *fakeConn) Query(_ context.Context, _ string, _ config.Profile, req exec.Request) (*exec.Result, error) {
 	f.queries = append(f.queries, req)
+	if f.failOn > 0 && len(f.queries) != f.failOn {
+		return f.queryRes, nil
+	}
 	return f.queryRes, f.queryErr
 }
 func (f *fakeConn) CloseAll() {}

@@ -1,0 +1,26 @@
+---
+title: Edit lists, sets, and maps
+description: Change collection and user-defined type cells without rewriting the whole value.
+---
+
+Double-click a list, set, map, tuple or user-defined type cell to open its editor. The editor stays open until you choose **Stage change**, which adds the edit to the pending changes. **Cancel** discards it.
+
+## Lists
+
+Each element is a row. Edit it in place, drag the handle or use the arrows to move it, remove it with **X**, or choose **Add item**. A vector has a fixed length, so its elements can be edited but not added or removed.
+
+## Sets
+
+Members are shown sorted. Remove one with **X**. To add one, type it in the box at the bottom and choose **Add**. A value that is already in the set is refused.
+
+## Maps
+
+Each entry has a key and a value, both checked against their types. A key that appears twice is outlined and blocks **Stage change**. Choose **Add entry** for a new row.
+
+## Nested values
+
+When an element is itself a collection or a user-defined type, its cell is a button. Click it to edit inside the same panel. The path at the top shows where you are, and clicking a name in it takes you back up.
+
+## Frozen and non-frozen
+
+For a non-frozen list, set, map or user-defined type, Helenus sends only what changed: items added, removed or replaced, map entries put or removed, or the fields you edited. For a frozen collection, a tuple or a frozen type, Cassandra can only replace the whole value, so that is what Helenus sends. See [How Helenus turns edits into CQL](/helenus/docs/how-helenus-turns-edits-into-cql/).

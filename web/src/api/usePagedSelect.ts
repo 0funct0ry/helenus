@@ -12,6 +12,8 @@ export interface PagedSelect {
   page: number
   /** Reload from the first page. */
   reload: () => void
+  /** Fetch the current page again, keeping the page position (used after edits are applied). */
+  refetch: () => void
   next: () => void
   prev: () => void
   count: () => Promise<string>
@@ -57,6 +59,7 @@ export function usePagedSelect(profile: string, keyspace: string, cql: string, c
   }, [cql, consistency, pageSize, profile])
 
   const reload = useCallback(() => (stackRef.current.length === 1 ? setNonce((n) => n + 1) : setStack([null])), [])
+  const refetch = useCallback(() => setNonce((n) => n + 1), [])
   const next = useCallback(() => {
     if (response?.page_state) setStack((s) => [...s, response.page_state as string])
   }, [response])
@@ -68,5 +71,5 @@ export function usePagedSelect(profile: string, keyspace: string, cql: string, c
     return String(res.rows[0]?.[0] ?? '0')
   }, [run, cql, keyspace, consistency])
 
-  return { response, error, loading, page: stack.length, reload, next, prev, count }
+  return { response, error, loading, page: stack.length, reload, refetch, next, prev, count }
 }

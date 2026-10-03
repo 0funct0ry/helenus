@@ -78,6 +78,11 @@ golden:
 golden-shell:
 	$(GO) test ./internal/shell -run TestRenderGolden -update
 
+.PHONY: golden-mutate
+## golden-mutate: Rewrite the grid change compiler golden files
+golden-mutate:
+	$(GO) test ./internal/mutate -run TestCompileGolden -update
+
 .PHONY: lint
 ## lint: Run linters (Go and web)
 lint:
@@ -91,6 +96,11 @@ it:
 		echo "== integration tests against cassandra:$$v =="; \
 		HELENUS_IT_CASSANDRA_VERSION=$$v $(GO) test -tags integration -count=1 -timeout 20m ./internal/... || exit 1; \
 	done
+
+.PHONY: it-pkg
+## it-pkg: Run integration tests for one package, e.g. make it-pkg PKG=./internal/mutate (set HELENUS_IT_ADDR=host:port to reuse a node)
+it-pkg:
+	$(GO) test -tags integration -count=1 -timeout 20m $(PKG) $(TESTFLAGS)
 
 .PHONY: fmt
 ## fmt: Format Go code

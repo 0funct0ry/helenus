@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, BundleInfo, ClusterInfo, ConnectResult, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult } from './types'
+import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult } from './types'
 import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
@@ -162,4 +162,18 @@ export function useRunQuery(profile: string) {
 /** Returns a function that splits editor text into statements with byte offsets. */
 export function useSplit(profile: string) {
   return useCallback(async (cql: string) => (await api<{ statements: SplitStatement[] }>(`/p/${enc(profile)}/split`, { body: { cql } })).statements, [profile])
+}
+
+/**
+ * Returns `preview` and `apply` for staged grid changes (SPEC §11.3). Preview compiles them to CQL
+ * without running anything; apply runs them one at a time and stops at the first failure.
+ */
+export function useChanges(profile: string) {
+  return useMemo(
+    () => ({
+      preview: async (body: ChangesRequest) => (await api<{ statements: PreviewStatement[] }>(`/p/${enc(profile)}/changes/preview`, { body })).statements,
+      apply: (body: ChangesRequest) => api<ApplyResponse>(`/p/${enc(profile)}/changes/apply`, { body }),
+    }),
+    [profile],
+  )
 }

@@ -55,23 +55,28 @@ func (a *api) query(c *gin.Context) {
 	}
 	res, err := a.conn.Query(c.Request.Context(), p.Name, p, req)
 	if err != nil {
-		var filt *exec.ErrFilteringRequired
-		var reqErr gocql.RequestError
-		switch {
-		case errors.As(err, &filt):
-			fail(c, http.StatusUnprocessableEntity, "filtering_required", filt.Message, gin.H{"executed_cql": req.CQL})
-		case errors.Is(err, context.Canceled):
-			fail(c, 499, "cancelled", "query cancelled", nil)
-		case errors.Is(err, context.DeadlineExceeded):
-			fail(c, http.StatusGatewayTimeout, "timeout", "request timed out", nil)
-		case errors.As(err, &reqErr):
-			fail(c, http.StatusBadRequest, "query_failed", reqErr.Message(), gin.H{"executed_cql": req.CQL})
-		default:
-			fail(c, http.StatusBadGateway, "query_failed", err.Error(), gin.H{"executed_cql": req.CQL})
-		}
+		status, code, msg, detail := queryFailure(err, req.CQL)
+		fail(c, status, code, msg, detail)
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+// queryFailure maps an execution error to the API error that describes it.
+func queryFailure(err error, executedCQL string) (status int, code, message string, detail any) {
+	var filt *exec.ErrFilteringRequired
+	var reqErr gocql.RequestError
+	switch {
+	case errors.As(err, &filt):
+		return http.StatusUnprocessableEntity, "filtering_required", filt.Message, gin.H{"executed_cql": executedCQL}
+	case errors.Is(err, context.Canceled):
+		return 499, "cancelled", "query cancelled", nil
+	case errors.Is(err, context.DeadlineExceeded):
+		return http.StatusGatewayTimeout, "timeout", "request timed out", nil
+	case errors.As(err, &reqErr):
+		return http.StatusBadRequest, "query_failed", reqErr.Message(), gin.H{"executed_cql": executedCQL}
+	}
+	return http.StatusBadGateway, "query_failed", err.Error(), gin.H{"executed_cql": executedCQL}
 }
 
 // split breaks editor text into statements with offsets (SPEC §7.1).

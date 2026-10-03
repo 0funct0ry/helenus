@@ -586,3 +586,21 @@ func applyNullBoolDefaults(ctx context.Context, s *gocql.Session, table, nameCol
 	}
 	return nil
 }
+
+// UDTFields returns the field types of a user-defined type, or nil when the
+// type is not in the snapshot. It matches codec.Encoder.UDTFields.
+func (s *Snapshot) UDTFields(r codec.UDTRef) map[string]codec.TypeDesc {
+	k := s.Keyspace(r.Keyspace)
+	if k == nil {
+		return nil
+	}
+	u := k.Type(r.Name)
+	if u == nil {
+		return nil
+	}
+	m := make(map[string]codec.TypeDesc, len(u.Fields))
+	for _, f := range u.Fields {
+		m[f.Name] = f.Type
+	}
+	return m
+}

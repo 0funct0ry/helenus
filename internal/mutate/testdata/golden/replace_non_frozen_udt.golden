@@ -1,0 +1,5 @@
+-- 0 replace_value: set contact
+cql:     UPDATE labs.profiles SET contact = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET contact = {city: 'Pune', id: 7c9e6679-7425-40de-944b-e07fc1f90ae7, visits: 3} WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    map[string]interface {}(map[city:Pune id:7c9e6679-7425-40de-944b-e07fc1f90ae7 visits:3]) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

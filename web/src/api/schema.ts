@@ -2,7 +2,7 @@ import type { SchemaColumn, SchemaKeyspace, SchemaSnapshot, SchemaTable } from '
 import type { Column, Keyspace, Table } from '../lib/schemaModel'
 
 function toColumn(c: SchemaColumn): Column {
-  return { name: c.name, type: c.cql, kind: c.kind, position: c.position || undefined, order: c.order }
+  return { name: c.name, type: c.cql, kind: c.kind, position: c.position || undefined, order: c.order, desc: c.type }
 }
 
 const INDEX_KIND: Record<string, string> = { composites: 'Secondary index', keys: 'Secondary index', custom: 'Custom index' }
@@ -35,7 +35,7 @@ function toKeyspace(k: SchemaKeyspace): Keyspace {
     system: k.system || undefined,
     tables: k.tables.map(toTable),
     views: k.views.map((v) => ({ name: v.name, keyspace: v.keyspace, baseTable: v.base_table, columns: v.columns.map(toColumn), filter: v.where_clause })),
-    types: k.types.map((u) => ({ name: u.name, keyspace: u.keyspace, fields: u.fields.map((f) => ({ name: f.name, type: f.cql })), usedBy: u.used_by })),
+    types: k.types.map((u) => ({ name: u.name, keyspace: u.keyspace, fields: u.fields.map((f) => ({ name: f.name, type: f.cql, desc: f.type })), usedBy: u.used_by })),
     functions: [...k.functions.map((f) => `${f.name}(${f.arg_types.join(', ')})`), ...k.aggregates.map((a) => `${a.name}(${a.arg_types.join(', ')})`)],
   }
 }

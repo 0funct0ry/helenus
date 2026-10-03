@@ -5,6 +5,7 @@ package exec
 import (
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
@@ -35,6 +36,9 @@ type Request struct {
 	PageState         []byte
 	AllowFiltering    bool
 	Trace             bool
+	// Args are bound to the statement's ? markers. With args the driver
+	// prepares the statement (INSERT, UPDATE, DELETE, SELECT).
+	Args []any
 	// Timeout bounds the request; zero leaves the session default.
 	Timeout time.Duration
 }
@@ -101,7 +105,7 @@ func (x *Executor) Run(ctx context.Context, req Request) (*Result, error) {
 		ctx, cancel = context.WithTimeout(ctx, req.Timeout)
 		defer cancel()
 	}
-	q := x.Session.Query(stmt)
+	q := x.Session.Query(stmt, req.Args...)
 	if req.Keyspace != "" {
 		q = q.SetKeyspace(req.Keyspace)
 	}
@@ -236,13 +240,22 @@ func scanDest(cols []gocql.ColumnInfo) ([]any, func() []any) {
 			continue
 		}
 		slots[i].n = -1
-		dest = append(dest, reflect.New(reflect.PointerTo(reflect.TypeOf(c.TypeInfo.Zero()))).Interface())
+		if zero, ok := safeZero(c.TypeInfo); ok {
+			dest = append(dest, reflect.New(reflect.PointerTo(reflect.TypeOf(zero))).Interface())
+		} else {
+			dest = append(dest, &pairScan{})
+		}
 	}
 	return dest, func() []any {
 		out := make([]any, len(cols))
 		k := 0
 		for i, s := range slots {
 			if s.n < 0 {
+				if ps, ok := dest[k].(*pairScan); ok {
+					out[i] = ps.value()
+					k++
+					continue
+				}
 				out[i] = derefNull(dest[k])
 				k++
 				continue
@@ -256,6 +269,91 @@ func scanDest(cols []gocql.ColumnInfo) ([]any, func() []any) {
 		}
 		return out
 	}
+}
+
+// safeZero returns the driver's Go type for a column. The driver panics for a
+// map whose key type cannot be a Go map key (blob, frozen collections).
+func safeZero(ti gocql.TypeInfo) (zero any, ok bool) {
+	defer func() {
+		if recover() != nil {
+			zero, ok = nil, false
+		}
+	}()
+	return ti.Zero(), true
+}
+
+// pairScan reads a map whose keys are not hashable into ordered pairs.
+type pairScan struct {
+	m    codec.Map
+	null bool
+}
+
+func (p *pairScan) value() any {
+	if p.null {
+		return nil
+	}
+	return p.m
+}
+
+// UnmarshalCQL implements gocql.Unmarshaler.
+func (p *pairScan) UnmarshalCQL(info gocql.TypeInfo, data []byte) error {
+	ct, ok := info.(gocql.CollectionType)
+	if !ok {
+		return fmt.Errorf("cannot scan %T into ordered pairs", info)
+	}
+	if data == nil {
+		p.null = true
+		return nil
+	}
+	read := func() ([]byte, error) {
+		if len(data) < 4 {
+			return nil, errors.New("truncated map value")
+		}
+		n := int(int32(binary.BigEndian.Uint32(data)))
+		data = data[4:]
+		if n < 0 {
+			return nil, nil
+		}
+		if len(data) < n {
+			return nil, errors.New("truncated map value")
+		}
+		b := data[:n]
+		data = data[n:]
+		return b, nil
+	}
+	decode := func(ti gocql.TypeInfo, b []byte) (any, error) {
+		dst := reflect.New(reflect.PointerTo(reflect.TypeOf(ti.Zero())))
+		if err := gocql.Unmarshal(ti, b, dst.Interface()); err != nil {
+			return nil, err
+		}
+		return derefNull(dst.Interface()), nil
+	}
+	if len(data) < 4 {
+		return errors.New("truncated map value")
+	}
+	n := int(int32(binary.BigEndian.Uint32(data)))
+	data = data[4:]
+	for i := 0; i < n; i++ {
+		kb, err := read()
+		if err != nil {
+			return err
+		}
+		vb, err := read()
+		if err != nil {
+			return err
+		}
+		k, err := decode(ct.Key, kb)
+		if err != nil {
+			return err
+		}
+		v, err := decode(ct.Elem, vb)
+		if err != nil {
+			return err
+		}
+		p.m.Keys = append(p.m.Keys, k)
+		p.m.Values = append(p.m.Values, v)
+	}
+	return nil
 }
 
 // derefNull turns a **T into nil (NULL) or the T value.
@@ -304,21 +402,7 @@ func udtFields(snap *schema.Snapshot) func(codec.UDTRef) map[string]codec.TypeDe
 	if snap == nil {
 		return nil
 	}
-	return func(r codec.UDTRef) map[string]codec.TypeDesc {
-		k := snap.Keyspace(r.Keyspace)
-		if k == nil {
-			return nil
-		}
-		u := k.Type(r.Name)
-		if u == nil {
-			return nil
-		}
-		m := make(map[string]codec.TypeDesc, len(u.Fields))
-		for _, f := range u.Fields {
-			m[f.Name] = f.Type
-		}
-		return m
-	}
+	return snap.UDTFields
 }
 
 type traceCapture struct{ b []byte }

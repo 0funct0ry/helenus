@@ -1,0 +1,42 @@
+---
+title: Edit rows in the grid
+description: Change cells, add and delete rows, and apply the edits to your cluster.
+---
+
+The **Data** view of a table works like a spreadsheet. You make edits, Helenus collects them as **pending changes**, and nothing is written until you apply them.
+
+## Edit a cell
+
+1. Double-click a cell, or select it and press **Enter** or **F2**.
+2. Type the new value and press **Enter**. Press **Escape** to cancel.
+
+Helenus checks the value against the column type as you type: UUIDs, number ranges, dates, times, timestamps, IP addresses, booleans, blobs (hex starting with `0x`) and durations. An invalid value stays in the editor with a message.
+
+- To set a cell to null, use the **Set null** button in the editor. Leaving a non-text cell empty also sets it to null.
+- Primary key cells are read-only. To change a key, use **Duplicate row** and change the key in the new row.
+- Counter cells take an increment instead of a value. Type `5` or `-3` and the cell shows the current value with the change, such as `10 (+5)`.
+- List, set, map and user-defined type cells open an editor. See [Edit lists, sets, and maps](/helenus/docs/edit-lists-sets-and-maps/).
+
+## Add and delete rows
+
+- **Insert row** opens a form with a field for each column. The primary key is required. Switch on **IF NOT EXISTS** to insert only when the row does not exist yet. New rows appear in green at the top of the grid.
+- **Duplicate row** opens the same form filled with the selected row's values.
+- **Delete row** marks the selected row with a strikethrough until you apply. **Restore row** takes the mark off.
+
+Counter tables only accept increments, so insert, duplicate and delete are not offered there.
+
+## Apply the changes
+
+The bar under the grid shows how many changes are pending.
+
+- **Review CQL** shows the statements Helenus will run.
+- **Discard** drops every pending change after you confirm.
+- **Apply changes** runs them in order at the tab's consistency level.
+
+Changes run one at a time, not in a batch. If one fails, Helenus stops there. The failed change and the ones after it stay pending, and the error appears on the cell and in the bar. After a successful apply the page loads again.
+
+Pending changes stay when you switch tabs. They are lost if you reload the page.
+
+## When editing is off
+
+The grid is read-only, with the reason shown above it, for materialized views, tables in `system` keyspaces, and results that do not include the whole primary key.

@@ -25,6 +25,9 @@ export default defineConfig({
           items: [
             { label: 'Run queries in the web UI', slug: 'docs/run-queries-in-the-web-ui' },
             { label: 'Page through large results', slug: 'docs/page-through-large-results' },
+            { label: 'Edit rows in the grid', slug: 'docs/edit-rows-in-the-grid' },
+            { label: 'Edit lists, sets, and maps', slug: 'docs/edit-lists-sets-and-maps' },
+            { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
             { label: 'Autocomplete in the editor and shell', slug: 'docs/autocomplete-in-the-editor-and-shell' },
             { label: 'Use the shell', slug: 'docs/use-the-shell' },

@@ -118,6 +118,8 @@ export function connectedWorkspace(tabs: WorkspaceTab[] = [], activeId = tabs[0]
     profileDialogOpen: false,
     queryCount: 0,
     queryStates: {},
+    edits: {},
+    editErrors: {},
   })
 }
 

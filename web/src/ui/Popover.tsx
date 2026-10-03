@@ -14,6 +14,8 @@ export interface PopoverProps {
   /** Match the anchor's width (used by Select). */
   matchWidth?: boolean
   className?: string
+  /** Stack above modal dialogs (z-60 instead of z-40), for popovers opened from inside a Dialog. */
+  aboveDialog?: boolean
   role?: string
   'aria-label'?: string
 }
@@ -22,7 +24,7 @@ export interface PopoverProps {
  * A floating panel rendered in a portal at fixed coordinates below its anchor. It closes on Escape
  * or a mouse press outside both the panel and the anchor. It never moves focus; callers own that.
  */
-export function Popover({ open, onClose, anchorRef, children, align = 'start', matchWidth, className, role = 'dialog', ...rest }: PopoverProps) {
+export function Popover({ open, onClose, anchorRef, children, align = 'start', matchWidth, className, aboveDialog, role = 'dialog', ...rest }: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number; width?: number }>({ top: 0 })
 
@@ -36,6 +38,26 @@ export function Popover({ open, onClose, anchorRef, children, align = 'start', m
       width: matchWidth ? r.width : undefined,
     })
   }, [open, anchorRef, align, matchWidth])
+
+  // Keep wide panels inside the viewport: shift left when the panel would run off the right edge.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!open || !el || pos.left === undefined) return
+    const over = pos.left + el.offsetWidth + 8 - window.innerWidth
+    if (over > 0 && el.offsetWidth > 0) setPos((p) => ({ ...p, left: Math.max(8, (p.left ?? 0) - over) }))
+  }, [open, pos.left])
+
+  // Keep tall panels on screen: open upwards when there is no room below, else shift up to fit.
+  useLayoutEffect(() => {
+    const el = ref.current
+    const a = anchorRef.current
+    if (!open || !el || !a || el.offsetHeight === 0) return
+    const r = a.getBoundingClientRect()
+    const h = el.offsetHeight
+    if (r.bottom + 4 + h + 8 <= window.innerHeight) return
+    const above = r.top - 4 - h
+    setPos((p) => ({ ...p, top: above >= 8 ? above : Math.max(8, window.innerHeight - h - 8) }))
+  }, [open, anchorRef, children])
 
   useEffect(() => {
     if (!open) return
@@ -66,7 +88,7 @@ export function Popover({ open, onClose, anchorRef, children, align = 'start', m
       role={role}
       aria-label={rest['aria-label']}
       style={{ position: 'fixed', ...pos, minWidth: pos.width }}
-      className={cn('z-40 rounded-lg bg-elevated shadow-[var(--shadow)]', className)}
+      className={cn(aboveDialog ? 'z-[60]' : 'z-40', 'rounded-lg bg-elevated shadow-[var(--shadow)]', className)}
     >
       {children}
     </div>,

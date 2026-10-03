@@ -231,3 +231,68 @@ export interface CompleteResponse {
   from: number
   items: CompleteItem[]
 }
+
+/** The kinds of grid change `POST /p/{profile}/changes/*` accepts (SPEC §9.9). */
+export type ChangeKind =
+  | 'set_cell'
+  | 'set_null'
+  | 'insert_row'
+  | 'delete_row'
+  | 'counter_delta'
+  | 'list_append'
+  | 'list_prepend'
+  | 'list_set_index'
+  | 'list_remove_index'
+  | 'set_add'
+  | 'set_remove'
+  | 'map_put'
+  | 'map_remove'
+  | 'udt_field_set'
+  | 'replace_value'
+
+/** One edit to one row, with values in the API's JSON encoding. */
+export interface Change {
+  kind: ChangeKind
+  /** Primary key values by column name; static columns use the partition key only. */
+  key?: Record<string, unknown>
+  column?: string
+  field?: string
+  index?: number
+  value?: unknown
+  map_key?: unknown
+  values?: Record<string, unknown>
+  if_not_exists?: boolean
+}
+
+/** Body of `POST /p/{profile}/changes/preview` and `/changes/apply`. */
+export interface ChangesRequest {
+  keyspace: string
+  table: string
+  consistency: string
+  serial_consistency?: string
+  changes: Change[]
+}
+
+/** One compiled change: the prepared CQL and the same statement with literal values. */
+export interface PreviewStatement {
+  index: number
+  kind: ChangeKind
+  cql: string
+  preview: string
+  summary: string
+}
+
+/** The outcome of one change in `POST /p/{profile}/changes/apply`. */
+export interface ChangeResult {
+  index: number
+  status: 'applied' | 'failed' | 'pending'
+  executed_cql: string
+  error?: { code: string; message: string }
+}
+
+export interface ApplyResponse {
+  results: ChangeResult[]
+  applied: number
+  /** Index of the failed change, or -1. */
+  failed_at: number
+}

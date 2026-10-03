@@ -1,0 +1,5 @@
+-- 0 set_cell: set amount
+cql:     UPDATE payments.transactions_by_merchant SET amount = ? WHERE merchant_id = ? AND txn_day = ? AND txn_time = ?;
+preview: UPDATE payments.transactions_by_merchant SET amount = 1250.00 WHERE merchant_id = 7c9e6679-7425-40de-944b-e07fc1f90ae7 AND txn_day = '2026-09-30' AND txn_time = 3f1a2b10-9d3c-11ef-8a6e-0242ac120002;
+args:    *inf.Dec(1250.00) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7) time.Time(2026-09-30 00:00:00 +0000 UTC) gocql.UUID(3f1a2b10-9d3c-11ef-8a6e-0242ac120002)
+

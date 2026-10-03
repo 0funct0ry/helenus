@@ -1,4 +1,6 @@
 /** The schema shapes the explorer components render, built from the API snapshot (see api/schema.ts). */
+import type { TypeDesc } from '../api/types'
+
 export type ColumnKind = 'partition' | 'clustering' | 'static' | 'regular'
 
 export interface Column {
@@ -8,6 +10,8 @@ export interface Column {
   /** 1-based position within the partition or clustering key. */
   position?: number
   order?: 'ASC' | 'DESC'
+  /** The structured type, used by the cell and collection editors. */
+  desc?: TypeDesc
 }
 
 export interface Index {
@@ -37,7 +41,7 @@ export interface MaterializedView {
 export interface Udt {
   name: string
   keyspace: string
-  fields: { name: string; type: string }[]
+  fields: { name: string; type: string; desc?: TypeDesc }[]
   usedBy: string[]
 }
 

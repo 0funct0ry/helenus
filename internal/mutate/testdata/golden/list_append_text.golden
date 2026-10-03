@@ -1,0 +1,5 @@
+-- 0 list_append: append to nicks
+cql:     UPDATE labs.profiles SET nicks = nicks + ? WHERE id = ?;
+preview: UPDATE labs.profiles SET nicks = nicks + ['o''neil'] WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    []interface {}([o'neil]) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

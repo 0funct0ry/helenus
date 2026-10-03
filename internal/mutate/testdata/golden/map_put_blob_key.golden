@@ -1,0 +1,5 @@
+-- 0 map_put: put entry in blob_keys
+cql:     UPDATE labs.profiles SET blob_keys[?] = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET blob_keys[0xcafe] = 1 WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    []uint8([202 254]) int32(1) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

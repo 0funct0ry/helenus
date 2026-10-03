@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
@@ -8,11 +9,27 @@ import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { Select } from '../ui/Select'
 import { Popover } from '../ui/Popover'
+import { GridCell } from './GridCell'
 import { typeFamily } from '../lib/typeFamily'
-import { timeuuidTime } from '../lib/cellFormat'
+import type { RowMeta } from '../lib/gridEdits'
 import { rowsToTsv } from '../lib/rows'
 import { cn } from '../lib/cn'
 import type { CellValue, Column, Row } from '../mocks/types'
+
+/** Turns the grid into a spreadsheet: staged edits, read-only reasons, and the editors that open from a cell. */
+export interface GridEdit {
+  /** One entry per row: its state and staged cell edits. */
+  meta: RowMeta[]
+  /** Why a cell cannot be edited, or null when it can. */
+  readOnlyReason: (row: number, column: Column) => string | null
+  /** Double-click, Enter or F2 on an editable cell; `anchor` is the cell element. */
+  onEditCell: (row: number, column: Column, anchor: HTMLElement) => void
+  /** The cell shown in inline-edit mode, with the editor to render inside it. */
+  editing?: { row: number; column: string }
+  renderEditor?: (row: number, column: Column) => ReactNode
+  /** Called with the selected row index, or null when the selection is cleared. */
+  onSelectRow?: (row: number | null) => void
+}
 
 export interface ResultsGridProps {
   columns: Column[]
@@ -33,6 +50,8 @@ export interface ResultsGridProps {
   onCount?: () => void
   /** JSON text for the row at an index, used by "Copy row as JSON". Falls back to the displayed values. */
   rowJson?: (index: number) => string
+  /** Makes the grid editable (the table Data view); omitted for query results, which stay read-only. */
+  edit?: GridEdit
 }
 
 const ROW_H = 26
@@ -49,25 +68,12 @@ function widthFor(c: Column): number {
   return 150
 }
 
-function Cell({ column, value }: { column: Column; value: CellValue }) {
-  if (value === null) return <span className="italic text-dim">null</span>
-  const f = typeFamily(column.type)
-  if (column.type === 'timeuuid') {
-    const when = timeuuidTime(String(value))
-    return <span className={column.kind === 'regular' ? 'text-syn-str' : 'text-muted'} title={when}>{String(value)}</span>
-  }
-  if (column.kind === 'partition' || column.kind === 'clustering') return <span className="text-muted">{String(value)}</span>
-  if (f === 'num' || f === 'counter') return <span className="text-syn-num">{String(value)}</span>
-  if (f === 'coll' || f === 'udt' || f === 'vec') return <span className="text-syn-const">{String(value)}</span>
-  return <span className="text-syn-str">{String(value)}</span>
-}
-
 /**
- * Read-only virtualized result grid. Headers show the kind marker, name and type badge; null is a dim
+ * Virtualized result grid, read-only unless an `edit` prop is given. Headers show the kind marker, name and type badge; null is a dim
  * italic "null"; collections and UDTs render as CQL literals. The footer shows row count, page,
  * elapsed time, consistency and paging controls. Row numbers stick to the left, headers to the top.
  */
-export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, hasPrev, hasNext, onPrev, onNext, pageSize, onPageSize, showCount, onCount, rowJson }: ResultsGridProps) {
+export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, hasPrev, hasNext, onPrev, onNext, pageSize, onPageSize, showCount, onCount, rowJson, edit }: ResultsGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const copyRef = useRef<HTMLSpanElement>(null)
   const [copyOpen, setCopyOpen] = useState(false)
@@ -87,7 +93,7 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
           id: c.name,
           header: c.name,
           size: widthFor(c),
-          cell: (ctx) => <Cell column={c} value={ctx.getValue() as CellValue} />,
+          cell: (ctx) => <GridCell column={c} value={ctx.getValue() as CellValue} />,
           meta: c,
         }),
       ),
@@ -107,7 +113,20 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto bg-editor text-[12.5px]">
+      <div
+        ref={scrollRef}
+        tabIndex={edit ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (!edit || !picked || edit.editing || (e.key !== 'Enter' && e.key !== 'F2') || (e.target as HTMLElement).closest('input, button')) return
+          const col = columns.find((c) => c.name === picked.col)
+          const el = [...(scrollRef.current?.querySelectorAll<HTMLElement>('[role="cell"]') ?? [])].find((n) => n.dataset.row === String(picked.row) && n.dataset.col === picked.col)
+          if (col && el && edit.readOnlyReason(picked.row, col) === null) {
+            e.preventDefault()
+            edit.onEditCell(picked.row, col, el)
+          }
+        }}
+        className="min-h-0 flex-1 overflow-auto bg-editor text-[12.5px] outline-none"
+      >
         <div role="table" aria-label="Results" aria-rowcount={rows.length + 1} aria-colcount={columns.length + 1} style={{ minWidth: total, width: '100%' }}>
           <div role="rowgroup" className="sticky top-0 z-[2]">
             {table.getHeaderGroups().map((hg) => (
@@ -135,6 +154,11 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
           <div role="rowgroup" className="relative" style={{ height: virt.getTotalSize() }}>
             {virt.getVirtualItems().map((v) => {
               const row = tableRows[v.index]
+              const rm = edit?.meta[v.index]
+              const select = (from: number, to: number) => {
+                setRange({ from, to })
+                edit?.onSelectRow?.(to)
+              }
               return (
                 <div
                   key={row.id}
@@ -146,28 +170,57 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
                   <div
                     role="rowheader"
                     aria-selected={inRange(v.index)}
+                    title={rm?.error}
                     onClick={(e) => {
                       setPicked(null)
-                      setRange((r) => (e.shiftKey && r ? { from: r.from, to: v.index } : { from: v.index, to: v.index }))
+                      if (e.shiftKey && range) select(range.from, v.index)
+                      else select(v.index, v.index)
                     }}
-                    className="sticky left-0 z-[1] truncate border-b border-r border-line bg-surface pr-2 text-right leading-[26px] text-faint cursor-pointer group-hover:bg-hover">
-                    {v.index + 1}
+                    className={cn(
+                      'sticky left-0 z-[1] truncate border-b border-r border-line bg-surface pr-2 text-right leading-[26px] text-faint cursor-pointer group-hover:bg-hover',
+                      rm?.kind === 'new' && 'shadow-[inset_2px_0_0_var(--success)] text-ok',
+                      rm?.kind === 'deleted' && 'shadow-[inset_2px_0_0_var(--error)]',
+                    )}>
+                    {rm?.kind === 'new' ? '+' : v.index + 1}
                   </div>
-                  {row.getVisibleCells().map((cell) => (
-                    <div
-                      key={cell.id}
-                      role="cell"
-                      aria-selected={picked ? picked.row === v.index && picked.col === cell.column.id : undefined}
-                      onClick={() => {
-                        setPicked({ row: v.index, col: cell.column.id })
-                        setRange({ from: v.index, to: v.index })
-                      }}
-                      className={cn('truncate border-b border-r px-2.5 leading-[26px] group-hover:bg-[var(--active-line)]', inRange(v.index) && 'bg-[var(--active-line)]', picked?.row === v.index && picked.col === cell.column.id && 'outline outline-1 -outline-offset-1 outline-accent')}
-                      style={{ borderColor: 'var(--border-variant)' }}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const col = cell.column.columnDef.meta as Column
+                    const cm = rm?.cells[col.name]
+                    const isPicked = picked?.row === v.index && picked.col === cell.column.id
+                    const isEditing = edit?.editing?.row === v.index && edit.editing.column === col.name
+                    const reason = edit ? edit.readOnlyReason(v.index, col) : null
+                    return (
+                      <div
+                        key={cell.id}
+                        role="cell"
+                        data-row={v.index}
+                        data-col={col.name}
+                        aria-selected={picked ? isPicked : undefined}
+                        aria-readonly={edit && reason ? true : undefined}
+                        title={cm?.error ?? (cm?.changed ? `Was ${cm.was ?? 'null'}` : edit && !isEditing && reason ? reason : undefined)}
+                        onClick={() => {
+                          setPicked({ row: v.index, col: cell.column.id })
+                          select(v.index, v.index)
+                        }}
+                        onDoubleClick={(e) => {
+                          if (edit && reason === null) edit.onEditCell(v.index, col, e.currentTarget)
+                        }}
+                        className={cn(
+                          'truncate border-b border-r px-2.5 leading-[26px] group-hover:bg-[var(--active-line)]',
+                          inRange(v.index) && 'bg-[var(--active-line)]',
+                          isPicked && 'outline outline-1 -outline-offset-1 outline-accent',
+                          rm?.kind === 'new' && 'bg-ok-bg',
+                          rm?.kind === 'deleted' && 'bg-err-bg text-dim line-through',
+                          cm?.changed && 'bg-warn-bg',
+                          cm?.error && 'outline outline-1 -outline-offset-1 outline-danger',
+                          isEditing && '!bg-accent-bg !p-0 shadow-[inset_0_0_0_1px_var(--accent)]',
+                        )}
+                        style={{ borderColor: 'var(--border-variant)' }}
+                      >
+                        {isEditing && edit?.renderEditor ? edit.renderEditor(v.index, col) : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </div>
+                    )
+                  })}
                 </div>
               )
             })}

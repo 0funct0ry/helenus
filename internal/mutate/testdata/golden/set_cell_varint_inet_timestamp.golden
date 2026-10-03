@@ -1,0 +1,15 @@
+-- 0 set_cell: set big
+cql:     UPDATE labs.profiles SET big = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET big = 1208925819614629174706176 WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    *big.Int(1208925819614629174706176) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+
+-- 1 set_cell: set ip
+cql:     UPDATE labs.profiles SET ip = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET ip = '10.0.0.1' WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    net.IP(10.0.0.1) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+
+-- 2 set_cell: set since
+cql:     UPDATE labs.profiles SET since = ? WHERE id = ?;
+preview: UPDATE labs.profiles SET since = '2026-09-30 10:00:00.005Z' WHERE id = 7c9e6679-7425-40de-944b-e07fc1f90ae7;
+args:    time.Time(2026-09-30 10:00:00.005 +0000 UTC) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7)
+

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, RefreshCw } from 'lucide-react'
+import { Copy, Plus, RefreshCw, Trash2, Undo2 } from 'lucide-react'
 import { Tabs } from '../ui/Tabs'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
@@ -9,7 +9,14 @@ import { SchemaSheet } from './SchemaSheet'
 import { DdlView } from './DdlView'
 import { ViewsSheet } from './ViewsSheet'
 import { CountRowsDialog } from './CountRowsDialog'
+import { CellEditor } from './CellEditor'
+import { CollectionPopover } from './CollectionPopover'
+import { InsertRowDialog } from './InsertRowDialog'
+import { PendingBar } from './PendingBar'
+import { ReviewChangesDialog } from './ReviewChangesDialog'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { usePagedSelect } from '../api/usePagedSelect'
+import { useTableEditing } from '../api/useTableEditing'
 import { rowToJson, toGridColumns, toGridRows } from '../lib/rows'
 import { useDdl, useSchema } from '../api/hooks'
 import { describeError } from '../api/client'
@@ -24,9 +31,11 @@ export interface TableViewProps {
 }
 
 /**
- * Table (or materialized view) tab body with Data, Schema, DDL and Views sub-views. Views are
- * read-only and have no Views sub-view. Everything comes from the connected cluster; Data runs a
- * read-only `SELECT *` with native paging (Previous/Next, page size, Count rows) at the tab's consistency.
+ * Table (or materialized view) tab body with Data, Schema, DDL and Views sub-views. Views have no Views
+ * sub-view. Everything comes from the connected cluster; Data runs a `SELECT *` with native paging
+ * (Previous/Next, page size, Count rows) at the tab's consistency. On a table the Data grid is a
+ * spreadsheet (SPEC §9.9): edits are staged in a pending bar, reviewed as CQL, then applied. Materialized
+ * views, system keyspaces and results without the full primary key stay read-only, with the reason shown.
  */
 export function TableView({ tab }: TableViewProps) {
   const [sub, setSub] = useState('data')
@@ -47,8 +56,21 @@ export function TableView({ tab }: TableViewProps) {
   const [counting, setCounting] = useState(false)
   const ident = (n: string) => (/^[a-z][a-z0-9_]*$/.test(n) ? n : `"${n.replace(/"/g, '""')}"`)
   const data = usePagedSelect(profileId, tab.keyspace, `SELECT * FROM ${ident(tab.keyspace)}.${ident(tab.object)};`, consistency, pageSize, sub === 'data' && connected && !!(table || view))
+  const editing = useTableEditing({
+    tab,
+    profile: profileId,
+    consistency,
+    response: data.response,
+    refetch: data.refetch,
+    tableColumns: columns,
+    isView,
+    system: !!ks?.system,
+    counterTable: !!table?.counter,
+    keyspaces,
+  })
   const dataColumns = useMemo(() => (data.response ? toGridColumns(data.response.columns) : columns), [data.response, columns])
   const dataRows = useMemo(() => (data.response ? toGridRows(data.response) : []), [data.response])
+  const shownRows = editing.composed?.rows ?? dataRows
   const ddlQuery = useDdl(profileId, tab.keyspace, isView ? 'view' : 'table', tab.object, sub === 'ddl' && !!(table || view))
 
   const items = [
@@ -73,18 +95,36 @@ export function TableView({ tab }: TableViewProps) {
           <span className="truncate">{pk.length ? pk.map((c) => `${c.name} = …`).join(' AND ') : 'all partitions'}</span>
         </span>
         <div className="flex-1" />
-        <Button variant="ghost" icon={<Plus size={14} />} disabled title={isView ? 'Views are read-only' : 'Editing arrives in a later milestone'}>
+        <Button variant="ghost" icon={<Plus size={14} />} disabled={!editing.toolbar.canInsert} title={editing.toolbar.insertTitle} onClick={editing.toolbar.onInsert}>
           Insert row
         </Button>
+        {editing.ed.editable && !table?.counter && (
+          <>
+            <Button variant="ghost" icon={<Copy size={14} />} disabled={!editing.toolbar.canDuplicate} title="Insert a copy of the selected row with a new key" onClick={editing.toolbar.onDuplicate}>
+              Duplicate row
+            </Button>
+            <Button
+              variant="ghost"
+              icon={editing.toolbar.deleteLabel === 'Delete row' ? <Trash2 size={14} /> : <Undo2 size={14} />}
+              disabled={!editing.toolbar.canDelete}
+              title="Select a row first"
+              onClick={editing.toolbar.onDelete}
+            >
+              {editing.toolbar.deleteLabel}
+            </Button>
+          </>
+        )}
         <Select label="Consistency" value={consistency} onChange={setConsistency} options={CONSISTENCY_LEVELS} />
         <IconButton label="Refresh" icon={<RefreshCw size={14} />} onClick={data.reload} />
       </div>
+      {sub === 'data' && !editing.ed.editable && editing.ed.reason && <p className="m-0 border-b border-line2 px-3 py-1.5 text-xs text-muted">{editing.ed.reason}</p>}
+      {sub === 'data' && editing.editError && <p role="alert" className="m-0 border-b border-line2 bg-err-bg px-3 py-1.5 text-xs text-danger">{editing.editError}</p>}
       {sub === 'data' && data.error && <p role="alert" className="m-3 rounded-md bg-err-bg px-3 py-2 text-[12.5px] text-danger">{data.error}</p>}
       {sub === 'data' && !data.error && !data.response && <p className="p-4 text-muted">{data.loading ? 'Reading rows…' : 'Connect to read rows.'}</p>}
       {sub === 'data' && !data.error && data.response && (
         <ResultsGrid
           columns={dataColumns}
-          rows={dataRows}
+          rows={shownRows}
           page={data.page}
           elapsedMs={data.response.timing.client_ms}
           consistency={consistency}
@@ -96,9 +136,84 @@ export function TableView({ tab }: TableViewProps) {
           onPageSize={setPageSize}
           showCount
           onCount={() => setCounting(true)}
-          rowJson={(i) => rowToJson(data.response!, i)}
+          rowJson={(i) => {
+            const src = editing.composed?.meta[i]?.source
+            return src === null ? JSON.stringify(shownRows[i], null, 2) : rowToJson(data.response!, src ?? i)
+          }}
+          edit={
+            editing.grid && {
+              ...editing.grid,
+              renderEditor: (row, column) => {
+                const ed = editing.editorFor(row, column.name)
+                if (!ed) return null
+                return (
+                  <CellEditor
+                    name={ed.qcol.name}
+                    type={ed.qcol.type}
+                    initial={ed.initial}
+                    counter={ed.qcol.type.name === 'counter'}
+                    onCommit={(r) => editing.commitCell(row, column.name, r)}
+                    onCancel={editing.cancelEdit}
+                    onInvalid={editing.setEditError}
+                  />
+                )
+              },
+            }
+          }
         />
       )}
+      {sub === 'data' && (
+        <PendingBar
+          items={editing.items}
+          failure={editing.failure}
+          busy={editing.busy}
+          onDiscard={() => editing.setDiscarding(true)}
+          onReview={() => editing.setReviewing(true)}
+          onApply={() => void editing.apply()}
+        />
+      )}
+      {editing.collection && (
+        <CollectionPopover
+          open
+          onClose={editing.collection.onClose}
+          anchorRef={editing.collection.anchorRef}
+          name={editing.collection.name}
+          type={editing.collection.type}
+          original={editing.collection.original}
+          draft={editing.collection.draft}
+          udtFields={editing.udtFields}
+          onStage={editing.collection.onStage}
+        />
+      )}
+      <InsertRowDialog
+        open={!!editing.inserting}
+        onClose={editing.closeInsert}
+        columns={data.response?.columns ?? []}
+        initial={editing.inserting?.initial}
+        duplicate={editing.inserting?.duplicate}
+        udtFields={editing.udtFields}
+        onStage={editing.stageInsert}
+      />
+      <ReviewChangesDialog
+        open={editing.reviewing}
+        onClose={() => editing.setReviewing(false)}
+        profile={profileId}
+        keyspace={tab.keyspace}
+        table={tab.object}
+        consistency={consistency}
+        items={editing.items}
+        onApplied={editing.handleApplied}
+        onDropFailed={editing.dropFailed}
+      />
+      <ConfirmDialog
+        open={editing.discarding}
+        title="Discard pending changes"
+        message={`Discard ${editing.items.length} pending ${editing.items.length === 1 ? 'change' : 'changes'}? Nothing has been written to the cluster.`}
+        confirmLabel="Discard"
+        danger
+        onConfirm={editing.discard}
+        onCancel={() => editing.setDiscarding(false)}
+      />
       <CountRowsDialog open={counting} onClose={() => setCounting(false)} onRun={data.count} />
       {sub === 'schema' && <SchemaSheet columns={columns} options={table?.options} indexes={table?.indexes} />}
       {sub === 'ddl' && (

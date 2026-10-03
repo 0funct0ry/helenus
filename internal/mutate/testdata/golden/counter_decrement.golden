@@ -1,0 +1,5 @@
+-- 0 counter_delta: increment credits
+cql:     UPDATE payments.ledger_counters SET credits = credits + ? WHERE account_id = ? AND day = ?;
+preview: UPDATE payments.ledger_counters SET credits = credits + -3 WHERE account_id = 7c9e6679-7425-40de-944b-e07fc1f90ae7 AND day = '2026-09-30';
+args:    int64(-3) gocql.UUID(7c9e6679-7425-40de-944b-e07fc1f90ae7) time.Time(2026-09-30 00:00:00 +0000 UTC)
+

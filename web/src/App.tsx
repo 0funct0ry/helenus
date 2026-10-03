@@ -18,6 +18,7 @@ import { initTheme } from './store/theme'
  */
 export function App() {
   const tabs = useWorkspace((s) => s.tabs)
+  const edits = useWorkspace((s) => s.edits)
   const activeId = useWorkspace((s) => s.activeId)
   const activate = useWorkspace((s) => s.activate)
   const close = useWorkspace((s) => s.close)
@@ -44,7 +45,7 @@ export function App() {
       <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
         <SchemaTree />
         <main className="flex min-h-0 min-w-0 flex-col">
-          <TabBar tabs={tabs} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
+          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0 }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (
             <TableView key={active.id} tab={active} />
           ) : active?.kind === 'query' ? (
