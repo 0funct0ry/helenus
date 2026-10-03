@@ -28,6 +28,7 @@ export default defineConfig({
             { label: 'Edit rows in the grid', slug: 'docs/edit-rows-in-the-grid' },
             { label: 'Edit lists, sets, and maps', slug: 'docs/edit-lists-sets-and-maps' },
             { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
+            { label: 'Create and change user-defined types', slug: 'docs/create-and-change-user-defined-types' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
             { label: 'Autocomplete in the editor and shell', slug: 'docs/autocomplete-in-the-editor-and-shell' },
             { label: 'Use the shell', slug: 'docs/use-the-shell' },

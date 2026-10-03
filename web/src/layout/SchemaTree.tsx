@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from 'react'
 import { Braces, Copy, Database, ExternalLink, Eye, FileText, FunctionSquare, Lock, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
+import { NewTypeDialog } from './NewTypeDialog'
 import type { ContextMenuItem } from './SchemaContextMenu'
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
@@ -16,7 +17,7 @@ import type { Keyspace, Table } from '../lib/schemaModel'
 
 const defaultClosed = (key: string) => key.startsWith('fn:') || key === 'system'
 
-type ObjectKind = 'table' | 'view' | 'type'
+type ObjectKind = 'table' | 'view' | 'type' | 'keyspace'
 interface MenuState {
   x: number
   y: number
@@ -36,6 +37,7 @@ export function SchemaTree() {
   const [filter, setFilter] = useState('')
   const [toggled, setToggled] = useState<Record<string, boolean>>({})
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [newTypeKs, setNewTypeKs] = useState<string | null>(null)
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId))
   const open = useWorkspace((s) => s.open)
   const newQuery = useWorkspace((s) => s.newQuery)
@@ -66,14 +68,22 @@ export function SchemaTree() {
   }
 
   const menuItems = (m: MenuState): ContextMenuItem[] => {
+    if (m.kind === 'keyspace')
+      return [
+        { label: 'New type…', icon: <Braces size={14} />, onSelect: () => setNewTypeKs(m.keyspace) },
+        { label: 'New query here', icon: <FileText size={14} />, onSelect: () => newQuery({ keyspace: m.keyspace }) },
+        { label: 'Copy name', icon: <Copy size={14} />, onSelect: () => void navigator.clipboard?.writeText(m.keyspace) },
+        { label: 'Refresh', icon: <RefreshCw size={14} />, onSelect: () => refresh.mutate() },
+      ]
     const fq = `${m.keyspace}.${m.name}`
-    const ddlObject: DdlObject = m.kind
+    const kind = m.kind
+    const ddlObject: DdlObject = kind
     return [
-      { label: 'Open', icon: <ExternalLink size={14} />, onSelect: () => open(m.kind, m.keyspace, m.name) },
+      { label: 'Open', icon: <ExternalLink size={14} />, onSelect: () => open(kind, m.keyspace, m.name) },
       {
         label: 'New query here',
         icon: <FileText size={14} />,
-        onSelect: () => newQuery({ keyspace: m.keyspace, cql: m.kind === 'type' ? undefined : `SELECT * FROM ${fq} LIMIT 100;` }),
+        onSelect: () => newQuery({ keyspace: m.keyspace, cql: kind === 'type' ? undefined : `SELECT * FROM ${fq} LIMIT 100;` }),
       },
       { label: 'Copy name', icon: <Copy size={14} />, onSelect: () => void navigator.clipboard?.writeText(fq) },
       { label: 'Copy DDL', icon: <Copy size={14} />, onSelect: () => void copyDdl(m.keyspace, ddlObject, m.name) },
@@ -105,10 +115,20 @@ export function SchemaTree() {
     const fns = k.functions.filter((f) => match(f) || match(k.name))
     if (q && !tables.length && !views.length && !types.length && !fns.length && !match(k.name)) return null
     const kOpen = isOpen(`ks:${k.name}`)
-    const group = (id: string, name: string, count: number, children: ReactNode) =>
+    const group = (id: string, name: string, count: number, children: ReactNode, add?: { label: string; run: () => void }) =>
       count > 0 || !q ? (
         <div key={id}>
-          <TreeRow indent={22} label={name} muted expanded={isOpen(id)} meta={count} onClick={() => toggle(id)} />
+          <div className="group relative">
+            <TreeRow indent={22} label={name} muted expanded={isOpen(id)} meta={count} onClick={() => toggle(id)} />
+            {add && (
+              <IconButton
+                label={add.label}
+                icon={<Plus size={13} />}
+                onClick={add.run}
+                className="absolute right-7 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
+              />
+            )}
+          </div>
           {isOpen(id) && children}
         </div>
       ) : null
@@ -119,7 +139,9 @@ export function SchemaTree() {
     )
     return (
       <div key={k.name} role="group">
-        <TreeRow indent={6} label={k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
+        <div onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
+          <TreeRow indent={6} label={k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
+        </div>
         {kOpen && (
           <>
             {group(
@@ -157,6 +179,7 @@ export function SchemaTree() {
                   <TreeRow indent={40} label={t.name} mono selected={isSel('type', k.name, t.name)} icon={<Braces size={14} />} onClick={() => open('type', k.name, t.name)} />
                 </div>
               )),
+              { label: `New type in ${k.name}`, run: () => setNewTypeKs(k.name) },
             )}
             {group(
               `fn:${k.name}`,
@@ -229,7 +252,8 @@ export function SchemaTree() {
           <span>{counts.types} types</span>
         </div>
       )}
-      {menu && <SchemaContextMenu x={menu.x} y={menu.y} label={`${menu.keyspace}.${menu.name}`} items={menuItems(menu)} onClose={() => setMenu(null)} />}
+      {newTypeKs && <NewTypeDialog keyspace={newTypeKs} onClose={() => setNewTypeKs(null)} />}
+      {menu && <SchemaContextMenu x={menu.x} y={menu.y} label={menu.kind === 'keyspace' ? menu.keyspace : `${menu.keyspace}.${menu.name}`} items={menuItems(menu)} onClose={() => setMenu(null)} />}
     </aside>
   )
 }

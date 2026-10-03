@@ -518,6 +518,22 @@ func linkTypeUsage(snap *Snapshot) {
 				add(f.Type, u.Name+"."+f.Name)
 			}
 		}
+		addCQL := func(cql, who string) {
+			if t, err := codec.Parse(cql, ks.Name); err == nil {
+				add(t, who)
+			}
+		}
+		for _, f := range ks.Functions {
+			for _, a := range f.ArgTypes {
+				addCQL(a, f.Signature())
+			}
+			addCQL(f.ReturnType, f.Signature())
+		}
+		for _, a := range ks.Aggregates {
+			for _, t := range append([]string{a.StateType, a.ReturnType}, a.ArgTypes...) {
+				addCQL(t, a.Signature())
+			}
+		}
 	}
 	for _, u := range udts {
 		sort.Strings(u.UsedBy)

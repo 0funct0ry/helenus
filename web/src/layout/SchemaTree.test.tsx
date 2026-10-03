@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SchemaTree } from './SchemaTree'
 import { renderWithClient as render } from '../test/api'
@@ -109,5 +109,17 @@ describe('SchemaTree', () => {
       await userEvent.click(screen.getByRole('menuitem', { name: 'Copy DDL' }))
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE payments.transactions_by_merchant')))
     })
+  })
+
+  it('opens New type from the keyspace context menu and the Types group', async () => {
+    mockSchemaApi({ 'POST /p/local/types/preview': { statement: '', errors: [], notes: [], dependents: [] } })
+    render(<SchemaTree />)
+    await loaded()
+    fireEvent.contextMenu(screen.getByRole('treeitem', { name: /^payments/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'New type…' }))
+    expect(screen.getByRole('dialog', { name: 'New type' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(screen.getByRole('button', { name: 'New type in payments' }))
+    expect(screen.getByRole('dialog', { name: 'New type' })).toBeInTheDocument()
   })
 })

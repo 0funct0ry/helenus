@@ -87,7 +87,7 @@ export function Popover({ open, onClose, anchorRef, children, align = 'start', m
       ref={ref}
       role={role}
       aria-label={rest['aria-label']}
-      style={{ position: 'fixed', ...pos, minWidth: pos.width }}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, right: pos.right, minWidth: pos.width }}
       className={cn(aboveDialog ? 'z-[60]' : 'z-40', 'rounded-lg bg-elevated shadow-[var(--shadow)]', className)}
     >
       {children}

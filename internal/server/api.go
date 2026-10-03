@@ -128,6 +128,7 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/split", a.split)
 	p.POST("/changes/preview", a.changesPreview)
 	p.POST("/changes/apply", a.changesApply)
+	p.POST("/types/preview", a.typesPreview)
 	p.POST("/complete", a.complete)
 	p.GET("/schema", a.schema)
 	p.POST("/schema/refresh", a.refreshSchema)

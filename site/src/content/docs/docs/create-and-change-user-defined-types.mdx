@@ -1,0 +1,43 @@
+---
+title: Create and change user-defined types
+description: Create, add fields to, rename fields of and drop user-defined types (UDTs) from the web UI.
+---
+
+A user-defined type (UDT) groups named fields into one column type. You can manage them from the schema tree and from a type's tab. Every action shows the CQL first, runs it only when you confirm, and then refreshes the schema.
+
+## Create a type
+
+1. Right-click a keyspace and choose **New type…**, or hover the **Types** group and choose **+**.
+2. Enter a name, then add fields. Each field has a name and a type.
+3. Check the **DDL** preview. If anything is wrong, the problem is listed above it and **Create type** stays disabled.
+4. Choose **Create type**. The type appears in the tree and opens in its own tab.
+
+The type picker offers scalar types, `list`, `set`, `map`, `tuple`, `vector` and the other types in the keyspace. A collection, tuple or vector opens a nested picker for each element type, and tuples can have as many elements as you need. The **frozen** switch wraps a type in `frozen<…>`.
+
+Cassandra requires collections, tuples and other types used as fields to be frozen. Helenus adds `frozen<…>` for you where it is needed and says so under the preview.
+
+A type can only use types from its own keyspace, cannot contain itself, and cannot have a `counter` field.
+
+## Add a field
+
+Open the type and choose **Add field**. Enter a name and pick its type. Helenus runs `ALTER TYPE … ADD …`. A new field is null in existing rows.
+
+## Rename a field
+
+Choose the pencil next to a field and enter the new name. Helenus runs `ALTER TYPE … RENAME … TO …`. The new name must not already be used by another field in the type.
+
+## Change a field's type
+
+This is not offered, because Cassandra does not support it. To change a type, add a new field, copy the data over and stop using the old one.
+
+## Drop a type
+
+**Drop type** is disabled while anything uses the type: a table or view column, a field of another type, or a function or aggregate signature. Hover the button, or open **Used by** on the tab, to see what uses it. Once nothing does, choose **Drop type**, type the name of the type to confirm, and choose **Drop type** again.
+
+## Use it from the shell
+
+The new type shows up straight away in autocomplete wherever a type is expected, and in the shell:
+
+```
+cqlsh> DESCRIBE TYPE payments.geo_point
+```

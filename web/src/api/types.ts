@@ -132,6 +132,25 @@ export interface SchemaUdt {
   used_by: string[]
 }
 
+/** A request to `POST /p/{profile}/types/preview` (SPEC §9.11). */
+export interface TypeRequest {
+  action: 'create' | 'add_field' | 'rename_field' | 'drop'
+  keyspace: string
+  name: string
+  fields?: { name: string; type: TypeDesc }[]
+  field?: { name: string; type: TypeDesc }
+  from?: string
+  to?: string
+}
+
+/** The CQL a UDT action would run, with validation errors, builder notes and the type's dependents. */
+export interface TypePlan {
+  statement: string
+  errors: string[]
+  notes: string[]
+  dependents: string[]
+}
+
 export interface SchemaFunction {
   keyspace: string
   name: string

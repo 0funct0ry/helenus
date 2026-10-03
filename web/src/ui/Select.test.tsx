@@ -47,3 +47,21 @@ describe('Select disabled options', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 })
+
+describe('Select inside a dialog', () => {
+  it('stacks its list above dialogs when asked', async () => {
+    render(<Select value="ONE" options={options} onChange={() => {}} aria-label="CL" aboveDialog />)
+    await userEvent.click(screen.getByRole('button'))
+    expect(screen.getByRole('listbox').parentElement).toHaveClass('z-[60]')
+  })
+})
+
+describe('Select list width', () => {
+  it('is a minimum width, so long options can widen the list', async () => {
+    render(<Select value="ONE" options={options} onChange={() => {}} aria-label="CL" />)
+    await userEvent.click(screen.getByRole('button'))
+    const panel = screen.getByRole('listbox').parentElement as HTMLElement
+    expect(panel.style.width).toBe('')
+    expect(panel.style.minWidth).not.toBe('')
+  })
+})

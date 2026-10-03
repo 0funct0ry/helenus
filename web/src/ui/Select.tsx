@@ -24,13 +24,15 @@ export interface SelectProps {
   /** Accessible name when no visible `label` is given. */
   'aria-label'?: string
   className?: string
+  /** Stack the list above modal dialogs; set it when the Select is inside a Dialog. */
+  aboveDialog?: boolean
 }
 
 /**
  * A custom dropdown (never a native select). The trigger is a button; the options render in a
  * Popover listbox. Keyboard: Enter/Space/ArrowDown open, arrows move, Enter picks, Escape closes.
  */
-export function Select({ value, options, onChange, label, mono, className, ...rest }: SelectProps) {
+export function Select({ value, options, onChange, label, mono, className, aboveDialog, ...rest }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const ref = useRef<HTMLButtonElement>(null)
@@ -85,8 +87,8 @@ export function Select({ value, options, onChange, label, mono, className, ...re
         {current?.label ?? value}
         <ChevronDown size={12} />
       </button>
-      <Popover open={open} onClose={() => setOpen(false)} anchorRef={ref} role="presentation" matchWidth className="p-1">
-        <ul id={listId} role="listbox" aria-label={rest['aria-label'] ?? label} onKeyDown={onKey} className="max-h-64 overflow-auto outline-none">
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={ref} role="presentation" matchWidth aboveDialog={aboveDialog} className="p-1">
+        <ul id={listId} role="listbox" aria-label={rest['aria-label'] ?? label} onKeyDown={onKey} className="max-h-64 overflow-y-auto overflow-x-hidden outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {options.map((o, i) => (
             <li
               key={o.value}

@@ -1,7 +1,11 @@
-import { Copy, Info, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Copy, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { TypeBadge } from '../ui/TypeBadge'
+import { AlterFieldDialog } from './AlterFieldDialog'
+import { DropTypeDialog } from './DropTypeDialog'
 import { useDdl, useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
 import type { WorkspaceTab } from '../store/workspace'
@@ -10,12 +14,18 @@ export interface TypeViewProps {
   tab: WorkspaceTab
 }
 
-/** Type tab body: a read-only UDT inspector listing fields, the columns that use the type, and its DDL. */
+/**
+ * Type tab body: a UDT inspector listing fields, what uses the type and its DDL, with the actions Cassandra
+ * supports: add a field, rename a field and drop the type. Each opens a dialog that previews the statement.
+ * Changing a field's type is not offered because Cassandra does not support it.
+ */
 export function TypeView({ tab }: TypeViewProps) {
   const profileId = useWorkspace((s) => s.profileId)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: keyspaces } = useSchema(profileId, connected)
   const udt = keyspaces?.find((k) => k.name === tab.keyspace)?.types.find((t) => t.name === tab.object)
+  const close = useWorkspace((s) => s.close)
+  const [dialog, setDialog] = useState<{ kind: 'add' } | { kind: 'rename'; field: string } | { kind: 'drop' } | null>(null)
   const { data: described } = useDdl(profileId, tab.keyspace, 'type', tab.object, !!udt)
   if (!udt) return <p className="p-6 text-muted">Type not found.</p>
   const ddl = (described ?? `CREATE TYPE ${udt.keyspace}.${udt.name} (\n${udt.fields.map((f) => `    ${f.name} ${f.type}`).join(',\n')}\n);`).trim()
@@ -30,7 +40,16 @@ export function TypeView({ tab }: TypeViewProps) {
         <Button variant="ghost" icon={<Copy size={14} />} onClick={() => void navigator.clipboard?.writeText(ddl)}>
           Copy DDL
         </Button>
-        <Button variant="danger" icon={<Trash2 size={14} />} disabled title={udt.usedBy.length ? `In use by ${udt.usedBy.length} columns` : 'Editing arrives in a later milestone'}>
+        <Button icon={<Plus size={14} />} onClick={() => setDialog({ kind: 'add' })}>
+          Add field
+        </Button>
+        <Button
+          variant="danger"
+          icon={<Trash2 size={14} />}
+          disabled={udt.usedBy.length > 0}
+          title={udt.usedBy.length ? `In use by ${udt.usedBy.length} ${udt.usedBy.length === 1 ? 'object' : 'objects'}: ${udt.usedBy.join(', ')}` : undefined}
+          onClick={() => setDialog({ kind: 'drop' })}
+        >
           Drop type
         </Button>
       </div>
@@ -43,6 +62,7 @@ export function TypeView({ tab }: TypeViewProps) {
                 <tr>
                   <th className="border-b border-line bg-surface px-2.5 py-1.5 text-left font-medium text-muted">Name</th>
                   <th className="border-b border-line bg-surface px-2.5 py-1.5 text-left font-medium text-muted">Type</th>
+                  <th className="w-8 border-b border-line bg-surface" />
                 </tr>
               </thead>
               <tbody>
@@ -51,6 +71,9 @@ export function TypeView({ tab }: TypeViewProps) {
                     <td className="border-b border-line2 px-2.5 py-1.5 font-mono">{f.name}</td>
                     <td className="border-b border-line2 px-2.5 py-1.5">
                       <TypeBadge type={f.type} />
+                    </td>
+                    <td className="border-b border-line2 px-1">
+                      <IconButton label={`Rename field ${f.name}`} icon={<Pencil size={13} />} onClick={() => setDialog({ kind: 'rename', field: f.name })} />
                     </td>
                   </tr>
                 ))}
@@ -79,6 +102,19 @@ export function TypeView({ tab }: TypeViewProps) {
           </div>
         </div>
       </div>
+      {dialog?.kind === 'add' && <AlterFieldDialog keyspace={udt.keyspace} type={udt.name} mode="add" onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'rename' && <AlterFieldDialog keyspace={udt.keyspace} type={udt.name} mode="rename" field={dialog.field} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'drop' && (
+        <DropTypeDialog
+          keyspace={udt.keyspace}
+          type={udt.name}
+          onClose={() => setDialog(null)}
+          onDropped={() => {
+            setDialog(null)
+            close(tab.id)
+          }}
+        />
+      )}
     </div>
   )
 }
