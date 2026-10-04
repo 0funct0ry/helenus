@@ -16,6 +16,7 @@ export default defineConfig({
           label: 'Explore',
           items: [
             { label: 'Browse your schema', slug: 'docs/browse-your-schema' },
+            { label: 'Create a keyspace', slug: 'docs/create-a-keyspace' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

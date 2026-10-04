@@ -8,6 +8,7 @@ import { TypeView } from './layout/TypeView'
 import { StatusBar } from './layout/StatusBar'
 import { CommandPalette } from './layout/CommandPalette'
 import { ProfileDialog } from './layout/ProfileDialog'
+import { ToastViewport } from './ui/ToastViewport'
 import { useBootstrapProfile } from './api/useBootstrap'
 import { useWorkspace } from './store/workspace'
 import { initTheme } from './store/theme'
@@ -60,6 +61,7 @@ export function App() {
       <StatusBar />
       <CommandPalette />
       <ProfileDialog />
+      <ToastViewport />
     </div>
   )
 }

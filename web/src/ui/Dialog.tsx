@@ -34,6 +34,8 @@ export function Dialog({ open, onClose, title, children, footer, subtitle, width
     if (!open) return
     const opener = document.activeElement as HTMLElement | null
     const el = ref.current
+    // A child that took focus itself (autoFocus) keeps it.
+    if (el && el !== document.activeElement && el.contains(document.activeElement)) return () => opener?.focus?.()
     const first = el?.querySelector<HTMLElement>('input, ' + FOCUSABLE)
     ;(first ?? el)?.focus()
     return () => opener?.focus?.()

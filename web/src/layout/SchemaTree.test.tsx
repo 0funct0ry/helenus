@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SchemaTree } from './SchemaTree'
-import { renderWithClient as render } from '../test/api'
+import { renderWithClient as render, apiProfile } from '../test/api'
 import { connectedWorkspace, mockSchemaApi, tableTab } from '../test/schemaFixture'
 import { useWorkspace } from '../store/workspace'
 
@@ -128,5 +128,30 @@ describe('SchemaTree', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     await userEvent.click(screen.getByRole('button', { name: 'New type in payments' }))
     expect(screen.getByRole('dialog', { name: 'New type' })).toBeInTheDocument()
+  })
+
+  describe('New keyspace button', () => {
+    it('sits between New query and Refresh schema and opens the dialog', async () => {
+      render(<SchemaTree />)
+      await loaded()
+      const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label')).filter(Boolean)
+      expect(names.indexOf('New keyspace')).toBe(names.indexOf('New query') + 1)
+      expect(names.indexOf('Refresh schema')).toBe(names.indexOf('New keyspace') + 1)
+      await userEvent.click(screen.getByRole('button', { name: 'New keyspace' }))
+      expect(screen.getByRole('dialog', { name: 'New keyspace' })).toBeInTheDocument()
+    })
+    it('is disabled with a hint when not connected', () => {
+      useWorkspace.setState({ connections: {} })
+      render(<SchemaTree />)
+      const b = screen.getByRole('button', { name: 'New keyspace' })
+      expect(b).toBeDisabled()
+      expect(b).toHaveAttribute('title', 'Connect to a profile first')
+    })
+    it('is hidden for Astra profiles', async () => {
+      mockSchemaApi({ 'GET /profiles': { profiles: [apiProfile({ astra: { secure_bundle: 'b.zip' } })] } })
+      render(<SchemaTree />)
+      await loaded()
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'New keyspace' })).not.toBeInTheDocument())
+    })
   })
 })

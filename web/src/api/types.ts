@@ -157,6 +157,29 @@ export interface TypePlan {
   dependents: string[]
 }
 
+/** A request to `POST /p/{profile}/keyspaces/preview` (SPEC §9.3). */
+export interface KeyspaceRequest {
+  name: string
+  strategy: 'SimpleStrategy' | 'NetworkTopologyStrategy'
+  replication_factor: number
+  datacenters: { name: string; rf: number }[]
+  durable_writes: boolean
+  if_not_exists: boolean
+}
+
+/** A validation problem tied to a form field, such as `name` or `datacenters.1.rf`. */
+export interface PlanError {
+  field: string
+  message: string
+}
+
+/** The CREATE KEYSPACE statement a request would run, with blocking errors and non-blocking notes. */
+export interface KeyspacePlan {
+  statement: string
+  errors: PlanError[]
+  notes: string[]
+}
+
 export interface SchemaFunction {
   keyspace: string
   name: string

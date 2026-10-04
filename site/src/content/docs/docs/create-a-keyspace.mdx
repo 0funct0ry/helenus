@@ -1,0 +1,23 @@
+---
+title: Create a keyspace
+description: Create a keyspace from the web UI with a live preview of the CREATE KEYSPACE statement.
+---
+
+A keyspace holds your tables and decides how many copies of the data the cluster keeps. You can create one from the schema tree. Helenus shows the CQL first and runs it only when you choose **Create keyspace**.
+
+## Create a keyspace
+
+1. Connect a profile, then select **New keyspace** (the folder icon, right of **New query**) at the top of the schema tree.
+2. Enter a **Name**. Use letters, digits and underscores, starting with a letter, up to 48 characters. Names that start with `system` are reserved. A name with capital letters is kept as typed and written in double quotes.
+3. Pick a **Replication strategy**.
+   - **SimpleStrategy** keeps the same number of copies everywhere. Set the **Replication factor** from 1 to 20. Use it for a single datacenter or for development.
+   - **NetworkTopologyStrategy** sets a factor per datacenter. The table starts with the datacenters Helenus found in the cluster, each at 3 or the number of nodes in it if that is lower. Add or remove rows as needed. This is the right choice for production.
+4. Turn **Durable writes** off only if you accept losing recent data after a crash. Turn on **Create only if it doesn't exist** to add `IF NOT EXISTS`, which also allows a name that is already taken.
+5. Check the **CQL** preview. Problems are listed there and next to the field, and **Create keyspace** stays off until they are fixed. Notes, such as a replication factor higher than the number of nodes, do not block creation.
+6. Choose **Create keyspace**. The new keyspace is selected in the tree and a message confirms it.
+
+If Cassandra refuses the statement, for example because your user lacks permission, the message appears in the dialog and your entries are kept.
+
+Press Esc or **Cancel** to close the dialog. If you typed a name, Helenus asks before discarding it.
+
+Astra keyspaces are created in the Astra console, so the button is not shown for Astra profiles.

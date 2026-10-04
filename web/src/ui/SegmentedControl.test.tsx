@@ -1,0 +1,26 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { SegmentedControl } from './SegmentedControl'
+
+const options = [
+  { value: 'a', label: 'Alpha' },
+  { value: 'b', label: 'Beta' },
+]
+
+describe('SegmentedControl', () => {
+  it('marks the current option and reports clicks', async () => {
+    const onChange = vi.fn()
+    render(<SegmentedControl label="Mode" options={options} value="a" onChange={onChange} />)
+    expect(screen.getByRole('radiogroup', { name: 'Mode' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Alpha' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('radio', { name: 'Beta' }))
+    expect(onChange).toHaveBeenCalledWith('b')
+  })
+  it('moves with the arrow keys', async () => {
+    const onChange = vi.fn()
+    render(<SegmentedControl label="Mode" options={options} value="a" onChange={onChange} />)
+    screen.getByRole('radio', { name: 'Alpha' }).focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(onChange).toHaveBeenCalledWith('b')
+  })
+})

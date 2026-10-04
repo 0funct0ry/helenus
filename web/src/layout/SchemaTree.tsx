@@ -1,18 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { Braces, Copy, Database, ExternalLink, Eye, FileText, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { Braces, Copy, Database, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
 import { NewTypeDialog } from './NewTypeDialog'
+import { NewKeyspaceDialog } from './NewKeyspaceDialog'
 import type { ContextMenuItem } from './SchemaContextMenu'
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
 import { IconButton } from '../ui/IconButton'
-import { useCopyDdl, useRefreshSchema, useSchema } from '../api/hooks'
+import { useCopyDdl, useProfiles, useRefreshSchema, useSchema } from '../api/hooks'
 import type { DdlObject } from '../api/hooks'
 import { describeError } from '../api/client'
 import { keySummary } from '../lib/keySummary'
 import { useWorkspace } from '../store/workspace'
+import { useToasts } from '../store/toast'
 import type { Keyspace, Table } from '../lib/schemaModel'
 
 const defaultClosed = (key: string) => key.startsWith('fn:') || key.startsWith('trg:') || key === 'system'
@@ -38,14 +40,30 @@ export function SchemaTree() {
   const [toggled, setToggled] = useState<Record<string, boolean>>({})
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null)
+  const [newKsOpen, setNewKsOpen] = useState(false)
+  const [selectedKs, setSelectedKs] = useState<string | null>(null)
+  const [pendingKs, setPendingKs] = useState<string | null>(null)
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId))
   const open = useWorkspace((s) => s.open)
   const newQuery = useWorkspace((s) => s.newQuery)
   const profileId = useWorkspace((s) => s.profileId)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: keyspaces, isLoading, error, refetch } = useSchema(profileId, connected)
+  const { data: profiles } = useProfiles()
+  const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle
   const refresh = useRefreshSchema(profileId)
+  const pushToast = useToasts((s) => s.push)
   const copyDdl = useCopyDdl(profileId)
+
+  // After a keyspace is created the schema refetches asynchronously; once it shows up, reveal it.
+  useEffect(() => {
+    if (!pendingKs || !keyspaces?.some((k) => k.name === pendingKs)) return
+    setToggled((t) => ({ ...t, [`ks:${pendingKs}`]: true }))
+    setSelectedKs(pendingKs)
+    setPendingKs(null)
+    setFilter('')
+    requestAnimationFrame(() => document.querySelector(`[data-ks="${CSS.escape(pendingKs)}"]`)?.scrollIntoView({ block: 'nearest' }))
+  }, [pendingKs, keyspaces])
 
   const q = filter.trim().toLowerCase()
   const isOpen = (key: string) => (q ? true : (toggled[key] ?? !defaultClosed(key)))
@@ -140,8 +158,8 @@ export function SchemaTree() {
     )
     return (
       <div key={k.name} role="group">
-        <div onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
-          <TreeRow indent={6} label={k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
+        <div data-ks={k.name} onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
+          <TreeRow indent={6} label={k.name} selected={selectedKs === k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
         </div>
         {kOpen && (
           <>
@@ -234,6 +252,15 @@ export function SchemaTree() {
         <h2 className="m-0 text-[13px] font-medium">Schema</h2>
         <span className="flex-1" />
         <IconButton label="New query" icon={<Plus size={14} />} onClick={() => newQuery()} />
+        {!astra && (
+          <IconButton
+            label="New keyspace"
+            icon={<FolderPlus size={14} />}
+            disabled={!connected}
+            title={connected ? 'New keyspace' : 'Connect to a profile first'}
+            onClick={() => setNewKsOpen(true)}
+          />
+        )}
         <IconButton
           label="Refresh schema"
           icon={<RefreshCw size={14} className={refresh.isPending ? 'animate-spin' : undefined} />}
@@ -260,6 +287,15 @@ export function SchemaTree() {
           <span>{counts.tables} tables</span>
           <span>{counts.types} types</span>
         </div>
+      )}
+      {newKsOpen && (
+        <NewKeyspaceDialog
+          onCreated={(name) => {
+            setPendingKs(name)
+            pushToast(`Keyspace ${name} created`)
+          }}
+          onClose={() => setNewKsOpen(false)}
+        />
       )}
       {newTypeKs && <NewTypeDialog keyspace={newTypeKs} onClose={() => setNewTypeKs(null)} />}
       {menu && <SchemaContextMenu x={menu.x} y={menu.y} label={menu.kind === 'keyspace' ? menu.keyspace : `${menu.keyspace}.${menu.name}`} items={menuItems(menu)} onClose={() => setMenu(null)} />}
