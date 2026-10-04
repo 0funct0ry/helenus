@@ -38,11 +38,15 @@ func session(t *testing.T) *gocql.Session {
 		}
 	} else {
 		ctx := context.Background()
+		// The fixture creates a materialized view, which Cassandra 4.0+ disables by default.
+		script := `sed -i 's/^materialized_views_enabled:.*/materialized_views_enabled: true/; s/^user_defined_functions_enabled:.*/user_defined_functions_enabled: true/' /etc/cassandra/cassandra.yaml
+exec docker-entrypoint.sh cassandra -f`
 		c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Image:        "cassandra:" + itVersion(),
 				ExposedPorts: []string{"9042/tcp"},
 				Env:          map[string]string{"MAX_HEAP_SIZE": "512M", "HEAP_NEWSIZE": "128M"},
+				Entrypoint:   []string{"bash", "-c", script},
 				WaitingFor:   wait.ForLog("Starting listening for CQL clients").WithStartupTimeout(5 * time.Minute),
 			},
 			Started: true,

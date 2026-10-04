@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   check:
@@ -28,7 +29,9 @@ jobs:
       - run: make lint
       - run: make test
 
+  # Slow (starts Cassandra containers): run it by hand from the Actions tab (Run workflow).
   integration:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
