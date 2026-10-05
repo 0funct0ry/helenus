@@ -146,6 +146,7 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/keyspaces/preview", a.keyspacesPreview)
 	p.POST("/tables/preview", a.tablesPreview)
 	p.POST("/indexes/preview", a.indexesPreview)
+	p.POST("/triggers/preview", a.triggersPreview)
 	p.POST("/functions/preview", a.functionsPreview)
 	p.POST("/functions/invoke", a.functionsInvoke)
 	p.POST("/aggregates/preview", a.aggregatesPreview)

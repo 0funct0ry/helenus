@@ -10,6 +10,7 @@ import { DropViewDialog } from "./DropViewDialog";
 import { DdlView } from "./DdlView";
 import { ViewsSheet } from "./ViewsSheet";
 import { IndexesSheet } from "./IndexesSheet";
+import { TriggersSheet } from "./TriggersSheet";
 import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
 import { CellEditor } from "./CellEditor";
@@ -21,7 +22,7 @@ import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { usePagedSelect } from "../api/usePagedSelect";
 import { useTableEditing } from "../api/useTableEditing";
 import { rowToJson, toGridColumns, toGridRows } from "../lib/rows";
-import { useCluster, useDdl, useRefreshSchema, useSchema } from "../api/hooks";
+import { useCluster, useDdl, useProfiles, useRefreshSchema, useSchema } from "../api/hooks";
 import { describeError } from "../api/client";
 import { useWorkspace } from "../store/workspace";
 import type { WorkspaceTab } from "../store/workspace";
@@ -67,6 +68,8 @@ export function TableView({ tab }: TableViewProps) {
   const { data: keyspaces, isLoading } = useSchema(profileId, connected);
   const ks = keyspaces?.find((k) => k.name === tab.keyspace);
   const { data: cluster } = useCluster(profileId, connected);
+  const { data: profiles } = useProfiles();
+  const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle;
   const refreshSchema = useRefreshSchema(profileId);
   const table = ks?.tables.find((t) => t.name === tab.object);
   const view = ks?.views.find((v) => v.name === tab.object);
@@ -135,6 +138,9 @@ export function TableView({ tab }: TableViewProps) {
     ...(isView || !table
       ? []
       : [{ id: "indexes", label: "Indexes", badge: table.indexes.length }]),
+    ...(isView || !table || astra
+      ? []
+      : [{ id: "triggers", label: "Triggers", badge: (table.triggers ?? []).length }]),
     ...(isView ? [] : [{ id: "views", label: "Views", badge: views.length }]),
   ];
   const pk = columns.filter((c) => c.kind === "partition");
@@ -420,6 +426,13 @@ export function TableView({ tab }: TableViewProps) {
         <IndexesSheet
           table={table}
           serverMajor={parseInt(cluster?.release_version ?? "0", 10) || 0}
+          readOnly={!!ks?.system}
+          onChanged={() => refreshSchema.mutate()}
+        />
+      )}
+      {sub === "triggers" && table && !astra && (
+        <TriggersSheet
+          table={table}
           readOnly={!!ks?.system}
           onChanged={() => refreshSchema.mutate()}
         />

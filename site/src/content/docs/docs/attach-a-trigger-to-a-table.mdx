@@ -1,0 +1,30 @@
+---
+title: Attach a trigger to a table
+description: List, create and drop triggers on a table from the Triggers sub-view.
+---
+
+A trigger runs a Java class on the Cassandra nodes whenever the table is written. Open a table and choose the **Triggers** sub-view to see each trigger's name and class.
+
+## Create a trigger
+
+1. In the Triggers sub-view, click **New trigger**.
+2. Enter a name and the fully qualified class name, for example `com.example.Audit`.
+3. Check the preview, then click **Create trigger**.
+
+```sql
+CREATE TRIGGER audit ON shop.users USING 'com.example.Audit';
+```
+
+:::caution
+The class must be in a JAR in every node's `triggers` directory. Helenus cannot check this. If the class is missing, Cassandra rejects the statement and its message appears in the dialog; nothing is added.
+:::
+
+Class names must be dotted Java identifiers, so `com..Audit` is rejected before anything is sent.
+
+## Drop a trigger
+
+Click **Drop** on a row and confirm. Helenus runs `DROP TRIGGER name ON ks.table;`.
+
+## Astra
+
+Astra DB does not support triggers, so the sub-view is hidden for Astra profiles.

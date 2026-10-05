@@ -25,6 +25,7 @@ export default defineConfig({
             { label: 'Create a materialized view', slug: 'docs/create-a-materialized-view' },
             { label: 'Write a user-defined function', slug: 'docs/write-a-user-defined-function' },
             { label: 'Build a user-defined aggregate', slug: 'docs/build-a-user-defined-aggregate' },
+            { label: 'Attach a trigger to a table', slug: 'docs/attach-a-trigger-to-a-table' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

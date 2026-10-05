@@ -271,6 +271,19 @@ export interface IndexRequest {
 
 export type IndexPlan = KeyspacePlan
 
+/** Body of POST /p/:profile/triggers/preview (SPEC §9.22). */
+export interface TriggerRequest {
+  action: 'create' | 'drop'
+  keyspace: string
+  table: string
+  name?: string
+  class?: string
+  if_not_exists?: boolean
+  if_exists?: boolean
+}
+
+export type TriggerPlan = KeyspacePlan
+
 export interface SchemaFunction {
   keyspace: string
   name: string
