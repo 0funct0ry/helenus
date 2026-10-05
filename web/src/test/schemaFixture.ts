@@ -88,6 +88,7 @@ export const snapshot: SchemaSnapshot = {
         },
       ],
       functions: [{ keyspace: 'payments', name: 'add_cents', arg_names: ['a', 'b'], arg_types: ['int', 'int'], return_type: 'int', language: 'java', body: 'return a + b;', called_on_null_input: false }],
+      aggregates: [{ keyspace: 'payments', name: 'total', arg_types: ['int'], state_func: 'add_cents', state_type: 'int', init_cond: '0', return_type: 'int' }],
     }),
     emptyKs('system', { system: true, tables: [table('system', 'local', [col('key', 'text', 'partition', 1)])] }),
     emptyKs('system_auth', { system: true }),
@@ -128,6 +129,7 @@ export function connectedWorkspace(tabs: WorkspaceTab[] = [], activeId = tabs[0]
 export const tableTab: WorkspaceTab = { id: 'table:payments.transactions_by_merchant', kind: 'table', title: 'transactions_by_merchant', keyspace: 'payments', object: 'transactions_by_merchant', closable: true }
 export const viewTab: WorkspaceTab = { id: 'view:payments.transactions_by_status', kind: 'view', title: 'transactions_by_status', keyspace: 'payments', object: 'transactions_by_status', closable: true }
 export const typeTab: WorkspaceTab = { id: 'type:payments.address', kind: 'type', title: 'address', keyspace: 'payments', object: 'address', closable: true }
+export const aggregateTab: WorkspaceTab = { id: 'aggregate:payments.total(int)', kind: 'aggregate', title: 'total(int)', keyspace: 'payments', object: 'total(int)', closable: true }
 export const queryTab: WorkspaceTab = { id: 'query-1', kind: 'query', title: 'query-1.cql', keyspace: 'payments', object: '', closable: true }
 
 /** A positional query response, as `POST /p/{profile}/query` returns it. */

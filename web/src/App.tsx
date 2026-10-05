@@ -4,6 +4,7 @@ import { LeftDock } from './layout/LeftDock'
 import { TabBar } from './layout/TabBar'
 import { TableView } from './layout/TableView'
 import { QueryView } from './layout/QueryView'
+import { AggregateView } from './layout/AggregateView'
 import { FunctionView } from './layout/FunctionView'
 import { TypeView } from './layout/TypeView'
 import { StatusBar } from './layout/StatusBar'
@@ -54,6 +55,8 @@ export function App() {
             <QueryView key={active.id} tab={active} />
           ) : active?.kind === 'type' ? (
             <TypeView key={active.id} tab={active} />
+          ) : active?.kind === 'aggregate' ? (
+            <AggregateView key={active.id} tab={active} />
           ) : active?.kind === 'function' ? (
             <FunctionView key={active.id} tab={active} />
           ) : (

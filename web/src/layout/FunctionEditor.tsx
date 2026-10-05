@@ -22,6 +22,8 @@ export interface FunctionEditorProps {
   keyspace: string
   /** The function being edited. When set the editor is in replace mode: the name and argument types are locked. */
   existing?: Fn
+  /** Prefill for a new function (ignored in replace mode): argument names and CQL types, and the return type. */
+  initial?: { args: { name: string; type: string }[]; returns?: string }
   /** Major version of the connected server; JavaScript functions need 4.x. */
   serverMajor: number
   /** Called with the new function's signature after it was saved. */
@@ -43,17 +45,17 @@ const BODY_HINT = '// Java: the arguments are variables; return the result.\nret
  * Create or replace a user-defined function: name, arguments (name plus type picker), return type, null
  * behaviour, language, a Java body in CodeMirror and a live CREATE [OR REPLACE] FUNCTION preview built by
  * the server. In replace mode (opened from "Edit" on a function) the name and argument types are locked and
- * the preview is CREATE OR REPLACE. JavaScript is offered only before Cassandra 5.0. Mount it only while open.
+ * the preview is CREATE OR REPLACE. `initial` prefills a new function's signature (used by the aggregate builder). JavaScript is offered only before Cassandra 5.0. Mount it only while open.
  */
-export function FunctionEditor({ keyspace, existing, serverMajor, onSaved, onClose }: FunctionEditorProps) {
+export function FunctionEditor({ keyspace, existing, initial, serverMajor, onSaved, onClose }: FunctionEditorProps) {
   const profileId = useWorkspace((s) => s.profileId)
   const { data: keyspaces } = useSchema(profileId, true)
   const udts = keyspaces?.find((k) => k.name === keyspace)?.types.map((t) => t.name) ?? []
   const runDdl = useRunDdl(profileId)
   const replace = !!existing
   const [name, setName] = useState(existing?.name ?? '')
-  const [args, setArgs] = useState<ArgDraft[]>(() => (existing ? [] : [blankArg()]))
-  const [returns, setReturns] = useState<TypeDraft>(() => (existing ? cqlToDraft(existing.returnType) : newDraft('int')))
+  const [args, setArgs] = useState<ArgDraft[]>(() => (existing ? [] : initial ? initial.args.map((a) => ({ id: nextId++, name: a.name, type: cqlToDraft(a.type) })) : [blankArg()]))
+  const [returns, setReturns] = useState<TypeDraft>(() => (existing ? cqlToDraft(existing.returnType) : initial?.returns ? cqlToDraft(initial.returns) : newDraft('int')))
   const [calledOnNull, setCalledOnNull] = useState(existing?.calledOnNull ?? false)
   const [language, setLanguage] = useState<'java' | 'javascript'>(existing?.language === 'javascript' ? 'javascript' : 'java')
   const [body, setBody] = useState(existing?.body ?? BODY_HINT)

@@ -1,0 +1,45 @@
+---
+title: Build a user-defined aggregate
+description: Browse, create, replace, test and drop user-defined aggregates (UDAs) with guided function selection.
+---
+
+Every keyspace has an **Aggregates** group in the schema tree, shown as `name(argtypes) → rettype`. Click one to open the **Aggregate** tab: its argument types, state function, state type, final function, initial condition, a **Test** panel, **Dependencies** and the DDL.
+
+An aggregate is built from user-defined functions, so it needs `user_defined_functions_enabled: true` in `cassandra.yaml`. The server's message is shown under the form when they are disabled.
+
+## Build an aggregate
+
+1. Choose **New aggregate…** in the keyspace menu, or the **+** on the Aggregates group.
+2. Name the aggregate, add its argument types and pick the **state type**. Collections, tuples and UDTs are frozen automatically, with a note.
+3. Pick the **state function** (SFUNC). Only functions with the signature `(state type, argument types…) → state type` can be selected. Others stay in the list, disabled, with the reason, for example `Needs (tuple<int, bigint>, int) → tuple<int, bigint>`.
+4. Optionally pick a **final function** (FINALFUNC), which must take `(state type)`.
+5. Enter the **initial condition**, typed by the state type: a scalar input, or JSON for collections, tuples and UDTs (`[0, 0]` for `tuple<int, bigint>`). A value that does not match the state type blocks **Create aggregate** with an error under the field.
+6. Check the preview, then choose **Create aggregate**.
+
+If the function you need does not exist, choose **Create function…** next to the selector. The function editor opens with the right signature filled in, and the new function is selected when you save it.
+
+For example, an average over `int` with `state_avg(tuple<int, bigint>, int)` and `final_avg(tuple<int, bigint>)`:
+
+```sql
+CREATE AGGREGATE shop.average (int)
+  SFUNC state_avg
+  STYPE tuple<int, bigint>
+  FINALFUNC final_avg
+  INITCOND (0, 0);
+```
+
+:::note
+With a state function declared `RETURNS NULL ON NULL INPUT` and no initial condition, the state starts as null and the function never runs. The preview says so.
+:::
+
+## Test an aggregate
+
+On the Aggregate tab, choose a table or view of the keyspace and, for each argument, a column of the matching type. **Run** executes `SELECT shop.average(qty) FROM shop.orders LIMIT 1000;` and shows the result with the elapsed time. The aggregate sees at most 1000 rows.
+
+## Replace an aggregate
+
+Choose **Edit**. The name and argument types are locked, and the preview is `CREATE OR REPLACE AGGREGATE`.
+
+## Drop an aggregate
+
+Choose **Drop aggregate…**, type its name and confirm. The statement always includes the signature, for example `DROP AGGREGATE shop.average(int);`. The state and final functions are kept, and they list the aggregate under **Dependencies → Used by**. System keyspaces offer no create, edit or drop. All changes appear in **Schema changes**.

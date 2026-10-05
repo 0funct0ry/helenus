@@ -72,6 +72,19 @@ export interface Fn {
   calledOnNull: boolean
 }
 
+/** A user-defined aggregate; `signature` is `name(argtypes)` and identifies one overload. */
+export interface Agg {
+  keyspace: string
+  name: string
+  signature: string
+  argTypes: string[]
+  stateFunc: string
+  stateType: string
+  finalFunc: string
+  initCond: string
+  returnType: string
+}
+
 export interface Keyspace {
   name: string
   replication: string
@@ -80,8 +93,7 @@ export interface Keyspace {
   views: MaterializedView[]
   types: Udt[]
   functions: Fn[]
-  /** Aggregate signatures; shown in the Functions group until aggregates get their own tab. */
-  aggregates: string[]
+  aggregates: Agg[]
   /** Every trigger on the keyspace's tables. */
   triggers?: Trigger[]
 }

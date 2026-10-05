@@ -5,14 +5,14 @@ import { abortInflight } from '../api/inflight'
 import { stage, unstage } from '../lib/changes'
 import type { PendingItem } from '../lib/changes'
 
-export type TabKind = 'table' | 'view' | 'query' | 'type' | 'function'
+export type TabKind = 'table' | 'view' | 'query' | 'type' | 'function' | 'aggregate'
 
 export interface WorkspaceTab {
   id: string
   kind: TabKind
   title: string
   keyspace: string
-  /** Table, view or type name, or a function signature; empty for query tabs. */
+  /** Table, view or type name, a function or aggregate signature; empty for query tabs. */
   object: string
   closable: boolean
   /** Text a query tab starts with. */

@@ -242,6 +242,21 @@ describe("SchemaTree", () => {
     ).toBeInTheDocument();
   });
 
+  it("lists aggregates in their own group and opens them", async () => {
+    mockSchemaApi({ "POST /p/local/aggregates/preview": { statement: "", errors: [], notes: [] } });
+    render(<SchemaTree />);
+    await loaded();
+    expect(screen.getAllByRole("treeitem", { name: /^Aggregates/ })[0]).toBeInTheDocument();
+    await userEvent.pointer({
+      keys: "[MouseRight]",
+      target: screen.getByRole("treeitem", { name: /^total\(int\)/ }),
+    });
+    await userEvent.click(screen.getByRole("menuitem", { name: "Open" }));
+    expect(useWorkspace.getState().activeId).toBe("aggregate:payments.total(int)");
+    await userEvent.click(screen.getByRole("button", { name: "New aggregate in payments" }));
+    expect(screen.getByRole("dialog", { name: "New aggregate" })).toBeInTheDocument();
+  });
+
   describe("New keyspace button", () => {
     it("sits between New query and Refresh schema and opens the dialog", async () => {
       render(<SchemaTree />);
@@ -298,6 +313,7 @@ describe("SchemaTree", () => {
         "New table…",
         "New type…",
         "New function…",
+        "New aggregate…",
         "New query here",
         "Copy name",
         "Refresh",

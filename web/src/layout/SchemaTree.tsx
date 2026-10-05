@@ -18,6 +18,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Sigma,
   Table2,
   Trash2,
 } from "lucide-react";
@@ -26,6 +27,8 @@ import { SchemaContextMenu } from "./SchemaContextMenu";
 import { NewTypeDialog } from "./NewTypeDialog";
 import { FunctionEditor } from "./FunctionEditor";
 import { DropFunctionDialog } from "./DropFunctionDialog";
+import { AggregateBuilder } from "./AggregateBuilder";
+import { DropAggregateDialog } from "./DropAggregateDialog";
 import { NewKeyspaceDialog } from "./NewKeyspaceDialog";
 import { EditKeyspaceDialog } from "./EditKeyspaceDialog";
 import { DropKeyspaceDialog } from "./DropKeyspaceDialog";
@@ -53,12 +56,12 @@ import { describeError } from "../api/client";
 import { keySummary } from "../lib/keySummary";
 import { useWorkspace } from "../store/workspace";
 import { useToasts } from "../store/toast";
-import type { Fn, Keyspace, Table } from "../lib/schemaModel";
+import type { Agg, Fn, Keyspace, Table } from "../lib/schemaModel";
 
 const defaultClosed = (key: string) =>
   key.startsWith("fn:") || key.startsWith("trg:") || key === "system";
 
-type ObjectKind = "table" | "view" | "type" | "keyspace" | "function";
+type ObjectKind = "table" | "view" | "type" | "keyspace" | "function" | "aggregate";
 interface MenuState {
   x: number;
   y: number;
@@ -81,6 +84,8 @@ export function SchemaTree() {
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null);
   const [newFnKs, setNewFnKs] = useState<string | null>(null);
   const [dropFn, setDropFn] = useState<Fn | null>(null);
+  const [newAggKs, setNewAggKs] = useState<string | null>(null);
+  const [dropAgg, setDropAgg] = useState<Agg | null>(null);
   const [newTableKs, setNewTableKs] = useState<string | null>(null);
   const [newKsOpen, setNewKsOpen] = useState(false);
   const [editKs, setEditKs] = useState<string | null>(null);
@@ -208,6 +213,11 @@ export function SchemaTree() {
           onSelect: () => setNewFnKs(m.keyspace),
         },
         {
+          label: "New aggregate…",
+          icon: <Sigma size={14} />,
+          onSelect: () => setNewAggKs(m.keyspace),
+        },
+        {
           label: "New query here",
           icon: <FileText size={14} />,
           onSelect: () => newQuery({ keyspace: m.keyspace }),
@@ -264,6 +274,38 @@ export function SchemaTree() {
                 danger: true,
                 separatorBefore: true,
                 onSelect: () => setDropFn(fn),
+              },
+            ]
+          : []),
+      ];
+    }
+    if (m.kind === "aggregate") {
+      const ks = keyspaces?.find((k) => k.name === m.keyspace);
+      const agg = ks?.aggregates.find((a) => a.signature === m.name);
+      return [
+        {
+          label: "Open",
+          icon: <ExternalLink size={14} />,
+          onSelect: () => open("aggregate", m.keyspace, m.name),
+        },
+        {
+          label: "Copy name",
+          icon: <Copy size={14} />,
+          onSelect: () => void navigator.clipboard?.writeText(fq),
+        },
+        {
+          label: "Copy DDL",
+          icon: <Copy size={14} />,
+          onSelect: () => void copyDdl(m.keyspace, "aggregate", m.name),
+        },
+        ...(agg && !ks?.system
+          ? [
+              {
+                label: "Drop aggregate…",
+                icon: <Trash2 size={14} />,
+                danger: true,
+                separatorBefore: true,
+                onSelect: () => setDropAgg(agg),
               },
             ]
           : []),
@@ -420,7 +462,7 @@ export function SchemaTree() {
     const views = k.views.filter((v) => match(v.name) || match(k.name));
     const types = k.types.filter((t) => match(t.name) || match(k.name));
     const fns = k.functions.filter((f) => match(f.signature) || match(k.name));
-    const aggs = k.aggregates.filter((a) => match(a) || match(k.name));
+    const aggs = k.aggregates.filter((a) => match(a.signature) || match(k.name));
     const triggers = (k.triggers ?? []).filter(
       (g) => match(g.name) || match(g.table) || match(k.name),
     );
@@ -619,7 +661,7 @@ export function SchemaTree() {
             {group(
               `fn:${k.name}`,
               "Functions",
-              fns.length + aggs.length,
+              fns.length,
               [
                 ...fns.map((f) => (
                   <div
@@ -638,21 +680,40 @@ export function SchemaTree() {
                     />
                   </div>
                 )),
-                ...aggs.map((a) => (
-                  <TreeRow
-                    key={`agg/${a}`}
-                    indent={40}
-                    label={a}
-                    mono
-                    icon={<FunctionSquare size={14} />}
-                  />
-                )),
               ],
               k.system
                 ? undefined
                 : {
                     label: `New function in ${k.name}`,
                     run: () => setNewFnKs(k.name),
+                  },
+            )}
+            {group(
+              `agg:${k.name}`,
+              "Aggregates",
+              aggs.length,
+              aggs.map((a) => (
+                <div
+                  key={a.signature}
+                  onContextMenu={(e) =>
+                    onContext(e, k.name, "aggregate", a.signature)
+                  }
+                >
+                  <TreeRow
+                    indent={40}
+                    label={`${a.signature} → ${a.returnType}`}
+                    mono
+                    selected={isSel("aggregate", k.name, a.signature)}
+                    icon={<Sigma size={14} />}
+                    onClick={() => open("aggregate", k.name, a.signature)}
+                  />
+                </div>
+              )),
+              k.system
+                ? undefined
+                : {
+                    label: `New aggregate in ${k.name}`,
+                    run: () => setNewAggKs(k.name),
                   },
             )}
             {group(
@@ -970,6 +1031,35 @@ export function SchemaTree() {
             setDropFn(null);
           }}
           onClose={() => setDropFn(null)}
+        />
+      )}
+      {newAggKs && (
+        <AggregateBuilder
+          keyspace={newAggKs}
+          onSaved={(signature) => {
+            refresh.mutate();
+            open("aggregate", newAggKs, signature);
+            pushToast(`Aggregate ${signature.split("(")[0]} created`);
+          }}
+          onClose={() => setNewAggKs(null)}
+        />
+      )}
+      {dropAgg && (
+        <DropAggregateDialog
+          aggregate={dropAgg}
+          onDropped={() => {
+            for (const t of useWorkspace.getState().tabs)
+              if (
+                t.kind === "aggregate" &&
+                t.keyspace === dropAgg.keyspace &&
+                t.object === dropAgg.signature
+              )
+                useWorkspace.getState().close(t.id);
+            refresh.mutate();
+            pushToast(`Aggregate ${dropAgg.name} dropped`);
+            setDropAgg(null);
+          }}
+          onClose={() => setDropAgg(null)}
         />
       )}
       {menu && (

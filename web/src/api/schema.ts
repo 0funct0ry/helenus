@@ -50,7 +50,17 @@ function toKeyspace(k: SchemaKeyspace): Keyspace {
       body: f.body,
       calledOnNull: f.called_on_null_input,
     })),
-    aggregates: k.aggregates.map((a) => `${a.name}(${a.arg_types.join(', ')})`),
+    aggregates: k.aggregates.map((a) => ({
+      keyspace: a.keyspace,
+      name: a.name,
+      signature: `${a.name}(${a.arg_types.join(', ')})`,
+      argTypes: a.arg_types,
+      stateFunc: a.state_func,
+      stateType: a.state_type,
+      finalFunc: a.final_func ?? '',
+      initCond: a.init_cond ?? '',
+      returnType: a.return_type,
+    })),
   }
 }
 

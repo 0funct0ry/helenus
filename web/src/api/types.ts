@@ -286,6 +286,10 @@ export interface SchemaAggregate {
   keyspace: string
   name: string
   arg_types: string[]
+  state_func: string
+  state_type: string
+  final_func?: string
+  init_cond?: string
   return_type: string
 }
 
@@ -309,6 +313,40 @@ export interface FunctionRequest {
 }
 
 export type FunctionPlan = KeyspacePlan
+
+/** Body of POST /p/{profile}/aggregates/preview (SPEC §9.21). Drop needs only the name and argument types. */
+export interface AggregateRequest {
+  action: 'create' | 'replace' | 'drop'
+  keyspace: string
+  name: string
+  arg_types: string[]
+  sfunc?: string
+  stype?: string
+  finalfunc?: string
+  /** A JSON value rendered as a CQL literal of the state type; omitted for no INITCOND. */
+  initcond?: unknown
+  if_not_exists?: boolean
+}
+
+export type AggregatePlan = KeyspacePlan
+
+/** A function offered for the SFUNC or FINALFUNC slot; `reason` says what signature a disabled one lacks. */
+export interface AggregateCandidate {
+  name: string
+  signature: string
+  returns: string
+  ok: boolean
+  reason?: string
+}
+
+/** Result of POST /p/{profile}/aggregates/test. */
+export interface AggregateTestResult {
+  value: unknown
+  type: TypeDesc
+  elapsed_ms: number
+  cql: string
+  limit: number
+}
 
 /** Result of POST /p/{profile}/functions/invoke: the codec-encoded value, its type and the elapsed time. */
 export interface InvokeResult {

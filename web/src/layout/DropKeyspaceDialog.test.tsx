@@ -22,7 +22,7 @@ describe('DropKeyspaceDialog', () => {
     setup()
     const list = await screen.findByLabelText('Keyspace contents')
     await waitFor(() => expect(list).toHaveTextContent('Tables: 3'))
-    for (const t of ['Views: 1', 'Types: 1', 'Functions: 1', 'Aggregates: 0', 'Indexes: 1']) expect(list).toHaveTextContent(t)
+    for (const t of ['Views: 1', 'Types: 1', 'Functions: 1', 'Aggregates: 1', 'Indexes: 1']) expect(list).toHaveTextContent(t)
   })
   it('requires the exact name (case-sensitive) and drops once', async () => {
     const { calls, onDropped, onClose } = setup()
