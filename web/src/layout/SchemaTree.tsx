@@ -31,12 +31,15 @@ import { NewTableWizard } from "./NewTableWizard";
 import { TruncateTableDialog } from "./TruncateTableDialog";
 import { DropTableDialog } from "./DropTableDialog";
 import { DropViewDialog } from "./DropViewDialog";
+import { NewIndexDialog } from "./NewIndexDialog";
+import { DropIndexDialog } from "./DropIndexDialog";
 import type { ContextMenuItem } from "./SchemaContextMenu";
 import { KeyMarker } from "../ui/KeyMarker";
 import { TypeBadge } from "../ui/TypeBadge";
 import { IconButton } from "../ui/IconButton";
 import { Tooltip } from "../ui/Tooltip";
 import {
+  useCluster,
   useCopyDdl,
   useProfiles,
   useRefreshSchema,
@@ -89,6 +92,14 @@ export function SchemaTree() {
     keyspace: string;
     name: string;
   } | null>(null);
+  const [newIndex, setNewIndex] = useState<{
+    keyspace: string;
+    name: string;
+  } | null>(null);
+  const [dropIndex, setDropIndex] = useState<{
+    keyspace: string;
+    name: string;
+  } | null>(null);
   const [selectedKs, setSelectedKs] = useState<string | null>(null);
   const [pendingKs, setPendingKs] = useState<string | null>(null);
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId));
@@ -104,6 +115,7 @@ export function SchemaTree() {
     error,
     refetch,
   } = useSchema(profileId, connected);
+  const { data: cluster } = useCluster(profileId, connected);
   const { data: profiles } = useProfiles();
   const astra = !!profiles?.find((p) => p.name === profileId)?.astra
     ?.secure_bundle;
@@ -236,6 +248,11 @@ export function SchemaTree() {
               onSelect: () => open("table", m.keyspace, m.name),
             },
             {
+              label: "New index…",
+              icon: <Search size={14} />,
+              onSelect: () => setNewIndex(target),
+            },
+            {
               label: "Truncate…",
               icon: <Trash2 size={14} />,
               danger: true,
@@ -294,6 +311,29 @@ export function SchemaTree() {
       className="absolute right-1 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
     />
   );
+
+  const renderIndexes = (t: Table) =>
+    t.indexes.map((i) => (
+      <div
+        key={`idx/${i.name}`}
+        className="flex h-6 items-center gap-[5px] pl-[58px] pr-2"
+        role="treeitem"
+        aria-selected="false"
+      >
+        <Search size={12} className="shrink-0 text-muted" aria-hidden />
+        <span className="overflow-hidden text-ellipsis font-mono text-xs text-muted">
+          {i.name}
+        </span>
+        <span className="ml-auto text-[11px] text-faint">{i.badge ?? "2i"}</span>
+        {i.badge !== "custom" && (
+          <IconButton
+            label={`Drop index ${i.name}`}
+            icon={<Trash2 size={12} />}
+            onClick={() => setDropIndex({ keyspace: t.keyspace, name: i.name })}
+          />
+        )}
+      </div>
+    ));
 
   const renderColumns = (t: Table) => (
     <>
@@ -483,6 +523,7 @@ export function SchemaTree() {
                       )}
                     </div>
                     {sel && renderColumns(t)}
+                    {sel && renderIndexes(t)}
                     {children.map((v) => viewRow(v, 58, `${t.name}/${v.name}`))}
                   </div>
                 );
@@ -734,6 +775,33 @@ export function SchemaTree() {
             pushToast(`Table ${dropTable.name} dropped`);
           }}
           onClose={() => setDropTable(null)}
+        />
+      )}
+      {newIndex && (
+        <NewIndexDialog
+          table={
+            keyspaces
+              ?.find((k) => k.name === newIndex.keyspace)
+              ?.tables.find((t) => t.name === newIndex.name) as Table
+          }
+          serverMajor={parseInt(cluster?.release_version ?? "0", 10) || 0}
+          onCreated={() => {
+            refresh.mutate();
+            pushToast("Index created");
+          }}
+          onClose={() => setNewIndex(null)}
+        />
+      )}
+      {dropIndex && (
+        <DropIndexDialog
+          keyspace={dropIndex.keyspace}
+          index={dropIndex.name}
+          onDropped={() => {
+            refresh.mutate();
+            pushToast(`Index ${dropIndex.name} dropped`);
+          }}
+          onError={(m) => pushToast(m)}
+          onClose={() => setDropIndex(null)}
         />
       )}
       {dropView && (

@@ -21,6 +21,7 @@ export default defineConfig({
             { label: 'Create a table', slug: 'docs/create-a-table' },
             { label: 'Change a table', slug: 'docs/change-a-table' },
             { label: 'Truncate or drop a table', slug: 'docs/truncate-or-drop-a-table' },
+            { label: 'Add an index to a table', slug: 'docs/add-an-index-to-a-table' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

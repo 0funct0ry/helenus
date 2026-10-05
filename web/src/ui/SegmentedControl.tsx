@@ -3,6 +3,10 @@ import { cn } from '../lib/cn'
 export interface SegmentedOption<T extends string> {
   value: T
   label: string
+  /** Not pickable; shown dimmed. */
+  disabled?: boolean
+  /** Explains why the option is disabled (shown as a hover title). */
+  title?: string
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -25,6 +29,8 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
           role="radio"
           aria-checked={o.value === value}
           tabIndex={o.value === value ? 0 : -1}
+          disabled={o.disabled}
+          title={o.title}
           onClick={() => onChange(o.value)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -37,7 +43,7 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
               ;(e.currentTarget.parentElement?.children[(i - 1 + options.length) % options.length] as HTMLElement | undefined)?.focus()
             }
           }}
-          className={cn('h-6 rounded px-2.5 text-[12.5px]', o.value === value ? 'bg-selected text-fg' : 'text-muted hover:text-fg')}
+          className={cn('h-6 rounded px-2.5 text-[12.5px]', o.value === value ? 'bg-selected text-fg' : 'text-muted hover:text-fg', o.disabled && 'cursor-not-allowed opacity-50 hover:text-muted')}
         >
           {o.label}
         </button>

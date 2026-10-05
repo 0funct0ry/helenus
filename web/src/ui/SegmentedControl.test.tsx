@@ -23,4 +23,14 @@ describe('SegmentedControl', () => {
     await userEvent.keyboard('{ArrowRight}')
     expect(onChange).toHaveBeenCalledWith('b')
   })
+  it('does not select a disabled option and exposes its reason', async () => {
+    const onChange = vi.fn()
+    const opts = [...options, { value: 'c', label: 'Gamma', disabled: true, title: 'Not available' }]
+    render(<SegmentedControl label="Mode" options={opts} value="a" onChange={onChange} />)
+    const g = screen.getByRole('radio', { name: 'Gamma' })
+    expect(g).toBeDisabled()
+    expect(g).toHaveAttribute('title', 'Not available')
+    await userEvent.click(g)
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

@@ -18,6 +18,11 @@ export interface Index {
   name: string
   column: string
   kind: string
+  /** Raw target as stored, e.g. `values(tags)` or `email`. */
+  target?: string
+  /** Short badge text: SAI, 2i or custom. */
+  badge?: 'SAI' | '2i' | 'custom'
+  options?: Record<string, string>
 }
 
 export interface Trigger {

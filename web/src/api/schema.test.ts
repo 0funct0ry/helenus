@@ -20,7 +20,7 @@ describe('toKeyspaces', () => {
   it('turns options into a map and labels SAI indexes', () => {
     const txn = payments.tables.find((t) => t.name === 'transactions_by_merchant')!
     expect(txn.options.gc_grace_seconds).toBe('864000')
-    expect(txn.indexes).toEqual([{ name: 'txn_by_currency_sai', column: 'currency', kind: 'Storage-attached (SAI)' }])
+    expect(txn.indexes).toMatchObject([{ name: 'txn_by_currency_sai', column: 'currency', kind: 'Storage-attached (SAI)', badge: 'SAI' }])
   })
   it('links views to base tables and flags system keyspaces', () => {
     expect(payments.views[0]).toMatchObject({ name: 'transactions_by_status', baseTable: 'transactions_by_merchant' })

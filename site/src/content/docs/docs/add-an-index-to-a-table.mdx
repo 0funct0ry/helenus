@@ -1,0 +1,28 @@
+---
+title: Add an index to a table
+description: List, create and drop secondary (2i) and storage-attached (SAI) indexes from the Indexes tab.
+---
+
+Open a table and choose the **Indexes** tab. It lists every index on the table with its column, target, kind and options. The kind badge reads **2i** for a legacy secondary index, **SAI** for a storage-attached index, or **custom**. Custom indexes are listed read-only. Indexes also appear under the table in the schema tree when it is expanded.
+
+## Create an index
+
+1. Choose **New index** (or **New index…** in the table menu).
+2. Pick a column. Columns that cannot be indexed are dimmed, with the reason on hover: counter columns, and the only partition key column of a single-column key (legacy indexes).
+3. Pick a **Kind**. **SAI** needs Cassandra 5.0 or later; on older servers it is disabled with the tooltip "SAI needs Cassandra 5.0 or later". Vector columns always use SAI and offer a similarity function (`cosine`, `dot_product` or `euclidean`).
+4. Pick a **Target** when the column type allows a choice. Lists and sets index their values; a `map<text,int>` offers **Keys**, **Values** (the default) and **Entries**; frozen collections, tuples and UDTs index the **Full** value.
+5. For SAI indexes on text columns you can set case sensitivity, normalization and ASCII folding.
+6. Optionally name the index; the default is `<table>_<column>_idx`.
+7. Check the CQL preview and notes, then choose **Create index**.
+
+For example, indexing the values of a map column previews:
+
+```sql
+CREATE INDEX users_attrs_idx ON shop.users (VALUES(attrs));
+```
+
+Indexes build in the background, so queries may miss rows until the build finishes. A legacy index on a `uuid`, `timeuuid` or `timestamp` column warns that queries contact every node.
+
+## Drop an index
+
+Choose **Drop** on the row (or the trash button in the tree) and confirm. Indexes have no dependents, so no name needs to be typed. The statement is `DROP INDEX shop.users_attrs_idx;`. Both actions appear in **Schema changes**.

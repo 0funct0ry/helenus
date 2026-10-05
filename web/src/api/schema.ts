@@ -13,7 +13,7 @@ function toTable(t: SchemaTable): Table {
     keyspace: t.keyspace,
     columns: t.columns.map(toColumn),
     options: Object.fromEntries(t.options.map((o) => [o.name, o.value])),
-    indexes: t.indexes.map((i) => ({ name: i.name, column: i.column, kind: i.sai ? 'Storage-attached (SAI)' : (INDEX_KIND[i.kind] ?? i.kind) })),
+    indexes: t.indexes.map((i) => ({ name: i.name, column: i.column, kind: i.sai ? 'Storage-attached (SAI)' : (INDEX_KIND[i.kind] ?? i.kind), target: i.target, badge: i.sai ? 'SAI' : i.kind === 'custom' ? 'custom' : '2i', options: i.options })),
     triggers: (t.triggers ?? []).map((g) => ({ name: g.name, table: t.name, class: g.class })),
     views: t.views,
     counter: t.counter || undefined,

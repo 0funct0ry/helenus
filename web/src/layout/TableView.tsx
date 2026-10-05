@@ -8,6 +8,7 @@ import { ResultsGrid } from "./ResultsGrid";
 import { SchemaSheet } from "./SchemaSheet";
 import { DdlView } from "./DdlView";
 import { ViewsSheet } from "./ViewsSheet";
+import { IndexesSheet } from "./IndexesSheet";
 import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
 import { CellEditor } from "./CellEditor";
@@ -128,6 +129,9 @@ export function TableView({ tab }: TableViewProps) {
     { id: "schema", label: "Schema" },
     { id: "ddl", label: "DDL" },
     { id: "deps", label: "Dependencies" },
+    ...(isView || !table
+      ? []
+      : [{ id: "indexes", label: "Indexes", badge: table.indexes.length }]),
     ...(isView ? [] : [{ id: "views", label: "Views", badge: views.length }]),
   ];
   const pk = columns.filter((c) => c.kind === "partition");
@@ -386,6 +390,14 @@ export function TableView({ tab }: TableViewProps) {
           kind={isView ? "view" : "table"}
           keyspace={tab.keyspace}
           name={tab.object}
+        />
+      )}
+      {sub === "indexes" && table && (
+        <IndexesSheet
+          table={table}
+          serverMajor={parseInt(cluster?.release_version ?? "0", 10) || 0}
+          readOnly={!!ks?.system}
+          onChanged={() => refreshSchema.mutate()}
         />
       )}
       {sub === "views" && (

@@ -229,6 +229,32 @@ export interface TableActionRequest {
 /** The CREATE TABLE statement a request would run, with blocking errors and non-blocking notes. */
 export type TablePlan = KeyspacePlan
 
+export type IndexTarget = 'plain' | 'VALUES' | 'KEYS' | 'ENTRIES' | 'FULL'
+export type IndexKind = 'legacy' | 'sai'
+
+export interface IndexOptions {
+  case_sensitive?: boolean
+  normalize?: boolean
+  ascii?: boolean
+  similarity_function?: string
+}
+
+/** Body of POST /p/:profile/indexes/preview (SPEC §9.18). */
+export interface IndexRequest {
+  action: 'create' | 'drop'
+  keyspace: string
+  table?: string
+  name?: string
+  column?: string
+  target?: IndexTarget
+  kind?: IndexKind
+  options?: IndexOptions
+  if_not_exists?: boolean
+  if_exists?: boolean
+}
+
+export type IndexPlan = KeyspacePlan
+
 export interface SchemaFunction {
   keyspace: string
   name: string
