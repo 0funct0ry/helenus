@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
 import { Tabs } from "../ui/Tabs";
 import { Button } from "../ui/Button";
+import { ReadOnlyBadge } from "../ui/ReadOnlyBadge";
+import { SystemTableBanner } from "./SystemTableBanner";
 import { IconButton } from "../ui/IconButton";
 import { Select } from "../ui/Select";
 import { ResultsGrid } from "./ResultsGrid";
@@ -135,13 +137,13 @@ export function TableView({ tab }: TableViewProps) {
     { id: "schema", label: "Schema" },
     { id: "ddl", label: "DDL" },
     { id: "deps", label: "Dependencies" },
-    ...(isView || !table
+    ...(isView || !table || ks?.system
       ? []
       : [{ id: "indexes", label: "Indexes", badge: table.indexes.length }]),
-    ...(isView || !table || astra
+    ...(isView || !table || astra || ks?.system
       ? []
       : [{ id: "triggers", label: "Triggers", badge: (table.triggers ?? []).length }]),
-    ...(isView ? [] : [{ id: "views", label: "Views", badge: views.length }]),
+    ...(isView || ks?.system ? [] : [{ id: "views", label: "Views", badge: views.length }]),
   ];
   const pk = columns.filter((c) => c.kind === "partition");
 
@@ -174,15 +176,18 @@ export function TableView({ tab }: TableViewProps) {
           </span>
         </span>
         <div className="flex-1" />
-        <Button
-          variant="ghost"
-          icon={<Plus size={14} />}
-          disabled={!editing.toolbar.canInsert}
-          title={editing.toolbar.insertTitle}
-          onClick={editing.toolbar.onInsert}
-        >
-          Insert row
-        </Button>
+        {ks?.system && <ReadOnlyBadge />}
+        {!ks?.system && (
+          <Button
+            variant="ghost"
+            icon={<Plus size={14} />}
+            disabled={!editing.toolbar.canInsert}
+            title={editing.toolbar.insertTitle}
+            onClick={editing.toolbar.onInsert}
+          >
+            Insert row
+          </Button>
+        )}
         {editing.ed.editable && !table?.counter && (
           <>
             <Button
@@ -223,6 +228,9 @@ export function TableView({ tab }: TableViewProps) {
           onClick={data.reload}
         />
       </div>
+      {ks?.system && !isView && (
+        <SystemTableBanner keyspace={tab.keyspace} table={tab.object} />
+      )}
       {sub === "data" && !editing.ed.editable && editing.ed.reason && (
         <p className="m-0 border-b border-line2 px-3 py-1.5 text-xs text-muted">
           {editing.ed.reason}

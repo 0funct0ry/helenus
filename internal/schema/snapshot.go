@@ -205,6 +205,9 @@ func isSystem(name string) bool {
 	return strings.HasPrefix(name, "system") || name == "dse_system" || name == "dse_security"
 }
 
+// IsSystem reports whether name is a keyspace Cassandra manages itself.
+func IsSystem(name string) bool { return isSystem(name) }
+
 type row = map[string]any
 
 func fetch(ctx context.Context, s *gocql.Session, stmt string) ([]row, error) {
@@ -303,12 +306,40 @@ func Build(ctx context.Context, s *gocql.Session) (*Snapshot, error) {
 	if err := applyNullBoolDefaults(ctx, s, "views", "view_name", views); err != nil {
 		return nil, err
 	}
+	kss, tabs, cols = appendVirtual(ctx, s, kss, tabs, cols)
 	snap := assemble(kss, tabs, cols, views, idxs, types, funcs, aggs)
 	attachTriggers(snap, trigs)
 	attachDropped(snap, dropped)
 	snap.Version = version
 	snap.GeneratedAt = time.Now().UTC()
 	return snap, nil
+}
+
+// appendVirtual adds the virtual keyspaces, tables and columns (Cassandra 4.0+),
+// which system_schema does not list. Servers without them are left unchanged.
+func appendVirtual(ctx context.Context, s *gocql.Session, kss, tabs, cols []row) (outK, outT, outC []row) {
+	vk, err := fetch(ctx, s, `SELECT keyspace_name FROM system_virtual_schema.keyspaces`)
+	if err != nil {
+		return kss, tabs, cols
+	}
+	vt, err := fetch(ctx, s, `SELECT keyspace_name, table_name FROM system_virtual_schema.tables`)
+	if err != nil {
+		return kss, tabs, cols
+	}
+	vc, err := fetch(ctx, s, `SELECT keyspace_name, table_name, column_name, clustering_order, kind, position, type FROM system_virtual_schema.columns`)
+	if err != nil {
+		return kss, tabs, cols
+	}
+	have := map[string]bool{}
+	for _, r := range kss {
+		have[str(r, "keyspace_name")] = true
+	}
+	for _, r := range vk {
+		if !have[str(r, "keyspace_name")] {
+			kss = append(kss, row{"keyspace_name": str(r, "keyspace_name"), "durable_writes": false})
+		}
+	}
+	return kss, append(tabs, vt...), append(cols, vc...)
 }
 
 // attachTriggers adds the rows of system_schema.triggers to their tables, sorted by name.

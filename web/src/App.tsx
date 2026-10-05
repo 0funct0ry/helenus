@@ -13,6 +13,7 @@ import { CommandPalette } from './layout/CommandPalette'
 import { ProfileDialog } from './layout/ProfileDialog'
 import { ToastViewport } from './ui/ToastViewport'
 import { useBootstrapProfile } from './api/useBootstrap'
+import { useSchema } from './api/hooks'
 import { useWorkspace } from './store/workspace'
 import { initTheme } from './store/theme'
 
@@ -27,6 +28,11 @@ export function App() {
   const activate = useWorkspace((s) => s.activate)
   const close = useWorkspace((s) => s.close)
   const newQuery = useWorkspace((s) => s.newQuery)
+  const profileId = useWorkspace((s) => s.profileId)
+  const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
+  const { data: keyspaces } = useSchema(profileId, connected)
+  const isSystemTab = (t: { kind: string; keyspace: string }) =>
+    (t.kind === 'table' || t.kind === 'view') && !!keyspaces?.find((k) => k.name === t.keyspace)?.system
   const active = tabs.find((t) => t.id === activeId)
   useBootstrapProfile()
 
@@ -49,7 +55,7 @@ export function App() {
       <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
         <LeftDock />
         <main className="flex min-h-0 min-w-0 flex-col">
-          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0 }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
+          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t) }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (
             <TableView key={active.id} tab={active} />
           ) : active?.kind === 'query' ? (

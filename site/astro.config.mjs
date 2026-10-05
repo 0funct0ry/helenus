@@ -27,6 +27,7 @@ export default defineConfig({
             { label: 'Build a user-defined aggregate', slug: 'docs/build-a-user-defined-aggregate' },
             { label: 'Attach a trigger to a table', slug: 'docs/attach-a-trigger-to-a-table' },
             { label: 'Manage roles and permissions', slug: 'docs/manage-roles-and-permissions' },
+            { label: 'Explore system keyspaces', slug: 'docs/explore-system-keyspaces' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SchemaTree } from "./SchemaTree";
 import { renderWithClient as render, apiProfile } from "../test/api";
@@ -432,7 +432,22 @@ describe("SchemaTree", () => {
         screen.getAllByRole("button", { name: "Keyspace actions" }),
       ).toHaveLength(2); // payments and inventory only
       fireEvent.contextMenu(screen.getByText("system_auth"));
-      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      const labels = within(screen.getByRole("menu"))
+        .getAllByRole("menuitem")
+        .map((m) => m.textContent);
+      expect(labels).toEqual(["New query here", "Copy name", "Refresh"]);
+    });
+
+    it("offers only read-only items on system tables", async () => {
+      render(<SchemaTree />);
+      await loaded();
+      await userEvent.click(screen.getByRole("treeitem", { name: /System/ }));
+      await userEvent.click(screen.getByText("system"));
+      fireEvent.contextMenu(screen.getByText("local"));
+      const labels = within(screen.getByRole("menu"))
+        .getAllByRole("menuitem")
+        .map((m) => m.textContent);
+      expect(labels).toEqual(["Open", "New query here", "Copy name", "Copy DDL", "Refresh"]);
     });
   });
 });

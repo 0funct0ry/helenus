@@ -53,6 +53,7 @@ import {
 } from "../api/hooks";
 import type { DdlObject } from "../api/hooks";
 import { describeError } from "../api/client";
+import { NO_DESCRIPTION, useSystemDocs } from "../api/useSystemDocs";
 import { keySummary } from "../lib/keySummary";
 import { useWorkspace } from "../store/workspace";
 import { useToasts } from "../store/toast";
@@ -61,7 +62,8 @@ import type { Agg, Fn, Keyspace, Table } from "../lib/schemaModel";
 const defaultClosed = (key: string) =>
   key.startsWith("fn:") || key.startsWith("trg:") || key === "system";
 
-type ObjectKind = "table" | "view" | "type" | "keyspace" | "function" | "aggregate";
+type ObjectKind =
+  "table" | "view" | "type" | "keyspace" | "function" | "aggregate";
 interface MenuState {
   x: number;
   y: number;
@@ -152,9 +154,17 @@ export function SchemaTree() {
     );
   }, [pendingKs, keyspaces]);
 
+  const { data: sysDocs } = useSystemDocs();
   const q = filter.trim().toLowerCase();
   const isOpen = (key: string) =>
-    q ? true : (toggled[key] ?? !defaultClosed(key));
+    q
+      ? true
+      : (toggled[key] ??
+        !(
+          defaultClosed(key) ||
+          (key.startsWith("ks:") &&
+            !!keyspaces?.find((k) => `ks:${k.name}` === key)?.system)
+        ));
   const toggle = (key: string) =>
     setToggled((t) => ({ ...t, [key]: !isOpen(key) }));
   const match = (s: string) => !q || s.toLowerCase().includes(q);
@@ -186,15 +196,53 @@ export function SchemaTree() {
     name: string,
   ) => {
     e.preventDefault();
-    if (
-      kind === "keyspace" &&
-      keyspaces?.find((k) => k.name === keyspace)?.system
-    )
-      return;
     setMenu({ x: e.clientX, y: e.clientY, keyspace, kind, name });
   };
 
   const menuItems = (m: MenuState): ContextMenuItem[] => {
+    // System keyspaces are read-only: no object-changing actions anywhere.
+    if (keyspaces?.find((k) => k.name === m.keyspace)?.system) {
+      const sfq =
+        m.kind === "keyspace" ? m.keyspace : `${m.keyspace}.${m.name}`;
+      const ro: ContextMenuItem[] = [];
+      if (m.kind !== "keyspace")
+        ro.push({
+          label: "Open",
+          icon: <ExternalLink size={14} />,
+          onSelect: () => open(m.kind as "table" | "view", m.keyspace, m.name),
+        });
+      ro.push(
+        {
+          label: "New query here",
+          icon: <FileText size={14} />,
+          onSelect: () =>
+            newQuery({
+              keyspace: m.keyspace,
+              cql:
+                m.kind === "table" || m.kind === "view"
+                  ? `SELECT * FROM ${sfq} LIMIT 100;`
+                  : undefined,
+            }),
+        },
+        {
+          label: "Copy name",
+          icon: <Copy size={14} />,
+          onSelect: () => void navigator.clipboard?.writeText(sfq),
+        },
+      );
+      if (m.kind === "table" || m.kind === "view")
+        ro.push({
+          label: "Copy DDL",
+          icon: <Copy size={14} />,
+          onSelect: () => void copyDdl(m.keyspace, m.kind as DdlObject, m.name),
+        });
+      ro.push({
+        label: "Refresh",
+        icon: <RefreshCw size={14} />,
+        onSelect: () => refresh.mutate(),
+      });
+      return ro;
+    }
     if (m.kind === "keyspace")
       return [
         {
@@ -339,7 +387,8 @@ export function SchemaTree() {
             {
               label: "New view…",
               icon: <Eye size={14} />,
-              onSelect: () => setNewView({ keyspace: m.keyspace, baseTable: m.name }),
+              onSelect: () =>
+                setNewView({ keyspace: m.keyspace, baseTable: m.name }),
             },
             {
               label: "New index…",
@@ -418,14 +467,19 @@ export function SchemaTree() {
         <span className="overflow-hidden text-ellipsis font-mono text-xs text-muted">
           {i.name}
         </span>
-        <span className="ml-auto text-[11px] text-faint">{i.badge ?? "2i"}</span>
-        {i.badge !== "custom" && (
-          <IconButton
-            label={`Drop index ${i.name}`}
-            icon={<Trash2 size={12} />}
-            onClick={() => setDropIndex({ keyspace: t.keyspace, name: i.name })}
-          />
-        )}
+        <span className="ml-auto text-[11px] text-faint">
+          {i.badge ?? "2i"}
+        </span>
+        {i.badge !== "custom" &&
+          !keyspaces?.find((k) => k.name === t.keyspace)?.system && (
+            <IconButton
+              label={`Drop index ${i.name}`}
+              icon={<Trash2 size={12} />}
+              onClick={() =>
+                setDropIndex({ keyspace: t.keyspace, name: i.name })
+              }
+            />
+          )}
       </div>
     ));
 
@@ -462,7 +516,9 @@ export function SchemaTree() {
     const views = k.views.filter((v) => match(v.name) || match(k.name));
     const types = k.types.filter((t) => match(t.name) || match(k.name));
     const fns = k.functions.filter((f) => match(f.signature) || match(k.name));
-    const aggs = k.aggregates.filter((a) => match(a.signature) || match(k.name));
+    const aggs = k.aggregates.filter(
+      (a) => match(a.signature) || match(k.name),
+    );
     const triggers = (k.triggers ?? []).filter(
       (g) => match(g.name) || match(g.table) || match(k.name),
     );
@@ -608,7 +664,12 @@ export function SchemaTree() {
                             </Tooltip>
                           ) : undefined
                         }
-                        title={keySummary(t.columns)}
+                        title={
+                          k.system
+                            ? (sysDocs?.keyspaces[k.name]?.tables[t.name]
+                                ?.description ?? NO_DESCRIPTION)
+                            : keySummary(t.columns)
+                        }
                         onClick={() => open("table", k.name, t.name)}
                       />
                       {rowMenuButton(
@@ -632,7 +693,10 @@ export function SchemaTree() {
               views.map((v) => viewRow(v, 40)),
               k.system
                 ? undefined
-                : { label: "New view", run: () => setNewView({ keyspace: k.name }) },
+                : {
+                    label: "New view",
+                    run: () => setNewView({ keyspace: k.name }),
+                  },
             )}
             {group(
               `types:${k.name}`,
@@ -777,18 +841,7 @@ export function SchemaTree() {
               onClick={() => toggle("system")}
             />
             {isOpen("system") &&
-              system
-                .filter((k) => match(k.name))
-                .map((k) => (
-                  <TreeRow
-                    key={k.name}
-                    indent={22}
-                    label={k.name}
-                    mono
-                    muted
-                    icon={<Database size={14} />}
-                  />
-                ))}
+              system.filter((k) => match(k.name)).map(renderKeyspace)}
           </>
         )}
       </>

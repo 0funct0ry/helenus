@@ -1,0 +1,26 @@
+---
+title: Explore system keyspaces
+description: Browse Cassandra's own system keyspaces and virtual tables read-only, with a plain-language description of every table.
+---
+
+Cassandra keeps its own state in system keyspaces: `system`, `system_schema`, `system_auth`, `system_distributed`, `system_traces`, and, on 4.0 and later, the virtual keyspaces `system_views` and `system_virtual_schema`. Helenus lets you look inside them, but never change them.
+
+## Open a system table
+
+1. In the schema tree, expand **System**, then a keyspace such as `system_schema`.
+2. Click a table. It opens like any other table, with a **Read-only** badge on the tab and in the toolbar.
+3. A **What is this table?** banner explains what the table holds. Hover a table in the tree to see the same sentence. Tables without an entry show "No description available".
+
+There is nothing to edit here: no insert, delete, alter, drop, truncate, index, view, or trigger actions. Right-clicking a system table offers only **Open**, **New query here**, **Copy name**, **Copy DDL**, and **Refresh**.
+
+## Hidden credentials
+
+`system_auth.roles.salted_hash`, and any column in a system keyspace whose name contains `password`, shows as `••••••`. The server replaces the value before the page leaves it, so the hash does not appear in API responses or in the network tab.
+
+## Virtual tables
+
+Tables in `system_views` are computed live on the node you are connected to. They page like other tables. A few reject paging or `LIMIT`; when that happens Helenus shows the server's message.
+
+## Cluster insights
+
+Press Cmd/Ctrl-K and type **Cluster insights** to jump to `system_views.clients`, `settings`, `thread_pools`, or `caches`, whichever your server provides.

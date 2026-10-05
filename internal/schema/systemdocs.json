@@ -1,0 +1,347 @@
+{
+ "keyspaces": {
+  "system": {
+   "description": "Node-local state: this node's identity, peers, and internal bookkeeping.",
+   "tables": {
+    "local": {
+     "description": "One row describing this node: its host ID, datacenter, rack, tokens and release version.",
+     "columns": {
+      "release_version": "Cassandra version of this node.",
+      "tokens": "Token ranges owned by this node.",
+      "cluster_name": "Name of the cluster."
+     }
+    },
+    "peers": {
+     "description": "What this node knows about the other nodes (legacy format, pre-4.0 clients)."
+    },
+    "peers_v2": {
+     "description": "What this node knows about the other nodes in the cluster, including their addresses and ports."
+    },
+    "batches": {
+     "description": "Legacy storage for batches that were not yet applied."
+    },
+    "batchlog": {
+     "description": "Batches awaiting replay so that an atomic batch is applied even if the coordinator fails."
+    },
+    "available_ranges": {
+     "description": "Token ranges available on this node for streaming (legacy format)."
+    },
+    "available_ranges_v2": {
+     "description": "Token ranges that are already available on this node after bootstrap or rebuild."
+    },
+    "built_views": {
+     "description": "Materialized views that have finished building on this node."
+    },
+    "built_indexes": {
+     "description": "Secondary indexes that have finished building on this node."
+    },
+    "IndexInfo": {
+     "description": "Records which secondary indexes were built on this node."
+    },
+    "compaction_history": {
+     "description": "A log of past compactions: tables, sizes and timings."
+    },
+    "hints": {
+     "description": "Hints stored for other nodes that were down during a write."
+    },
+    "local_hints": {
+     "description": "Hints stored for other nodes that were down during a write."
+    },
+    "paxos": {
+     "description": "State of lightweight transactions (Paxos) on this node."
+    },
+    "paxos_repair_history": {
+     "description": "Records of Paxos repairs that have completed."
+    },
+    "paxos_repair_state": {
+     "description": "In-progress Paxos repair state."
+    },
+    "peer_events": {
+     "description": "Legacy record of events about peers."
+    },
+    "peer_events_v2": {
+     "description": "Record of events about peers."
+    },
+    "prepared_statements": {
+     "description": "Prepared statements cached on this node, so they survive restarts."
+    },
+    "range_xfers": {
+     "description": "Token ranges that were streamed to this node (legacy)."
+    },
+    "repairs": {
+     "description": "Persistent state of incremental repairs."
+    },
+    "size_estimates": {
+     "description": "Estimated size of each token range per table, used by tools such as Spark connectors."
+    },
+    "table_estimates": {
+     "description": "Estimated partition counts and sizes per table."
+    },
+    "sstable_activity": {
+     "description": "Recent read activity per SSTable (legacy)."
+    },
+    "sstable_activity_v2": {
+     "description": "Recent read activity per SSTable."
+    },
+    "transferred_ranges": {
+     "description": "Token ranges that were streamed away from this node (legacy)."
+    },
+    "transferred_ranges_v2": {
+     "description": "Token ranges that were streamed away from this node."
+    },
+    "view_builds_in_progress": {
+     "description": "Materialized views that are still building on this node."
+    },
+    "materialized_views_builds_in_progress": {
+     "description": "Legacy list of materialized view builds in progress."
+    },
+    "top_partitions": {
+     "description": "The largest and most-written partitions found by a top-partitions scan."
+    },
+    "metadata_log": {
+     "description": "Cluster metadata change log (Transactional Cluster Metadata)."
+    },
+    "snapshot": {
+     "description": "Cluster metadata snapshots (Transactional Cluster Metadata)."
+    },
+    "local_metadata_log": {
+     "description": "Local copy of the cluster metadata log."
+    },
+    "consensus_migration_state": {
+     "description": "State of migrating tables between consensus protocols."
+    },
+    "accord_commands": {
+     "description": "Internal Accord transaction command state."
+    }
+   }
+  },
+  "system_schema": {
+   "description": "The definitions of all keyspaces, tables, columns and other schema objects.",
+   "tables": {
+    "keyspaces": {
+     "description": "One row per keyspace with its replication settings.",
+     "columns": {
+      "replication": "Replication strategy and factors."
+     }
+    },
+    "tables": {
+     "description": "One row per table with its options (compaction, TTL, caching, ...)."
+    },
+    "columns": {
+     "description": "One row per column of every table and view, with type and key role.",
+     "columns": {
+      "kind": "partition_key, clustering, static or regular.",
+      "type": "CQL data type."
+     }
+    },
+    "dropped_columns": {
+     "description": "Columns that were dropped from tables."
+    },
+    "triggers": {
+     "description": "Triggers attached to tables."
+    },
+    "views": {
+     "description": "Materialized view definitions."
+    },
+    "types": {
+     "description": "User-defined types."
+    },
+    "functions": {
+     "description": "User-defined functions."
+    },
+    "aggregates": {
+     "description": "User-defined aggregates."
+    },
+    "indexes": {
+     "description": "Secondary index definitions."
+    },
+    "column_masks": {
+     "description": "Dynamic data masking functions attached to columns."
+    }
+   }
+  },
+  "system_auth": {
+   "description": "Authentication and authorization data: roles, their members and permissions.",
+   "tables": {
+    "roles": {
+     "description": "One row per role: whether it can log in, is superuser, and its password hash.",
+     "columns": {
+      "salted_hash": "Password hash. Always hidden by Helenus.",
+      "can_login": "Whether the role can log in.",
+      "is_superuser": "Whether the role bypasses all permission checks."
+     }
+    },
+    "role_members": {
+     "description": "Which roles are members of which other roles."
+    },
+    "role_permissions_index": {
+     "description": "Index of permissions by role, used internally."
+    },
+    "resource_role_permissons_index": {
+     "description": "Index of permissions by resource, used internally."
+    },
+    "identity_to_role": {
+     "description": "Maps authenticated identities (such as certificates) to roles."
+    },
+    "network_permissions": {
+     "description": "Datacenters that each role may access."
+    },
+    "cidr_groups": {
+     "description": "Named groups of IP ranges used for access control."
+    },
+    "cidr_permissions": {
+     "description": "Which CIDR groups each role may connect from."
+    }
+   }
+  },
+  "system_distributed": {
+   "description": "Cluster-wide bookkeeping, replicated to all nodes.",
+   "tables": {
+    "repair_history": {
+     "description": "History of repairs per table and token range."
+    },
+    "parent_repair_history": {
+     "description": "History of repair sessions as a whole."
+    },
+    "view_build_status": {
+     "description": "Per-node build status of each materialized view."
+    },
+    "partition_denylist": {
+     "description": "Partitions that are blocked from reads and writes."
+    }
+   }
+  },
+  "system_traces": {
+   "description": "Query tracing results written when tracing is enabled.",
+   "tables": {
+    "sessions": {
+     "description": "One row per traced request with its coordinator, duration and parameters."
+    },
+    "events": {
+     "description": "The individual steps recorded during each traced request."
+    }
+   }
+  },
+  "system_views": {
+   "description": "Virtual tables exposing live node state; nothing is stored on disk.",
+   "tables": {
+    "caches": {
+     "description": "Sizes and hit rates of the key, row and counter caches."
+    },
+    "clients": {
+     "description": "Currently connected client connections."
+    },
+    "settings": {
+     "description": "The current value of every cassandra.yaml setting."
+    },
+    "thread_pools": {
+     "description": "Activity of the node's internal thread pools."
+    },
+    "system_properties": {
+     "description": "JVM and system properties of this node."
+    },
+    "sstable_tasks": {
+     "description": "Running compactions and other SSTable operations with progress."
+    },
+    "disk_usage": {
+     "description": "Disk space used by each table."
+    },
+    "max_partition_size": {
+     "description": "Largest partition size per table."
+    },
+    "rows_per_read": {
+     "description": "Distribution of rows returned per read, per table."
+    },
+    "tombstones_per_read": {
+     "description": "Distribution of tombstones scanned per read, per table."
+    },
+    "local_read_latency": {
+     "description": "Local read latency per table."
+    },
+    "local_write_latency": {
+     "description": "Local write latency per table."
+    },
+    "local_scan_latency": {
+     "description": "Local range scan latency per table."
+    },
+    "coordinator_read_latency": {
+     "description": "Read latency as seen by the coordinator, per table."
+    },
+    "coordinator_write_latency": {
+     "description": "Write latency as seen by the coordinator, per table."
+    },
+    "coordinator_scan_latency": {
+     "description": "Range scan latency as seen by the coordinator, per table."
+    },
+    "internode_inbound": {
+     "description": "Inbound messaging between this node and its peers."
+    },
+    "internode_outbound": {
+     "description": "Outbound messaging between this node and its peers."
+    },
+    "pending_hints": {
+     "description": "Hints waiting to be delivered to other nodes."
+    },
+    "snapshots": {
+     "description": "Snapshots present on this node."
+    },
+    "repairs": {
+     "description": "Repair sessions known to this node."
+    },
+    "batch_metrics": {
+     "description": "Metrics about logged and unlogged batches."
+    },
+    "cql_metrics": {
+     "description": "Metrics about prepared and regular CQL statements."
+    },
+    "gossip_info": {
+     "description": "The gossip state this node holds about every node."
+    },
+    "queries": {
+     "description": "Currently running queries on this node."
+    },
+    "streaming": {
+     "description": "Active data streams."
+    },
+    "sai_column_indexes": {
+     "description": "Storage Attached Index status per column."
+    },
+    "sai_sstable_indexes": {
+     "description": "Storage Attached Index status per SSTable."
+    },
+    "sai_view_indexes": {
+     "description": "Storage Attached Index status per index segment."
+    },
+    "table_partitions": {
+     "description": "Partition metrics per table."
+    },
+    "top_size_partitions": {
+     "description": "Largest partitions found per table."
+    },
+    "top_tombstone_partitions": {
+     "description": "Partitions with the most tombstones per table."
+    },
+    "top_partitions": {
+     "description": "The hottest partitions per table."
+    },
+    "unreplicated_keyspaces": {
+     "description": "Keyspaces that are not replicated."
+    }
+   }
+  },
+  "system_virtual_schema": {
+   "description": "Schema of the virtual tables in system_views.",
+   "tables": {
+    "keyspaces": {
+     "description": "The virtual keyspaces."
+    },
+    "tables": {
+     "description": "The virtual tables."
+    },
+    "columns": {
+     "description": "The columns of each virtual table."
+    }
+   }
+  }
+ }
+}

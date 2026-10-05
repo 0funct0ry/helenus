@@ -126,6 +126,7 @@ func fail(c *gin.Context, status int, code, message string, detail any) {
 
 func (a *api) routes(r *gin.RouterGroup) {
 	r.GET("/profiles", a.listProfiles)
+	r.GET("/system-docs", a.systemDocs)
 	r.POST("/profiles", a.createProfile)
 	r.POST("/profiles/test", a.testUnsaved)
 	r.POST("/profiles/astra/bundle", a.uploadBundle)

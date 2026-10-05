@@ -147,6 +147,7 @@ func (x *Executor) Run(ctx context.Context, req Request) (*Result, error) {
 	}
 	enc := codec.Encoder{BlobLimit: codec.DefaultBlobLimit, UDTFields: udtFields(snap)}
 	res.Columns = describe(cols, snap)
+	masked := maskedColumns(cols)
 	if len(cols) > 0 {
 		res.Kind = KindRows
 		n := it.NumRows()
@@ -156,6 +157,11 @@ func (x *Executor) Run(ctx context.Context, req Request) (*Result, error) {
 				break
 			}
 			raw := finish()
+			for _, j := range masked {
+				if raw[j] != nil {
+					raw[j] = schema.MaskedValue
+				}
+			}
 			row := make([]any, len(raw))
 			for j, v := range raw {
 				row[j] = enc.JSON(v, res.Columns[j].Type)
@@ -381,6 +387,17 @@ func derefNull(p any) any {
 		return nil
 	}
 	return rv.Elem().Interface()
+}
+
+// maskedColumns returns the indexes of credential columns in system keyspaces.
+func maskedColumns(cols []gocql.ColumnInfo) []int {
+	var out []int
+	for i, c := range cols {
+		if schema.MaskedColumn(c.Keyspace, c.Name) {
+			out = append(out, i)
+		}
+	}
+	return out
 }
 
 func describe(cols []gocql.ColumnInfo, snap *schema.Snapshot) []Column {

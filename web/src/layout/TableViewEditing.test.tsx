@@ -301,7 +301,8 @@ describe('TableView editing', () => {
     open({}, systemTab, txnResponse())
     render(<TableView tab={systemTab} />)
     expect(await screen.findByText(/system keyspaces are read-only/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Insert row/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Insert row/ })).not.toBeInTheDocument()
+    expect(screen.getAllByText('Read-only').length).toBeGreaterThan(0)
   })
 
   it('is read-only when the result lacks primary key columns', async () => {

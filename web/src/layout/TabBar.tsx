@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react'
 import { Braces, Eye, FileText, FunctionSquare, Plus, ShieldCheck, Sigma, Table2, X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { IconButton } from '../ui/IconButton'
+import { ReadOnlyBadge } from '../ui/ReadOnlyBadge'
 import type { TabKind } from '../store/workspace'
 
 export interface TabBarItem {
@@ -11,6 +12,8 @@ export interface TabBarItem {
   closable?: boolean
   /** Shows an accent dot for unsaved/pending state. */
   modified?: boolean
+  /** Shows a Read-only badge (system keyspace objects). */
+  readOnly?: boolean
 }
 
 export interface TabBarProps {
@@ -63,6 +66,7 @@ export function TabBar({ tabs, activeId, onSelect, onClose, onNew }: TabBarProps
               >
                 <Icon size={14} className="shrink-0" aria-hidden />
                 <span className="truncate">{t.title}</span>
+                {t.readOnly && <ReadOnlyBadge />}
                 {t.modified && <span className="size-1.5 rounded-full bg-accent" title="Pending changes" />}
               </button>
               {t.closable !== false && (

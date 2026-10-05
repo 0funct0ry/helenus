@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Database, Eye, Moon, Plus, Shield, Table2 } from 'lucide-react'
+import { Activity, Database, Eye, Moon, Plus, Shield, Table2 } from 'lucide-react'
 import { Dialog } from '../ui/Dialog'
 import { useProfiles, useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
@@ -51,6 +51,9 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       { id: 'new-query', group: 'Commands', label: 'New query', icon: <Plus size={14} />, run: () => newQuery() },
       { id: 'profiles', group: 'Commands', label: 'Switch profile…', icon: <Database size={14} />, run: () => openProfiles(true) },
       ...(astra ? [] : [{ id: 'security', group: 'Commands' as const, label: 'Security: roles and permissions', icon: <Shield size={14} />, run: () => open('security', '', 'Security') }]),
+      ...['clients', 'settings', 'thread_pools', 'caches']
+        .filter((n) => keyspaces.find((k) => k.name === 'system_views')?.tables.some((t) => t.name === n))
+        .map<Action>((n) => ({ id: `insight:${n}`, group: 'Commands', label: `Cluster insights: ${n}`, icon: <Activity size={14} />, run: () => open('table', 'system_views', n) })),
       { id: 'theme', group: 'Commands', label: 'Toggle light and dark theme', icon: <Moon size={14} />, run: cycleTheme },
     ],
     [keyspaces, astra, open, newQuery, openProfiles, cycleTheme],
