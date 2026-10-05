@@ -60,6 +60,14 @@ describe('TableView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Open' }))
     expect(useWorkspace.getState().activeId).toBe('view:payments.transactions_by_status')
   })
+  it('offers Seed data… on tables, not on views', async () => {
+    const { unmount } = render(<TableView tab={tableTab} />)
+    expect(await screen.findByRole('button', { name: 'Seed data…' })).toBeInTheDocument()
+    unmount()
+    render(<TableView tab={viewTab} />)
+    await screen.findByRole('button', { name: /Insert row/ })
+    expect(screen.queryByRole('button', { name: 'Seed data…' })).not.toBeInTheDocument()
+  })
   it('hides the Views sub-view for materialized views', async () => {
     render(<TableView tab={viewTab} />)
     expect(await screen.findByRole('button', { name: /Insert row/ })).toBeDisabled()

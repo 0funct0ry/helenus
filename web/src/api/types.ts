@@ -659,3 +659,91 @@ export interface AdviceFinding {
   keyspace: string
   table?: string
 }
+
+/** One generator choice for a seeded column or nested element; see the generator reference. */
+export interface SeedSpec {
+  type?: string
+  gen: string
+  params?: Record<string, unknown>
+  null_percent?: number
+  element?: SeedSpec
+  key?: SeedSpec
+  fields?: Record<string, SeedSpec>
+}
+
+export interface SeedConfig {
+  seed: number
+  total_rows: number
+  rows_per_partition: number
+  concurrency: number
+  consistency: string
+  ttl: number
+  if_not_exists: boolean
+  columns: Record<string, SeedSpec>
+}
+
+export interface SeedColumnInfo {
+  name: string
+  type: string
+  desc: TypeDesc
+  kind: 'partition' | 'clustering' | 'static' | 'regular'
+  key: boolean
+  /** Generator names that can fill this column. */
+  compatible: string[]
+}
+
+export interface SeedFieldError {
+  field: string
+  message: string
+}
+
+/** Response of `POST /p/{profile}/seed/preview`: the defaults-filled config, 20 rows and the sample statement. */
+export interface SeedPreview {
+  config: SeedConfig
+  columns: SeedColumnInfo[]
+  notes: string[]
+  errors: SeedFieldError[]
+  rows: unknown[][]
+  statement: string
+  counter: boolean
+  partitions?: number
+}
+
+export interface JobProgress {
+  done: number
+  total: number
+  errors: number
+  rate_per_s: number
+  eta_s: number
+}
+
+export interface SeedResult {
+  written: number
+  errors: number
+  skipped_duplicates: number
+  partitions: number
+  first_errors: string[]
+  keyspace: string
+  table: string
+}
+
+export interface JobInfo {
+  id: string
+  kind: string
+  profile: string
+  state: 'running' | 'done' | 'failed' | 'cancelled'
+  progress: JobProgress
+  started_at: string
+  ended_at?: string
+  result?: SeedResult | { error: string }
+}
+
+export interface SeedProfile {
+  id: number
+  keyspace: string
+  table: string
+  name: string
+  config: SeedConfig
+  created_at: string
+  updated_at: string
+}

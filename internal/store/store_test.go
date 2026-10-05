@@ -31,7 +31,7 @@ func TestOpenWALAndMigrate(t *testing.T) {
 	}
 	defer func() { _ = s2.Close() }()
 	var n int
-	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 1 {
+	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 2 {
 		t.Fatalf("migrations applied: %d, %v", n, err)
 	}
 }
@@ -76,5 +76,34 @@ func TestChangesLifecycle(t *testing.T) {
 	}
 	if got, _ = s2.ListChanges("b", 50, 0, ""); len(got) != 1 {
 		t.Fatalf("clear must be profile-scoped: %+v", got)
+	}
+}
+
+func TestSeedProfilesLifecycle(t *testing.T) {
+	s, _ := open(t)
+	p, err := s.SaveSeedProfile(SeedProfile{Profile: "a", Keyspace: "shop", Table: "users", Name: "big", Config: `{"x":1}`}, false)
+	if err != nil || p.ID == 0 || p.Config != `{"x":1}` {
+		t.Fatalf("save: %+v, %v", p, err)
+	}
+	if _, err := s.SaveSeedProfile(SeedProfile{Profile: "a", Keyspace: "shop", Table: "users", Name: "big", Config: `{}`}, false); err != ErrSeedProfileExists {
+		t.Fatalf("duplicate err = %v", err)
+	}
+	p2, err := s.SaveSeedProfile(SeedProfile{Profile: "a", Keyspace: "shop", Table: "users", Name: "big", Config: `{"x":2}`}, true)
+	if err != nil || p2.ID != p.ID || p2.Config != `{"x":2}` {
+		t.Fatalf("overwrite: %+v, %v", p2, err)
+	}
+	_, _ = s.SaveSeedProfile(SeedProfile{Profile: "a", Keyspace: "shop", Table: "orders", Name: "o", Config: `{}`}, false)
+	list, _ := s.ListSeedProfiles("a", "shop", "users")
+	if len(list) != 1 {
+		t.Fatalf("list = %d", len(list))
+	}
+	if _, err := s.GetSeedProfile("b", p.ID); err != ErrSeedProfileNotFound {
+		t.Fatalf("cross-profile get err = %v", err)
+	}
+	if ok, _ := s.DeleteSeedProfile("a", p.ID); !ok {
+		t.Fatal("delete failed")
+	}
+	if ok, _ := s.DeleteSeedProfile("a", p.ID); ok {
+		t.Fatal("double delete succeeded")
 	}
 }

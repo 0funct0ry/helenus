@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Plus, RefreshCw, Trash2, Undo2 } from "lucide-react";
+import { Copy, Plus, RefreshCw, Sprout, Trash2, Undo2 } from "lucide-react";
 import { Tabs } from "../ui/Tabs";
 import { Button } from "../ui/Button";
 import { ReadOnlyBadge } from "../ui/ReadOnlyBadge";
@@ -16,6 +16,7 @@ import { TriggersSheet } from "./TriggersSheet";
 import { TableAdviceView } from "./TableAdviceView";
 import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
+import { SeedWizard } from "./SeedWizard";
 import { CellEditor } from "./CellEditor";
 import { CollectionPopover } from "./CollectionPopover";
 import { InsertRowDialog } from "./InsertRowDialog";
@@ -58,6 +59,7 @@ export function TableView({ tab }: TableViewProps) {
   const [sub, setSub] = useState("data");
   const [editSchema, setEditSchema] = useState(false);
   const [droppingView, setDroppingView] = useState(false);
+  const [seedOpen, setSeedOpen] = useState(false);
   const closeTab = useWorkspace((s) => s.close);
   const consistency = useWorkspace((s) => s.consistency);
   const setConsistency = useWorkspace((s) => s.setConsistency);
@@ -188,6 +190,16 @@ export function TableView({ tab }: TableViewProps) {
             onClick={editing.toolbar.onInsert}
           >
             Insert row
+          </Button>
+        )}
+        {!ks?.system && !isView && (
+          <Button
+            variant="ghost"
+            icon={<Sprout size={14} />}
+            title="Fill the table with generated rows"
+            onClick={() => setSeedOpen(true)}
+          >
+            Seed data…
           </Button>
         )}
         {editing.ed.editable && !table?.counter && (
@@ -354,6 +366,13 @@ export function TableView({ tab }: TableViewProps) {
         onConfirm={editing.discard}
         onCancel={() => editing.setDiscarding(false)}
       />
+      {seedOpen && (
+        <SeedWizard
+          keyspace={tab.keyspace}
+          table={tab.object}
+          onClose={() => setSeedOpen(false)}
+        />
+      )}
       <CountRowsDialog
         open={counting}
         onClose={() => setCounting(false)}

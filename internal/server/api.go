@@ -10,6 +10,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
+	"github.com/0funct0ry/helenus/internal/jobs"
 	"github.com/0funct0ry/helenus/internal/schema"
 	"github.com/0funct0ry/helenus/internal/store"
 	"github.com/0funct0ry/helenus/internal/trace"
@@ -105,6 +106,7 @@ type api struct {
 	dataDir    string
 	conn       Connector
 	store      *store.Store
+	jobs       *jobs.Registry
 	// writeMu serializes config file edits made through the API.
 	writeMu sync.Mutex
 }
@@ -158,6 +160,15 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/aggregates/candidates", a.aggregatesCandidates)
 	p.POST("/aggregates/test", a.aggregatesTest)
 	p.POST("/views/preview", a.viewsPreview)
+	p.POST("/seed/preview", a.seedPreview)
+	p.POST("/seed/run", a.seedRun)
+	p.GET("/seed/profiles", a.seedProfilesList)
+	p.POST("/seed/profiles", a.seedProfilesSave)
+	p.PUT("/seed/profiles/:id", a.seedProfilesUpdate)
+	p.DELETE("/seed/profiles/:id", a.seedProfilesDelete)
+	p.GET("/jobs", a.jobsList)
+	p.GET("/jobs/:id", a.jobsGet)
+	p.DELETE("/jobs/:id", a.jobsCancel)
 	p.POST("/complete", a.complete)
 	p.GET("/deps", a.deps)
 	p.GET("/schema-changes", a.listSchemaChanges)

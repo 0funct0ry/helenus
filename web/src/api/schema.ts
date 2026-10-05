@@ -21,7 +21,8 @@ function toTable(t: SchemaTable): Table {
 }
 
 /** `NTS · dc1:3, dc2:3` / `Simple · 1`, shown beside a keyspace in the tree. */
-export function replicationSummary(r: Record<string, string> = {}): string {
+export function replicationSummary(repl?: Record<string, string> | null): string {
+  const r = repl ?? {}
   const cls = (r.class ?? '').split('.').pop() ?? ''
   const rest = Object.entries(r).filter(([k]) => k !== 'class' && k !== 'replication_factor')
   if (cls === 'NetworkTopologyStrategy') return `NTS · ${rest.map(([dc, n]) => `${dc}:${n}`).join(', ')}`

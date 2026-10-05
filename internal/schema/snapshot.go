@@ -378,6 +378,9 @@ func assemble(kss, tabs, cols, views, idxs, types, funcs, aggs []row) *Snapshot 
 	for _, r := range kss {
 		name := str(r, "keyspace_name")
 		repl, _ := r["replication"].(map[string]string)
+		if repl == nil {
+			repl = map[string]string{} // virtual keyspaces have no replication; keep it an object in JSON
+		}
 		snap.Keyspaces = append(snap.Keyspaces, Keyspace{
 			Name: name, System: isSystem(name), Replication: repl, DurableWrites: boolean(r, "durable_writes"),
 			Tables: []Table{}, Views: []View{}, Types: []UDT{}, Functions: []Function{}, Aggregates: []Aggregate{},

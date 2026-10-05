@@ -7,6 +7,7 @@ import {
   mockSchemaApi,
   tableTab,
 } from "../test/schemaFixture";
+import { seedPreview } from "../test/seedFixture";
 import { useWorkspace } from "../store/workspace";
 
 const loaded = async () => screen.findByRole("treeitem", { name: /^payments/ });
@@ -158,6 +159,7 @@ describe("SchemaTree", () => {
         "Edit schema",
         "New view…",
         "New index…",
+        "Seed data…",
         "Truncate…",
         "Drop table…",
         "Copy name",
@@ -437,6 +439,18 @@ describe("SchemaTree", () => {
         .getAllByRole("menuitem")
         .map((m) => m.textContent);
       expect(labels).toEqual(["New query here", "Copy name", "Refresh"]);
+    });
+
+    it("opens the seed wizard from a table's menu", async () => {
+      mockSchemaApi({
+        "POST /p/local/seed/preview": { body: seedPreview() },
+        "GET /p/local/seed/profiles?keyspace=payments&table=ledger_counters": { profiles: [] },
+      });
+      render(<SchemaTree />);
+      await loaded();
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByRole("treeitem", { name: /^ledger_counters/ }) });
+      await userEvent.click(screen.getByRole("menuitem", { name: "Seed data…" }));
+      expect(await screen.findByRole("dialog", { name: "Seed payments.ledger_counters" })).toBeInTheDocument();
     });
 
     it("offers only read-only items on system tables", async () => {

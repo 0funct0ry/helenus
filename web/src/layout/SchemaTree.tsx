@@ -22,8 +22,10 @@ import {
   Table2,
   Trash2,
   Lightbulb,
+  Sprout,
 } from "lucide-react";
 import { TreeRow } from "./TreeRow";
+import { SeedWizard } from "./SeedWizard";
 import { SchemaContextMenu } from "./SchemaContextMenu";
 import { NewTypeDialog } from "./NewTypeDialog";
 import { FunctionEditor } from "./FunctionEditor";
@@ -93,6 +95,10 @@ export function SchemaTree() {
   const [newKsOpen, setNewKsOpen] = useState(false);
   const [editKs, setEditKs] = useState<string | null>(null);
   const [dropKs, setDropKs] = useState<string | null>(null);
+  const [seedTarget, setSeedTarget] = useState<{
+    keyspace: string;
+    name: string;
+  } | null>(null);
   const [truncate, setTruncate] = useState<{
     keyspace: string;
     name: string;
@@ -401,6 +407,11 @@ export function SchemaTree() {
               label: "New index…",
               icon: <Search size={14} />,
               onSelect: () => setNewIndex(target),
+            },
+            {
+              label: "Seed data…",
+              icon: <Sprout size={14} />,
+              onSelect: () => setSeedTarget(target),
             },
             {
               label: "Truncate…",
@@ -943,6 +954,13 @@ export function SchemaTree() {
             pushToast(`Keyspace ${name} dropped`);
           }}
           onClose={() => setDropKs(null)}
+        />
+      )}
+      {seedTarget && (
+        <SeedWizard
+          keyspace={seedTarget.keyspace}
+          table={seedTarget.name}
+          onClose={() => setSeedTarget(null)}
         />
       )}
       {truncate && (

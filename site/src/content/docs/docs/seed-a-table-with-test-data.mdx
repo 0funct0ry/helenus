@@ -1,0 +1,51 @@
+---
+title: Seed a table with test data
+description: Fill a table with realistic, reproducible generated rows from a four-step wizard that runs as a background job.
+---
+
+Seeding writes generated rows into an existing table, which is handy for demos, load tests and trying out a data model. It is available for tables only: materialized views and system keyspaces have no **Seed data…** action.
+
+## Open the wizard
+
+Choose **Seed data…** from the table menu in the schema tree (the three-dot button, or right-click), or from the toolbar of the table's tab.
+
+## Step 1: Generators
+
+Each column gets one row. Helenus picks a generator from the column's type and name, so a `users (id uuid, email text, first_name text, created timestamp)` table starts out with a UUID generator, fake emails, fake first names and a timestamp range of the last 30 days.
+
+- Change the generator with the dropdown. It only lists generators that fit the column's type. See the [generator reference](/helenus/docs/generator-reference/).
+- Edit the generator's parameters under the row. Mistakes, such as an invalid regular expression, are shown under the field.
+- Non-key columns have a **Null %**. Primary-key columns are never null.
+- The grey text on the right shows three sample values and updates as you edit.
+- **Load recipe** and **Save as recipe…** keep the generators and settings as a named recipe for later. Recipes belong to one table (they are separate from connection profiles). If the table changed since a recipe was saved, columns that were dropped or changed type are reset to their defaults and a note says so.
+
+## Step 2: Volume
+
+- **Total rows** (1 to 1,000,000).
+- **Rows per partition** (1 to 10,000) for tables with clustering columns. Partitions are `ceil(total / rows per partition)`, and each partition key value is generated once and shared by that partition's rows. Tables without clustering columns write one row per partition.
+- **Concurrency** (1 to 64, default 8) is the number of writes in flight.
+- **Consistency** defaults to `LOCAL_QUORUM`. `ANY` is not offered.
+- **TTL** and **IF NOT EXISTS** (much slower, because every row is a lightweight transaction).
+- **Seed**: the same seed and settings produce byte-identical rows on any machine. **Randomize** picks a new one.
+
+Primary keys are unique within a run: a colliding key is regenerated up to ten times and then skipped, and the number of skipped rows is reported at the end.
+
+## Step 3: Preview
+
+The first 20 rows and a sample statement. Nothing is written yet.
+
+## Step 4: Run
+
+**Start seeding** begins a background job. The wizard shows a progress bar, the write rate, an ETA, the error count and, when it ends, the first 100 error messages. **Cancel** stops the job within about a second and reports how many rows were written. After a run, **Open table** shows the data. The job aborts after 1,000 write errors.
+
+You can close the wizard while the job runs. The **Jobs** indicator in the status bar lists running jobs and lets you cancel them.
+
+## Counter tables
+
+Counter tables are seeded with `UPDATE … SET c = c + n WHERE <key>`, where `n` comes from an integer range. TTL and IF NOT EXISTS are not available.
+
+## Good to know
+
+- Jobs live in memory in the `helenus ui` process and are lost when it restarts. Rows already written stay.
+- Fake emails always use the reserved `example.com`, `example.org` and `example.net` domains.
+- Null values are left unset instead of written, so seeding creates no tombstones.

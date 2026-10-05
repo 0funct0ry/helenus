@@ -83,6 +83,11 @@ golden-shell:
 golden-mutate:
 	$(GO) test ./internal/mutate -run TestCompileGolden -update
 
+.PHONY: golden-seed
+## golden-seed: Rewrite the seed generator golden files
+golden-seed:
+	$(GO) test ./internal/seed -run TestSeedGolden -update
+
 .PHONY: lint
 ## lint: Run linters (Go and web)
 lint:

@@ -20,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/0funct0ry/helenus/internal/config"
+	"github.com/0funct0ry/helenus/internal/jobs"
 	"github.com/0funct0ry/helenus/internal/store"
 	"github.com/0funct0ry/helenus/web"
 )
@@ -123,7 +124,7 @@ func NewRouter(opts Options) http.Handler {
 	r.GET("/api/v1/meta", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"version": opts.Version, "auth_enabled": false})
 	})
-	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store}).routes(r.Group("/api/v1"))
+	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store, jobs: jobs.New()}).routes(r.Group("/api/v1"))
 	r.NoRoute(staticHandler(opts.Assets))
 	return r
 }

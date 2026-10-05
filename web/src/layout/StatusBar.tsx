@@ -1,5 +1,6 @@
 import { Lock, TriangleAlert } from 'lucide-react'
 import { StatusDot } from '../ui/StatusDot'
+import { JobsIndicator } from './JobsIndicator'
 import { useCluster, useProfiles } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
 
@@ -49,6 +50,7 @@ export function StatusBar() {
       )}
       {conn?.status === 'error' && conn.error && <span className={`${item} min-w-0 truncate text-danger`}>{conn.error}</span>}
       <div className="flex-1" />
+      <JobsIndicator profile={profileId} enabled={connected} className={item} />
       <span className={item}>{consistency}</span>
       {activeKind === 'query' && <span className={item}>{`Ln ${cursor.line}, Col ${cursor.col}`}</span>}
       <span className={item}>helenus dev</span>
