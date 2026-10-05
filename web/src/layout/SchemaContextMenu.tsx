@@ -9,7 +9,7 @@ export interface ContextMenuItem {
 }
 
 export interface SchemaContextMenuProps {
-  /** Viewport position of the right-click. */
+  /** Viewport position of the right-click, or the bottom-left corner of the button that opened the menu. */
   x: number
   y: number
   /** Accessible name, e.g. the object the menu belongs to. */

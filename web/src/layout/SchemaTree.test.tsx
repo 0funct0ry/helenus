@@ -154,4 +154,35 @@ describe('SchemaTree', () => {
       await waitFor(() => expect(screen.queryByRole('button', { name: 'New keyspace' })).not.toBeInTheDocument())
     })
   })
+
+  describe('Keyspace actions menu', () => {
+    it('opens a menu with the keyspace actions from the hamburger button', async () => {
+      render(<SchemaTree />)
+      await loaded()
+      await userEvent.click(screen.getAllByRole('button', { name: 'Keyspace actions' })[0])
+      const items = screen.getAllByRole('menuitem').map((m) => m.textContent)
+      expect(items).toEqual(['New table…', 'New type…', 'New query here', 'Copy name', 'Refresh'])
+    })
+    it('opens the same menu on right-click', async () => {
+      render(<SchemaTree />)
+      await loaded()
+      fireEvent.contextMenu(screen.getByText('payments'))
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toContain('New table…')
+    })
+    it('opens the New table wizard from the menu', async () => {
+      render(<SchemaTree />)
+      await loaded()
+      await userEvent.click(screen.getAllByRole('button', { name: 'Keyspace actions' })[0])
+      await userEvent.click(screen.getByRole('menuitem', { name: 'New table…' }))
+      expect(await screen.findByText(/New table in /)).toBeInTheDocument()
+    })
+    it('has no button or menu for system keyspaces', async () => {
+      render(<SchemaTree />)
+      await loaded()
+      await userEvent.click(screen.getByRole('treeitem', { name: /System/ }))
+      expect(screen.getAllByRole('button', { name: 'Keyspace actions' })).toHaveLength(2) // payments and inventory only
+      fireEvent.contextMenu(screen.getByText('system_auth'))
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    })
+  })
 })

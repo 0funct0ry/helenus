@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '../lib/cn'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,6 +8,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode
   /** Optional keyboard hint shown at the end of the label (e.g. "⌘↵"). */
   kbd?: string
+  ref?: Ref<HTMLButtonElement>
 }
 
 const variants: Record<NonNullable<ButtonProps['variant']>, string> = {

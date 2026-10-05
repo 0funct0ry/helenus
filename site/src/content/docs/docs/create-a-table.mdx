@@ -1,0 +1,28 @@
+---
+title: Create a table
+description: Create a table from the web UI with a four-step wizard and a live preview of the CREATE TABLE statement.
+---
+
+The New table wizard builds a `CREATE TABLE` statement step by step. Helenus shows the CQL as you go and runs it only when you choose **Create table**.
+
+## Open the wizard
+
+Hover a keyspace in the schema tree and select the menu button (**Keyspace actions**), or right-click the keyspace, then choose **New table…**. System keyspaces have no menu.
+
+## Step 1: Columns
+
+Enter a **Table name** (letters, digits and underscores, starting with a letter, up to 48 characters; capitals are kept and quoted). Add columns with a name, a type and an optional **static** switch. The type list includes `counter` and the user-defined types of the keyspace. **Quick add** inserts `id uuid`. Use the arrows to reorder columns.
+
+## Step 2: Keys
+
+Pick the **Partition key** columns in order, then any **Clustering columns**, each ASC or DESC. A column can be in only one place. Counter and duration columns cannot be keys. Collections, tuples and user-defined types in a key are frozen automatically, and a note says so. Static columns need at least one clustering column.
+
+## Step 3: Options
+
+Open **Defaults are fine for most tables** to set a comment, default TTL (seconds, hours or days), `gc_grace_seconds`, compaction, compression and the bloom filter chance. Only options that differ from the defaults are written. `UnifiedCompactionStrategy` needs Cassandra 5.0 and `ZstdCompressor` needs 4.0.
+
+## Step 4: Review
+
+Check the full CQL, copy it, or choose **Open in editor** to continue in a query tab without running it. **Create table** runs exactly the statement shown. On success the table opens in a tab. If Cassandra refuses, its message appears on this step and your entries are kept.
+
+Next stays off while the current step has problems, and steps with problems show a red dot. Closing the wizard after editing asks you to confirm.

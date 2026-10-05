@@ -15,6 +15,8 @@ export interface TypePickerProps {
   udts: string[]
   /** Accessible name of this picker, e.g. "Type of lat"; nested pickers extend it. */
   label: string
+  /** Offer `counter` (top-level column types only; nested pickers never get it). */
+  allowCounter?: boolean
 }
 
 /**
@@ -23,9 +25,10 @@ export interface TypePickerProps {
  * shrink; vectors take a dimension), and a Frozen switch wraps the type in `frozen<…>`. The server adds
  * frozen<> where Cassandra requires it, so the switch only matters when the user wants it explicitly.
  */
-export function TypePicker({ value, onChange, udts, label }: TypePickerProps) {
+export function TypePicker({ value, onChange, udts, label, allowCounter }: TypePickerProps) {
   const options: SelectOption[] = [
     ...NATIVE_TYPES.map((t) => ({ value: t, label: t })),
+    ...(allowCounter ? [{ value: 'counter', label: 'counter' }] : []),
     ...COMPOSITE_TYPES.map((t) => ({ value: t, label: t === 'vector' ? 'vector<T, n>' : `${t}<…>` })),
     ...udts.map((u) => ({ value: UDT_PREFIX + u, label: u })),
   ]

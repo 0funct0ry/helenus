@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { Braces, Copy, Database, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { Braces, Copy, Menu, Database, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
 import { NewTypeDialog } from './NewTypeDialog'
 import { NewKeyspaceDialog } from './NewKeyspaceDialog'
+import { NewTableWizard } from './NewTableWizard'
 import type { ContextMenuItem } from './SchemaContextMenu'
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
@@ -40,6 +41,7 @@ export function SchemaTree() {
   const [toggled, setToggled] = useState<Record<string, boolean>>({})
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null)
+  const [newTableKs, setNewTableKs] = useState<string | null>(null)
   const [newKsOpen, setNewKsOpen] = useState(false)
   const [selectedKs, setSelectedKs] = useState<string | null>(null)
   const [pendingKs, setPendingKs] = useState<string | null>(null)
@@ -82,12 +84,14 @@ export function SchemaTree() {
 
   const onContext = (e: MouseEvent, keyspace: string, kind: ObjectKind, name: string) => {
     e.preventDefault()
+    if (kind === 'keyspace' && keyspaces?.find((k) => k.name === keyspace)?.system) return
     setMenu({ x: e.clientX, y: e.clientY, keyspace, kind, name })
   }
 
   const menuItems = (m: MenuState): ContextMenuItem[] => {
     if (m.kind === 'keyspace')
       return [
+        { label: 'New table…', icon: <Table2 size={14} />, onSelect: () => setNewTableKs(m.keyspace) },
         { label: 'New type…', icon: <Braces size={14} />, onSelect: () => setNewTypeKs(m.keyspace) },
         { label: 'New query here', icon: <FileText size={14} />, onSelect: () => newQuery({ keyspace: m.keyspace }) },
         { label: 'Copy name', icon: <Copy size={14} />, onSelect: () => void navigator.clipboard?.writeText(m.keyspace) },
@@ -158,8 +162,20 @@ export function SchemaTree() {
     )
     return (
       <div key={k.name} role="group">
-        <div data-ks={k.name} onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
+        <div data-ks={k.name} className="group relative" onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
           <TreeRow indent={6} label={k.name} selected={selectedKs === k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
+          {!k.system && (
+            <IconButton
+              label="Keyspace actions"
+              icon={<Menu size={13} />}
+              aria-haspopup="menu"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect()
+                setMenu({ x: r.left, y: r.bottom, keyspace: k.name, kind: 'keyspace', name: k.name })
+              }}
+              className={`absolute right-7 top-[1px] focus:opacity-100 group-hover:opacity-100 ${selectedKs === k.name ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
         </div>
         {kOpen && (
           <>
@@ -295,6 +311,17 @@ export function SchemaTree() {
             pushToast(`Keyspace ${name} created`)
           }}
           onClose={() => setNewKsOpen(false)}
+        />
+      )}
+      {newTableKs && (
+        <NewTableWizard
+          keyspace={newTableKs}
+          onCreated={(name) => {
+            setToggled((t) => ({ ...t, [`ks:${newTableKs}`]: true, [`tables:${newTableKs}`]: true }))
+            open('table', newTableKs, name)
+            pushToast(`Table ${name} created`)
+          }}
+          onClose={() => setNewTableKs(null)}
         />
       )}
       {newTypeKs && <NewTypeDialog keyspace={newTypeKs} onClose={() => setNewTypeKs(null)} />}

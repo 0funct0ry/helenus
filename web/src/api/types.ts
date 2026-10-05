@@ -171,6 +171,8 @@ export interface KeyspaceRequest {
 export interface PlanError {
   field: string
   message: string
+  /** Wizard step (1-3) the error belongs to; set by the table planner only. */
+  step?: number
 }
 
 /** The CREATE KEYSPACE statement a request would run, with blocking errors and non-blocking notes. */
@@ -179,6 +181,27 @@ export interface KeyspacePlan {
   errors: PlanError[]
   notes: string[]
 }
+
+/** A request to `POST /p/{profile}/tables/preview` (SPEC §9.13). Unset options mean the server default. */
+export interface TableRequest {
+  keyspace: string
+  name: string
+  if_not_exists: boolean
+  columns: { name: string; type: TypeDesc; static: boolean }[]
+  partition_key: string[]
+  clustering: { column: string; order: 'ASC' | 'DESC' }[]
+  options: {
+    comment: string
+    default_ttl_seconds: number
+    gc_grace_seconds: number | null
+    compaction: { class: string }
+    compression: { class: string }
+    bloom_filter_fp_chance: number | null
+  }
+}
+
+/** The CREATE TABLE statement a request would run, with blocking errors and non-blocking notes. */
+export type TablePlan = KeyspacePlan
 
 export interface SchemaFunction {
   keyspace: string
