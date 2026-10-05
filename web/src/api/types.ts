@@ -165,6 +165,8 @@ export interface KeyspaceRequest {
   datacenters: { name: string; rf: number }[]
   durable_writes: boolean
   if_not_exists: boolean
+  /** Defaults to create; alter and drop target the existing keyspace `name`. */
+  action?: 'create' | 'alter' | 'drop'
 }
 
 /** A validation problem tied to a form field, such as `name` or `datacenters.1.rf`. */

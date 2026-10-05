@@ -34,6 +34,10 @@ func TestKeyspacesPreview(t *testing.T) {
 	if p.Statement != "" || len(p.Errors) != 1 || p.Errors[0].Field != "name" {
 		t.Errorf("existing: %+v", p)
 	}
+	p = plan(`{"action":"drop","name":"payments"}`)
+	if p.Statement != "DROP KEYSPACE payments;" {
+		t.Errorf("drop: %+v", p)
+	}
 	if rec := e.do("POST", url, `{bad`); rec.Code != http.StatusBadRequest {
 		t.Errorf("malformed: %d", rec.Code)
 	}

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { Braces, Copy, EllipsisVertical, Database, Hash, Layers, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { Braces, Copy, EllipsisVertical, Database, Hash, Layers, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Pencil, Plus, RefreshCw, Search, Table2, Trash2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
 import { NewTypeDialog } from './NewTypeDialog'
 import { NewKeyspaceDialog } from './NewKeyspaceDialog'
+import { EditKeyspaceDialog } from './EditKeyspaceDialog'
+import { DropKeyspaceDialog } from './DropKeyspaceDialog'
 import { NewTableWizard } from './NewTableWizard'
 import type { ContextMenuItem } from './SchemaContextMenu'
 import { KeyMarker } from '../ui/KeyMarker'
@@ -44,6 +46,8 @@ export function SchemaTree() {
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null)
   const [newTableKs, setNewTableKs] = useState<string | null>(null)
   const [newKsOpen, setNewKsOpen] = useState(false)
+  const [editKs, setEditKs] = useState<string | null>(null)
+  const [dropKs, setDropKs] = useState<string | null>(null)
   const [selectedKs, setSelectedKs] = useState<string | null>(null)
   const [pendingKs, setPendingKs] = useState<string | null>(null)
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId))
@@ -57,6 +61,7 @@ export function SchemaTree() {
   const refresh = useRefreshSchema(profileId)
   const pushToast = useToasts((s) => s.push)
   const copyDdl = useCopyDdl(profileId)
+  const closeTab = useWorkspace((s) => s.close)
 
   // After a keyspace is created the schema refetches asynchronously; once it shows up, reveal it.
   useEffect(() => {
@@ -97,6 +102,8 @@ export function SchemaTree() {
         { label: 'New query here', icon: <FileText size={14} />, onSelect: () => newQuery({ keyspace: m.keyspace }) },
         { label: 'Copy name', icon: <Copy size={14} />, onSelect: () => void navigator.clipboard?.writeText(m.keyspace) },
         { label: 'Refresh', icon: <RefreshCw size={14} />, onSelect: () => refresh.mutate() },
+        { label: 'Edit keyspace…', icon: <Pencil size={14} />, separatorBefore: true, onSelect: () => setEditKs(m.keyspace) },
+        { label: 'Drop keyspace…', icon: <Trash2 size={14} />, danger: true, onSelect: () => setDropKs(m.keyspace) },
       ]
     const fq = `${m.keyspace}.${m.name}`
     const kind = m.kind
@@ -312,6 +319,28 @@ export function SchemaTree() {
             pushToast(`Keyspace ${name} created`)
           }}
           onClose={() => setNewKsOpen(false)}
+        />
+      )}
+      {editKs && (
+        <EditKeyspaceDialog
+          keyspace={editKs}
+          onChanged={(name) => {
+            refresh.mutate()
+            pushToast(`Keyspace ${name} changed`)
+          }}
+          onClose={() => setEditKs(null)}
+        />
+      )}
+      {dropKs && (
+        <DropKeyspaceDialog
+          keyspace={dropKs}
+          onDropped={(name) => {
+            for (const t of useWorkspace.getState().tabs) if (t.keyspace === name) closeTab(t.id)
+            setSelectedKs((k) => (k === name ? null : k))
+            refresh.mutate()
+            pushToast(`Keyspace ${name} dropped`)
+          }}
+          onClose={() => setDropKs(null)}
         />
       )}
       {newTableKs && (

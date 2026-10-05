@@ -1,0 +1,30 @@
+---
+title: Change or drop a keyspace
+description: Edit a keyspace's replication and durable writes, or drop it, from the web UI.
+---
+
+Both actions live in the keyspace menu in the schema tree (the three-dot button, or right-click), below **Refresh**. System keyspaces never show them.
+
+## Edit a keyspace
+
+1. Open the keyspace menu and choose **Edit keyspace…**.
+2. The form is prefilled with the current settings and the name is read-only. Change the replication strategy, the replication factors or **Durable writes**.
+3. The CQL preview shows only what changed, for example `ALTER KEYSPACE shop WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};` or `ALTER KEYSPACE shop WITH durable_writes = false;`.
+4. Choose **Apply changes**. The button stays disabled until something differs ("Nothing to change").
+
+Notes appear under the preview when they apply:
+
+- **Higher replication factor:** run `nodetool repair -full` on every node in that datacenter so existing data reaches the new replicas.
+- **Lower replication factor:** run `nodetool cleanup` on every node.
+- **SimpleStrategy to NetworkTopologyStrategy:** keep the datacenter name exactly as the cluster reports it, or data becomes unreachable.
+
+Datacenter names the cluster does not report are rejected with "Unknown datacenter".
+
+## Drop a keyspace
+
+1. Choose **Drop keyspace…** from the menu.
+2. The dialog shows how many tables, views, types, functions, aggregates and indexes will be deleted.
+3. Type the keyspace name exactly (case-sensitive: `Shop` does not match `shop`). The statement is `DROP KEYSPACE shop;`.
+4. Choose **Drop keyspace**. The keyspace leaves the tree and its open tabs close.
+
+Dropping cannot be undone.

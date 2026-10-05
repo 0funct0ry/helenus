@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -6,6 +6,10 @@ export interface ContextMenuItem {
   label: string
   icon?: ReactNode
   onSelect: () => void
+  /** Draw a separator line above this item. */
+  separatorBefore?: boolean
+  /** Use the danger colour (destructive actions). */
+  danger?: boolean
 }
 
 export interface SchemaContextMenuProps {
@@ -64,8 +68,9 @@ export function SchemaContextMenu({ x, y, label, items, onClose }: SchemaContext
       className="z-50 min-w-[180px] rounded-lg bg-elevated py-1 shadow-[var(--shadow)]"
     >
       {items.map((it, i) => (
+        <Fragment key={it.label}>
+        {it.separatorBefore && <div role="separator" className="my-1 h-px bg-line2" />}
         <button
-          key={it.label}
           type="button"
           role="menuitem"
           tabIndex={i === active ? 0 : -1}
@@ -73,11 +78,12 @@ export function SchemaContextMenu({ x, y, label, items, onClose }: SchemaContext
             onClose()
             it.onSelect()
           }}
-          className="flex h-7 w-full items-center gap-2 px-3 text-left hover:bg-hover focus:bg-hover focus:outline-none"
+          className={`flex h-7 w-full items-center gap-2 px-3 text-left hover:bg-hover focus:bg-hover focus:outline-none ${it.danger ? 'text-danger' : ''}`}
         >
-          <span className="text-muted">{it.icon}</span>
+          <span className={it.danger ? '' : 'text-muted'}>{it.icon}</span>
           {it.label}
         </button>
+        </Fragment>
       ))}
     </div>,
     document.body,

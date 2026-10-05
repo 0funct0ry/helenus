@@ -105,6 +105,16 @@ export function useSchema(profile: string, enabled: boolean) {
   })
 }
 
+/** The raw snapshot entry for one keyspace (replication map, durable writes, object lists), or undefined. */
+export function useKeyspaceDetail(profile: string, name: string) {
+  return useQuery({
+    queryKey: schemaKey(profile),
+    staleTime: Infinity,
+    queryFn: () => api<SchemaSnapshot>(`/p/${enc(profile)}/schema`),
+    select: (s: SchemaSnapshot) => s.keyspaces.find((k) => k.name === name),
+  })
+}
+
 /** Re-read the cluster's metadata and replace the cached snapshot. */
 export function useRefreshSchema(profile: string) {
   const qc = useQueryClient()

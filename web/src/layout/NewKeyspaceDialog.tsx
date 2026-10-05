@@ -2,10 +2,8 @@ import { useRef, useState } from 'react'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { Field } from '../ui/Field'
-import { SegmentedControl } from '../ui/SegmentedControl'
 import { Toggle } from '../ui/Toggle'
-import { DatacenterRows } from './DatacenterRows'
+import { KeyspaceForm } from './KeyspaceForm'
 import type { DatacenterRow } from './DatacenterRows'
 import { TypePlanPreview } from './TypePlanPreview'
 import { useCluster } from '../api/hooks'
@@ -103,54 +101,24 @@ export function NewKeyspaceDialog({ onCreated, onClose }: NewKeyspaceDialogProps
         }
       >
         <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden px-5 py-3">
-          <Field
-            label="Name"
-            mono
-            autoFocus
-            value={name}
-            placeholder="shop"
-            aria-invalid={showErrors && !!errs.name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => setBlurred(true)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void submit()
-              }
+          <KeyspaceForm
+            value={{ name, strategy, rf, rows, durable }}
+            onChange={(p) => {
+              if (p.name !== undefined) setName(p.name)
+              if (p.strategy !== undefined) setStrategy(p.strategy)
+              if (p.rf !== undefined) setRf(p.rf)
+              if (p.rows !== undefined) setEdited(p.rows)
+              if (p.durable !== undefined) setDurable(p.durable)
             }}
+            errors={showErrors ? errs : {}}
+            onNameBlur={() => setBlurred(true)}
+            onNameEnter={() => void submit()}
+            extraToggles={
+              <Toggle checked={ifNotExists} onChange={setIfNotExists}>
+                Create only if it doesn't exist
+              </Toggle>
+            }
           />
-          {showErrors && errs.name && <p className="-mt-2 mb-3 text-xs text-danger">{errs.name}</p>}
-          <div className="mb-3 flex flex-col gap-[5px]">
-            <span className="text-xs text-muted">Replication strategy</span>
-            <SegmentedControl
-              label="Replication strategy"
-              value={strategy}
-              onChange={setStrategy}
-              options={[
-                { value: 'SimpleStrategy', label: 'SimpleStrategy' },
-                { value: 'NetworkTopologyStrategy', label: 'NetworkTopologyStrategy' },
-              ]}
-            />
-          </div>
-          {strategy === 'SimpleStrategy' ? (
-            <>
-              <Field label="Replication factor" type="number" min={1} max={20} value={Number.isNaN(rf) ? '' : rf} aria-invalid={showErrors && !!errs.replication_factor} onChange={(e) => setRf(e.target.value === '' ? NaN : Number(e.target.value))} />
-              {showErrors && errs.replication_factor && <p className="-mt-2 mb-3 text-xs text-danger">{errs.replication_factor}</p>}
-            </>
-          ) : (
-            <div className="mb-3">
-              <span className="mb-[5px] block text-xs text-muted">Datacenters</span>
-              <DatacenterRows rows={rows} errors={showErrors ? errs : {}} onChange={setEdited} />
-            </div>
-          )}
-          <div className="mb-3 flex flex-col items-start gap-1">
-            <Toggle checked={durable} onChange={setDurable}>
-              Durable writes
-            </Toggle>
-            <Toggle checked={ifNotExists} onChange={setIfNotExists}>
-              Create only if it doesn't exist
-            </Toggle>
-          </div>
           <h3 className="mb-2 mt-4 text-[13px] font-semibold">CQL</h3>
           <TypePlanPreview plan={plan} pending={pending} />
           {error && (
