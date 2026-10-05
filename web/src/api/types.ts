@@ -400,3 +400,18 @@ export interface TraceResponse {
   lanes: TraceLane[]
   events: TraceEventRow[]
 }
+
+/** One related object in a dependency listing (GET /deps). */
+export interface DepItem {
+  kind: string
+  keyspace: string
+  name: string
+  signature?: string
+  via: string
+  blocking: boolean
+}
+
+export interface DepsResponse {
+  dependents: DepItem[]
+  dependencies: DepItem[]
+}

@@ -6,6 +6,7 @@ import { IconButton } from '../ui/IconButton'
 import { TypeBadge } from '../ui/TypeBadge'
 import { AlterFieldDialog } from './AlterFieldDialog'
 import { DropTypeDialog } from './DropTypeDialog'
+import { DependencyPanel } from './DependencyPanel'
 import { useDdl, useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
 import type { WorkspaceTab } from '../store/workspace'
@@ -99,6 +100,10 @@ export function TypeView({ tab }: TypeViewProps) {
             )}
             <h3 className="mb-2 mt-[22px] text-[13px] font-semibold">DDL</h3>
             <pre className="m-0 whitespace-pre-wrap rounded-md border border-line2 bg-editor p-3.5 font-mono text-[12.5px] leading-5">{ddl}</pre>
+          </div>
+          <div className="md:col-span-2">
+            <h3 className="mb-2 mt-[22px] text-[13px] font-semibold">Dependencies</h3>
+            <DependencyPanel kind="type" keyspace={udt.keyspace} name={udt.name} />
           </div>
         </div>
       </div>

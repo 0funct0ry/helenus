@@ -85,3 +85,25 @@ func TestDDL(t *testing.T) {
 		}
 	}
 }
+
+func TestDeps(t *testing.T) {
+	e := schemaEnv(t)
+	e.do("POST", "/api/v1/p/local/connect", "")
+	rec := e.do("GET", "/api/v1/p/local/deps?kind=table&keyspace=payments&name=t", "")
+	var body struct {
+		Dependents []struct {
+			Kind, Name, Via string
+			Blocking        bool
+		} `json:"dependents"`
+		Dependencies []struct{ Kind, Name string } `json:"dependencies"`
+	}
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &body) != nil || len(body.Dependents) != 1 || body.Dependents[0].Name != "v" || !body.Dependents[0].Blocking || len(body.Dependencies) != 1 {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	if rec := e.do("GET", "/api/v1/p/local/deps?kind=table&keyspace=payments&name=nope", ""); rec.Code != 404 || !strings.Contains(rec.Body.String(), "not_found") {
+		t.Errorf("missing: %d %s", rec.Code, rec.Body)
+	}
+	if rec := e.do("GET", "/api/v1/p/local/deps", ""); rec.Code != 400 {
+		t.Errorf("bad: %d", rec.Code)
+	}
+}

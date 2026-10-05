@@ -8,6 +8,7 @@ import { ResultsGrid } from './ResultsGrid'
 import { SchemaSheet } from './SchemaSheet'
 import { DdlView } from './DdlView'
 import { ViewsSheet } from './ViewsSheet'
+import { DependencyPanel } from './DependencyPanel'
 import { CountRowsDialog } from './CountRowsDialog'
 import { CellEditor } from './CellEditor'
 import { CollectionPopover } from './CollectionPopover'
@@ -77,6 +78,7 @@ export function TableView({ tab }: TableViewProps) {
     { id: 'data', label: 'Data' },
     { id: 'schema', label: 'Schema' },
     { id: 'ddl', label: 'DDL' },
+    { id: 'deps', label: 'Dependencies' },
     ...(isView ? [] : [{ id: 'views', label: 'Views', badge: views.length }]),
   ]
   const pk = columns.filter((c) => c.kind === 'partition')
@@ -223,6 +225,7 @@ export function TableView({ tab }: TableViewProps) {
           onOpenInQuery={() => newQuery({ keyspace: tab.keyspace, cql: ddlQuery.data?.trim() })}
         />
       )}
+      {sub === 'deps' && <DependencyPanel kind={isView ? 'view' : 'table'} keyspace={tab.keyspace} name={tab.object} />}
       {sub === 'views' && <ViewsSheet views={views} onOpen={(n) => open('view', tab.keyspace, n)} />}
     </div>
   )

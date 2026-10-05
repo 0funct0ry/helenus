@@ -1,0 +1,13 @@
+---
+title: See what depends on an object
+description: Check what uses a table, view or type, and what it uses, before you change or drop it.
+---
+
+Open a table, view or user-defined type and choose the **Dependencies** view.
+
+- **Used by** lists the objects that depend on this one: materialized views on a table, indexes, triggers, and the tables, types, functions and aggregates that use a type.
+- **Depends on** lists what this object needs, such as its keyspace, its base table or the types in its columns.
+
+Each item shows a "via" label (for example `column billing` or `base table`). A lock badge marks a **blocks drop** item: Cassandra refuses to drop the target while that object exists. Indexes and triggers do not block, since Cassandra drops them with their table.
+
+Click a table, view or type to open its tab. Helenus builds the list from the current schema only, so refresh the schema if you just changed it.

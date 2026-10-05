@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult, TraceResponse } from './types'
+import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, DepsResponse, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult, TraceResponse } from './types'
 import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
@@ -190,5 +190,18 @@ export function useTrace(profile: string, id: string | undefined) {
     retry: false,
     staleTime: Infinity,
     queryFn: ({ signal }) => api<TraceResponse>(`/p/${enc(profile)}/traces/${enc(id ?? '')}`, { signal }),
+  })
+}
+
+/** What depends on an object and what it depends on. Keyed under the schema key so a schema refresh refetches it. */
+export function useDeps(profile: string, ref: { kind: string; keyspace: string; name: string; signature?: string }, enabled = true) {
+  return useQuery({
+    queryKey: [...schemaKey(profile), 'deps', ref.kind, ref.keyspace, ref.name, ref.signature ?? ''],
+    enabled: enabled && !!profile,
+    queryFn: () => {
+      const q = new URLSearchParams({ kind: ref.kind, keyspace: ref.keyspace, name: ref.name })
+      if (ref.signature) q.set('signature', ref.signature)
+      return api<DepsResponse>(`/p/${enc(profile)}/deps?${q}`)
+    },
   })
 }
