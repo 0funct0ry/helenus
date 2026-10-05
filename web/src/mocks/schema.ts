@@ -145,6 +145,7 @@ const system = (name: string, tables: string[]): Keyspace => ({
   views: [],
   types: [],
   functions: [],
+  aggregates: [],
 })
 
 export const keyspaces: Keyspace[] = [
@@ -154,7 +155,8 @@ export const keyspaces: Keyspace[] = [
     tables: [transactionsByMerchant, ledgerCounters, merchants, customers, cardTokens],
     views: [transactionsByStatus],
     types: [address, cardToken, geoPoint],
-    functions: ['minor_units'],
+    functions: [{ keyspace: 'payments', name: 'minor_units', signature: 'minor_units(decimal)', argNames: ['amount'], argTypes: ['decimal'], returnType: 'bigint', language: 'java', body: 'return amount.movePointRight(2).longValue();', calledOnNull: false }],
+    aggregates: [],
   },
   {
     name: 'inventory',
@@ -168,6 +170,7 @@ export const keyspaces: Keyspace[] = [
     views: [],
     types: [],
     functions: [],
+    aggregates: [],
   },
   system('system', ['local', 'peers_v2', 'size_estimates']),
   system('system_auth', ['roles', 'role_permissions']),

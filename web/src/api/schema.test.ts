@@ -28,7 +28,7 @@ describe('toKeyspaces', () => {
   })
   it('carries UDT usage and function signatures', () => {
     expect(payments.types[0].usedBy).toContain('merchants.hq')
-    expect(payments.functions).toEqual(['add_cents(int, int)'])
+    expect(payments.functions.map((f) => f.signature)).toEqual(['add_cents(int, int)'])
   })
 })
 

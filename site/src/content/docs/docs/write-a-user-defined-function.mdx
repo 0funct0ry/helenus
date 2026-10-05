@@ -1,0 +1,41 @@
+---
+title: Write a user-defined function
+description: Browse, create, replace, test and drop user-defined functions (UDFs) from the schema tree.
+---
+
+Every keyspace has a **Functions** group in the schema tree. Each overload is its own row, shown as `name(argtypes) → rettype`. Click one to open the **Function** tab: its arguments and return type, language, null behavior, the body (read-only, with Java highlighting), a **Test** panel, **Dependencies** and the DDL.
+
+:::note
+UDFs require `user_defined_functions_enabled: true` in `cassandra.yaml`. When they are disabled, **Create function** shows the server's message under the form and keeps your input.
+:::
+
+## Create a function
+
+1. Choose **New function…** in the keyspace menu, or the **+** on the Functions group.
+2. Name the function and add arguments. Argument names are unique; types come from the type picker (UDTs of the same keyspace only). Collections, tuples and UDTs are frozen automatically, with a note.
+3. Pick the return type and the null behavior: **Returns null on null input** or **Called on null input**.
+4. Pick the language. Java works on every version; JavaScript is offered only on Cassandra 4.x.
+5. Write the body. It must not contain `$$`, which delimits the body in the statement.
+6. Check the preview, then choose **Create function**.
+
+For example, `shop.add_tax(amount decimal, rate decimal)` returning `decimal`:
+
+```sql
+CREATE FUNCTION shop.add_tax (amount decimal, rate decimal)
+  RETURNS NULL ON NULL INPUT
+  RETURNS decimal
+  LANGUAGE java
+  AS $$return amount.multiply(rate.add(java.math.BigDecimal.ONE));$$;
+```
+
+## Test a function
+
+On the Function tab, fill in one input per argument and choose **Run**. Scalar arguments use typed inputs; collection, tuple and UDT arguments take JSON. The result and the elapsed time appear below, or the server's error. Helenus runs `SELECT shop.add_tax(100, 0.2) AS result FROM system.local;`, so testing `add_tax` with `100` and `0.2` returns `120.0`.
+
+## Replace a function
+
+Choose **Edit** on the Function tab. The editor opens in replace mode: the name and argument types are locked, and the preview is `CREATE OR REPLACE FUNCTION`. A function with the same signature cannot be created again; the editor then asks you to choose Replace.
+
+## Drop a function
+
+Choose **Drop function…**, type the function's name and confirm. The statement always includes the signature, for example `DROP FUNCTION shop.add_tax(decimal, decimal);`. While an aggregate uses the function, the dialog names the aggregate and Drop stays disabled. System keyspaces offer no create, edit or drop. All changes appear in **Schema changes**.

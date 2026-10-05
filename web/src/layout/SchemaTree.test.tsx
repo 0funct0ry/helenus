@@ -297,6 +297,7 @@ describe("SchemaTree", () => {
       expect(items).toEqual([
         "New table…",
         "New type…",
+        "New function…",
         "New query here",
         "Copy name",
         "Refresh",

@@ -59,6 +59,19 @@ export interface Udt {
   usedBy: string[]
 }
 
+/** A user-defined function; `signature` is `name(argtypes)` and identifies one overload. */
+export interface Fn {
+  keyspace: string
+  name: string
+  signature: string
+  argNames: string[]
+  argTypes: string[]
+  returnType: string
+  language: string
+  body: string
+  calledOnNull: boolean
+}
+
 export interface Keyspace {
   name: string
   replication: string
@@ -66,7 +79,9 @@ export interface Keyspace {
   tables: Table[]
   views: MaterializedView[]
   types: Udt[]
-  functions: string[]
+  functions: Fn[]
+  /** Aggregate signatures; shown in the Functions group until aggregates get their own tab. */
+  aggregates: string[]
   /** Every trigger on the keyspace's tables. */
   triggers?: Trigger[]
 }

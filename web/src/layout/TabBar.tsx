@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react'
-import { Braces, Eye, FileText, Plus, Table2, X } from 'lucide-react'
+import { Braces, Eye, FileText, FunctionSquare, Plus, Table2, X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { IconButton } from '../ui/IconButton'
 import type { TabKind } from '../store/workspace'
@@ -21,7 +21,7 @@ export interface TabBarProps {
   onNew: () => void
 }
 
-const icons = { table: Table2, view: Eye, query: FileText, type: Braces }
+const icons = { table: Table2, view: Eye, query: FileText, type: Braces, function: FunctionSquare }
 
 /**
  * Zed-style editor tab strip. Each tab is a tab button plus an optional close button (visible on

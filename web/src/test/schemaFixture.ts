@@ -87,7 +87,7 @@ export const snapshot: SchemaSnapshot = {
           used_by: ['merchants.hq', 'transactions_by_merchant.billing'],
         },
       ],
-      functions: [{ keyspace: 'payments', name: 'add_cents', arg_types: ['int', 'int'], return_type: 'int' }],
+      functions: [{ keyspace: 'payments', name: 'add_cents', arg_names: ['a', 'b'], arg_types: ['int', 'int'], return_type: 'int', language: 'java', body: 'return a + b;', called_on_null_input: false }],
     }),
     emptyKs('system', { system: true, tables: [table('system', 'local', [col('key', 'text', 'partition', 1)])] }),
     emptyKs('system_auth', { system: true }),

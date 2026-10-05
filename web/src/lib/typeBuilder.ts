@@ -50,3 +50,32 @@ export function draftToCql(d: TypeDraft): string {
   else if (d.args.length) s = `${name}<${d.args.map(draftToCql).join(', ')}>`
   return d.frozen ? `frozen<${s}>` : s
 }
+
+/** Split `s` at commas that are not inside `<…>`. */
+function splitTop(s: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let from = 0
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '<') depth++
+    else if (s[i] === '>') depth--
+    else if (s[i] === ',' && depth === 0) {
+      out.push(s.slice(from, i).trim())
+      from = i + 1
+    }
+  }
+  out.push(s.slice(from).trim())
+  return out
+}
+
+/** Parse a CQL type string such as `frozen<list<int>>`, `vector<float, 3>` or `address` into a picker draft. */
+export function cqlToDraft(cql: string): TypeDraft {
+  const s = cql.trim()
+  const open = s.indexOf('<')
+  if (open < 0) return { base: NATIVE_TYPES.includes(s) ? s : UDT_PREFIX + s, frozen: false, args: [], size: 0 }
+  const name = s.slice(0, open).trim()
+  const inner = splitTop(s.slice(open + 1, s.lastIndexOf('>')))
+  if (name === 'frozen') return { ...cqlToDraft(inner[0]), frozen: true }
+  if (name === 'vector') return { base: 'vector', frozen: false, args: [cqlToDraft(inner[0])], size: parseInt(inner[1], 10) || 0 }
+  return { base: name, frozen: false, args: inner.map(cqlToDraft), size: 0 }
+}

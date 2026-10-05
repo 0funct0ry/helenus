@@ -4,6 +4,7 @@ import { LeftDock } from './layout/LeftDock'
 import { TabBar } from './layout/TabBar'
 import { TableView } from './layout/TableView'
 import { QueryView } from './layout/QueryView'
+import { FunctionView } from './layout/FunctionView'
 import { TypeView } from './layout/TypeView'
 import { StatusBar } from './layout/StatusBar'
 import { CommandPalette } from './layout/CommandPalette'
@@ -53,6 +54,8 @@ export function App() {
             <QueryView key={active.id} tab={active} />
           ) : active?.kind === 'type' ? (
             <TypeView key={active.id} tab={active} />
+          ) : active?.kind === 'function' ? (
+            <FunctionView key={active.id} tab={active} />
           ) : (
             <div className="grid flex-1 place-items-center text-muted">Open a table from the schema tree, or press ⌘K.</div>
           )}

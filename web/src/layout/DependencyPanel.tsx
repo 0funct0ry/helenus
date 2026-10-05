@@ -25,8 +25,8 @@ const icons: Record<string, ReactNode> = {
   aggregate: <Sigma size={13} />,
 }
 
-/** Tab kinds that can be opened from a dependency item; functions, aggregates, indexes and triggers have no tab yet. */
-const openable = new Set(['table', 'view', 'type'])
+/** Tab kinds that can be opened from a dependency item; aggregates, indexes and triggers have no tab yet. */
+const openable = new Set(['table', 'view', 'type', 'function'])
 
 function Section({ title, items, empty, onOpen }: { title: string; items: DepItem[]; empty: string; onOpen: (i: DepItem) => void }) {
   return (
@@ -68,7 +68,7 @@ function Section({ title, items, empty, onOpen }: { title: string; items: DepIte
 
 /**
  * The Dependencies sub-view: "Used by" (objects that depend on this one) and "Depends on" lists, each item with a kind
- * icon, qualified name and "via" label. Items that block a drop carry a lock badge; clicking a table, view or type opens its tab.
+ * icon, qualified name and "via" label. Items that block a drop carry a lock badge; clicking a table, view, type or function opens its tab.
  */
 export function DependencyPanel({ kind, keyspace, name, signature }: DependencyPanelProps) {
   const profileId = useWorkspace((s) => s.profileId)
@@ -76,7 +76,7 @@ export function DependencyPanel({ kind, keyspace, name, signature }: DependencyP
   const { data, error, isLoading } = useDeps(profileId, { kind, keyspace, name, signature })
   if (error) return <p role="alert" className="m-3 rounded-md bg-err-bg px-3 py-2 text-[12.5px] text-danger">{describeError(error)}</p>
   if (isLoading || !data) return <p className="p-4 text-muted">Reading dependencies…</p>
-  const onOpen = (i: DepItem) => open(i.kind as 'table' | 'view' | 'type', i.keyspace, i.name)
+  const onOpen = (i: DepItem) => open(i.kind as 'table' | 'view' | 'type' | 'function', i.keyspace, i.kind === 'function' ? (i.signature ?? i.name) : i.name)
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <div className="max-w-[1100px] px-[22px] pb-10 pt-[18px] md:grid md:grid-cols-2 md:gap-7">

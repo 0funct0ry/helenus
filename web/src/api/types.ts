@@ -274,8 +274,48 @@ export type IndexPlan = KeyspacePlan
 export interface SchemaFunction {
   keyspace: string
   name: string
+  arg_names: string[]
   arg_types: string[]
   return_type: string
+  language: string
+  body: string
+  called_on_null_input: boolean
+}
+
+export interface SchemaAggregate {
+  keyspace: string
+  name: string
+  arg_types: string[]
+  return_type: string
+}
+
+/** One argument of a function in a `FunctionRequest`; `type` is a CQL type such as `decimal` or `list<int>`. */
+export interface FunctionArg {
+  name: string
+  type: string
+}
+
+/** Body of POST /p/{profile}/functions/preview (SPEC §9.20). Drop needs only the name and argument types. */
+export interface FunctionRequest {
+  action: 'create' | 'replace' | 'drop'
+  keyspace: string
+  name: string
+  args: FunctionArg[]
+  returns?: string
+  called_on_null?: boolean
+  language?: 'java' | 'javascript'
+  body?: string
+  if_not_exists?: boolean
+}
+
+export type FunctionPlan = KeyspacePlan
+
+/** Result of POST /p/{profile}/functions/invoke: the codec-encoded value, its type and the elapsed time. */
+export interface InvokeResult {
+  value: unknown
+  type: TypeDesc
+  elapsed_ms: number
+  cql: string
 }
 
 export interface SchemaKeyspace {
@@ -287,7 +327,7 @@ export interface SchemaKeyspace {
   views: SchemaView[]
   types: SchemaUdt[]
   functions: SchemaFunction[]
-  aggregates: SchemaFunction[]
+  aggregates: SchemaAggregate[]
 }
 
 /** `GET /p/{profile}/schema`. */

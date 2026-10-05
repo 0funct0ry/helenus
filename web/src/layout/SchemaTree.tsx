@@ -24,6 +24,8 @@ import {
 import { TreeRow } from "./TreeRow";
 import { SchemaContextMenu } from "./SchemaContextMenu";
 import { NewTypeDialog } from "./NewTypeDialog";
+import { FunctionEditor } from "./FunctionEditor";
+import { DropFunctionDialog } from "./DropFunctionDialog";
 import { NewKeyspaceDialog } from "./NewKeyspaceDialog";
 import { EditKeyspaceDialog } from "./EditKeyspaceDialog";
 import { DropKeyspaceDialog } from "./DropKeyspaceDialog";
@@ -51,12 +53,12 @@ import { describeError } from "../api/client";
 import { keySummary } from "../lib/keySummary";
 import { useWorkspace } from "../store/workspace";
 import { useToasts } from "../store/toast";
-import type { Keyspace, Table } from "../lib/schemaModel";
+import type { Fn, Keyspace, Table } from "../lib/schemaModel";
 
 const defaultClosed = (key: string) =>
   key.startsWith("fn:") || key.startsWith("trg:") || key === "system";
 
-type ObjectKind = "table" | "view" | "type" | "keyspace";
+type ObjectKind = "table" | "view" | "type" | "keyspace" | "function";
 interface MenuState {
   x: number;
   y: number;
@@ -77,6 +79,8 @@ export function SchemaTree() {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null);
+  const [newFnKs, setNewFnKs] = useState<string | null>(null);
+  const [dropFn, setDropFn] = useState<Fn | null>(null);
   const [newTableKs, setNewTableKs] = useState<string | null>(null);
   const [newKsOpen, setNewKsOpen] = useState(false);
   const [editKs, setEditKs] = useState<string | null>(null);
@@ -199,6 +203,11 @@ export function SchemaTree() {
           onSelect: () => setNewTypeKs(m.keyspace),
         },
         {
+          label: "New function…",
+          icon: <FunctionSquare size={14} />,
+          onSelect: () => setNewFnKs(m.keyspace),
+        },
+        {
           label: "New query here",
           icon: <FileText size={14} />,
           onSelect: () => newQuery({ keyspace: m.keyspace }),
@@ -227,6 +236,39 @@ export function SchemaTree() {
         },
       ];
     const fq = `${m.keyspace}.${m.name}`;
+    if (m.kind === "function") {
+      const fn = keyspaces
+        ?.find((k) => k.name === m.keyspace)
+        ?.functions.find((f) => f.signature === m.name);
+      return [
+        {
+          label: "Open",
+          icon: <ExternalLink size={14} />,
+          onSelect: () => open("function", m.keyspace, m.name),
+        },
+        {
+          label: "Copy name",
+          icon: <Copy size={14} />,
+          onSelect: () => void navigator.clipboard?.writeText(fq),
+        },
+        {
+          label: "Copy DDL",
+          icon: <Copy size={14} />,
+          onSelect: () => void copyDdl(m.keyspace, "function", m.name),
+        },
+        ...(fn && !keyspaces?.find((k) => k.name === m.keyspace)?.system
+          ? [
+              {
+                label: "Drop function…",
+                icon: <Trash2 size={14} />,
+                danger: true,
+                separatorBefore: true,
+                onSelect: () => setDropFn(fn),
+              },
+            ]
+          : []),
+      ];
+    }
     const kind = m.kind;
     const ddlObject: DdlObject = kind;
     const target = { keyspace: m.keyspace, name: m.name };
@@ -377,7 +419,8 @@ export function SchemaTree() {
     const tables = k.tables.filter((t) => match(t.name) || match(k.name));
     const views = k.views.filter((v) => match(v.name) || match(k.name));
     const types = k.types.filter((t) => match(t.name) || match(k.name));
-    const fns = k.functions.filter((f) => match(f) || match(k.name));
+    const fns = k.functions.filter((f) => match(f.signature) || match(k.name));
+    const aggs = k.aggregates.filter((a) => match(a) || match(k.name));
     const triggers = (k.triggers ?? []).filter(
       (g) => match(g.name) || match(g.table) || match(k.name),
     );
@@ -387,6 +430,7 @@ export function SchemaTree() {
       !views.length &&
       !types.length &&
       !fns.length &&
+      !aggs.length &&
       !triggers.length &&
       !match(k.name)
     )
@@ -575,16 +619,41 @@ export function SchemaTree() {
             {group(
               `fn:${k.name}`,
               "Functions",
-              fns.length,
-              fns.map((f) => (
-                <TreeRow
-                  key={f}
-                  indent={40}
-                  label={f}
-                  mono
-                  icon={<FunctionSquare size={14} />}
-                />
-              )),
+              fns.length + aggs.length,
+              [
+                ...fns.map((f) => (
+                  <div
+                    key={f.signature}
+                    onContextMenu={(e) =>
+                      onContext(e, k.name, "function", f.signature)
+                    }
+                  >
+                    <TreeRow
+                      indent={40}
+                      label={`${f.signature} → ${f.returnType}`}
+                      mono
+                      selected={isSel("function", k.name, f.signature)}
+                      icon={<FunctionSquare size={14} />}
+                      onClick={() => open("function", k.name, f.signature)}
+                    />
+                  </div>
+                )),
+                ...aggs.map((a) => (
+                  <TreeRow
+                    key={`agg/${a}`}
+                    indent={40}
+                    label={a}
+                    mono
+                    icon={<FunctionSquare size={14} />}
+                  />
+                )),
+              ],
+              k.system
+                ? undefined
+                : {
+                    label: `New function in ${k.name}`,
+                    run: () => setNewFnKs(k.name),
+                  },
             )}
             {group(
               `trg:${k.name}`,
@@ -871,6 +940,36 @@ export function SchemaTree() {
         <NewTypeDialog
           keyspace={newTypeKs}
           onClose={() => setNewTypeKs(null)}
+        />
+      )}
+      {newFnKs && (
+        <FunctionEditor
+          keyspace={newFnKs}
+          serverMajor={parseInt(cluster?.release_version ?? "0", 10) || 0}
+          onSaved={(signature) => {
+            refresh.mutate();
+            open("function", newFnKs, signature);
+            pushToast(`Function ${signature.split("(")[0]} created`);
+          }}
+          onClose={() => setNewFnKs(null)}
+        />
+      )}
+      {dropFn && (
+        <DropFunctionDialog
+          fn={dropFn}
+          onDropped={() => {
+            for (const t of useWorkspace.getState().tabs)
+              if (
+                t.kind === "function" &&
+                t.keyspace === dropFn.keyspace &&
+                t.object === dropFn.signature
+              )
+                useWorkspace.getState().close(t.id);
+            refresh.mutate();
+            pushToast(`Function ${dropFn.name} dropped`);
+            setDropFn(null);
+          }}
+          onClose={() => setDropFn(null)}
         />
       )}
       {menu && (

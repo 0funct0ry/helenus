@@ -39,7 +39,18 @@ function toKeyspace(k: SchemaKeyspace): Keyspace {
     triggers: tables.flatMap((t) => t.triggers ?? []),
     views: k.views.map((v) => ({ name: v.name, keyspace: v.keyspace, baseTable: v.base_table, columns: v.columns.map(toColumn), filter: v.where_clause, options: Object.fromEntries(v.options.map((o) => [o.name, o.value])) })),
     types: k.types.map((u) => ({ name: u.name, keyspace: u.keyspace, fields: u.fields.map((f) => ({ name: f.name, type: f.cql, desc: f.type })), usedBy: u.used_by })),
-    functions: [...k.functions.map((f) => `${f.name}(${f.arg_types.join(', ')})`), ...k.aggregates.map((a) => `${a.name}(${a.arg_types.join(', ')})`)],
+    functions: k.functions.map((f) => ({
+      keyspace: f.keyspace,
+      name: f.name,
+      signature: `${f.name}(${f.arg_types.join(', ')})`,
+      argNames: f.arg_names,
+      argTypes: f.arg_types,
+      returnType: f.return_type,
+      language: f.language,
+      body: f.body,
+      calledOnNull: f.called_on_null_input,
+    })),
+    aggregates: k.aggregates.map((a) => `${a.name}(${a.arg_types.join(', ')})`),
   }
 }
 
