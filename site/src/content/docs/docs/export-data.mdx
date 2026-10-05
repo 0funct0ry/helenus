@@ -1,0 +1,42 @@
+---
+title: Export data
+description: Export a table or a query result to CSV, JSON, NDJSON, XML, Excel or CQL INSERT statements, with saved presets.
+---
+
+Export streams rows to a file page by page, so memory stays flat however large the table is. It runs as a background job: you see progress, can cancel it, and the browser downloads the file when it finishes.
+
+## Open the dialog
+
+- **Table:** choose **Export…** from the table menu in the schema tree (the three-dot button, or right-click), or from the toolbar of the table's tab. System keyspace tables export too; credential columns such as `salted_hash` are masked as `••••••`.
+- **Query result:** run a `SELECT`, then click **Export…** in the results toolbar. The whole query is exported, not only the page on screen.
+
+## Choose a format
+
+| Format | Notes |
+| --- | --- |
+| CSV | RFC 4180. Options: header row, delimiter (`,` `;` tab `\|`), quote character, NULL text (empty by default) and a timestamp pattern. |
+| JSON | One array of objects. Values use the same JSON form as the results grid, so a `map<text,int>` column is a list of `[key, value]` pairs. |
+| NDJSON | One JSON object per line. |
+| XML | `<rows><row><col name="…">value</col>…</row></rows>`; NULL is `nil="true"`. |
+| Excel | One sheet with a bold header row. An Excel sheet holds 1,048,576 rows, so an export of more than 1,048,575 data rows fails with "Excel allows 1,048,576 rows; use CSV for more", and no file is produced. |
+| CQL | One `INSERT` statement per line. |
+
+Collections and user-defined types are written as CQL literal text in CSV and XML, and as JSON in JSON and NDJSON.
+
+## Columns, ranges and file name
+
+- Untick columns you do not want. Key columns are marked, and **Select all** toggles everything.
+- **Token-range split** (tables only) reads the table in 1 to 64 token ranges in parallel. Rows are no longer in token order, and a split cannot be combined with a `WHERE` clause.
+- The file name defaults to `<table>-<yyyyMMdd-HHmm>.<ext>`.
+
+## Presets
+
+**Save as preset…** stores the format, its options and the column choice under a name, for this profile or for all profiles. **Load preset** applies one to the current table: columns that the table does not have are unchecked and listed in a note. **Update preset** overwrites the loaded preset with the current choices, and **Delete preset** asks first.
+
+## Cancel and cleanup
+
+**Cancel export** stops the job and deletes the partial file. Finished files live in Helenus's data directory under `exports/` and are deleted after the download, or after one hour. Jobs are lost when `helenus ui` restarts.
+
+## From the shell
+
+The shell has `COPY … TO` for the same job; see the [COPY TO reference](/helenus/docs/copy-to-reference/).

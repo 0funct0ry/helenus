@@ -142,6 +142,9 @@ func (s *Shell) Execute(ctx context.Context, text string) error {
 			return err
 		}
 	}
+	if isCopy(body) {
+		return s.copyTo(ctx, stmt)
+	}
 	return s.query(ctx, stmt)
 }
 

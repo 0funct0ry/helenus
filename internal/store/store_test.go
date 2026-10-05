@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"path/filepath"
 	"testing"
 )
@@ -31,7 +32,7 @@ func TestOpenWALAndMigrate(t *testing.T) {
 	}
 	defer func() { _ = s2.Close() }()
 	var n int
-	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 2 {
+	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 3 {
 		t.Fatalf("migrations applied: %d, %v", n, err)
 	}
 }
@@ -105,5 +106,42 @@ func TestSeedProfilesLifecycle(t *testing.T) {
 	}
 	if ok, _ := s.DeleteSeedProfile("a", p.ID); ok {
 		t.Fatal("double delete succeeded")
+	}
+}
+
+func TestExportPresets(t *testing.T) {
+	s, _ := open(t)
+	g, err := s.CreateExportPreset(ExportPreset{Name: "Finance", Format: "csv", Options: `{"delimiter":";"}`, Columns: []string{"a", "b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.Profile != "" || len(g.Columns) != 2 {
+		t.Fatalf("%+v", g)
+	}
+	if _, err := s.CreateExportPreset(ExportPreset{Name: "Finance", Format: "json", Options: "{}"}); !errors.Is(err, ErrExportPresetExists) {
+		t.Fatalf("global duplicate: %v", err)
+	}
+	l, err := s.CreateExportPreset(ExportPreset{Profile: "dev", Name: "Finance", Format: "json", Options: "{}"})
+	if err != nil || l.Columns != nil {
+		t.Fatalf("%+v %v", l, err)
+	}
+	if got, _ := s.ListExportPresets("dev"); len(got) != 2 {
+		t.Fatalf("dev sees %d", len(got))
+	}
+	if got, _ := s.ListExportPresets("prod"); len(got) != 1 {
+		t.Fatalf("prod sees %d", len(got))
+	}
+	if _, err := s.GetExportPreset("prod", l.ID); !errors.Is(err, ErrExportPresetNotFound) {
+		t.Fatalf("cross-profile get: %v", err)
+	}
+	u, err := s.UpdateExportPreset("dev", l.ID, ExportPreset{Name: "Fin2", Format: "xml", Options: "{}", Columns: []string{}})
+	if err != nil || u.Name != "Fin2" || u.Columns == nil {
+		t.Fatalf("%+v %v", u, err)
+	}
+	if ok, _ := s.DeleteExportPreset("dev", l.ID); !ok {
+		t.Fatal("not deleted")
+	}
+	if ok, _ := s.DeleteExportPreset("dev", l.ID); ok {
+		t.Fatal("deleted twice")
 	}
 }

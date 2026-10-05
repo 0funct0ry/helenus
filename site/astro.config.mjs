@@ -42,6 +42,7 @@ export default defineConfig({
             { label: 'Edit lists, sets, and maps', slug: 'docs/edit-lists-sets-and-maps' },
             { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
             { label: 'Create and change user-defined types', slug: 'docs/create-and-change-user-defined-types' },
+            { label: 'Export data', slug: 'docs/export-data' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
             { label: 'Trace a slow query', slug: 'docs/trace-a-slow-query' },
             { label: 'Read a trace', slug: 'docs/read-a-trace' },
@@ -49,6 +50,7 @@ export default defineConfig({
             { label: 'Use the shell', slug: 'docs/use-the-shell' },
             { label: 'Run scripts with -f and -e', slug: 'docs/run-scripts-with-f-and-e' },
             { label: 'Shell command reference', slug: 'docs/shell-command-reference' },
+            { label: 'COPY TO reference', slug: 'docs/copy-to-reference' },
           ],
         },
         {

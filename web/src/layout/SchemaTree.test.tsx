@@ -160,6 +160,7 @@ describe("SchemaTree", () => {
         "New view…",
         "New index…",
         "Seed data…",
+        "Export…",
         "Truncate…",
         "Drop table…",
         "Copy name",
@@ -441,6 +442,16 @@ describe("SchemaTree", () => {
       expect(labels).toEqual(["New query here", "Copy name", "Refresh"]);
     });
 
+    it("opens the export dialog from a table's menu", async () => {
+      mockSchemaApi({ "GET /p/local/export/presets": { presets: [] } });
+      render(<SchemaTree />);
+      await loaded();
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByRole("treeitem", { name: /^merchants/ }) });
+      await userEvent.click(screen.getByRole("menuitem", { name: "Export…" }));
+      expect(await screen.findByRole("dialog", { name: "Export data" })).toBeInTheDocument();
+      expect(screen.getByText("payments.merchants")).toBeInTheDocument();
+    });
+
     it("opens the seed wizard from a table's menu", async () => {
       mockSchemaApi({
         "POST /p/local/seed/preview": { body: seedPreview() },
@@ -462,7 +473,7 @@ describe("SchemaTree", () => {
       const labels = within(screen.getByRole("menu"))
         .getAllByRole("menuitem")
         .map((m) => m.textContent);
-      expect(labels).toEqual(["Open", "New query here", "Copy name", "Copy DDL", "Refresh"]);
+      expect(labels).toEqual(["Open", "Export…", "New query here", "Copy name", "Copy DDL", "Refresh"]);
     });
   });
 });

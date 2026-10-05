@@ -73,6 +73,9 @@ func (p *Reporter) Update(done, total, errs int64) {
 	e.job.Progress = progress(done, total, errs, p.r.now().Sub(e.job.StartedAt))
 }
 
+// ID returns the id of the job being reported.
+func (p *Reporter) ID() string { return p.id }
+
 // SetResult stores the value served as the job's result.
 func (p *Reporter) SetResult(v any) {
 	p.r.mu.Lock()

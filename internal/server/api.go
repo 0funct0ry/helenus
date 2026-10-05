@@ -107,6 +107,7 @@ type api struct {
 	conn       Connector
 	store      *store.Store
 	jobs       *jobs.Registry
+	exports    exportFiles
 	// writeMu serializes config file edits made through the API.
 	writeMu sync.Mutex
 }
@@ -166,6 +167,12 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/seed/profiles", a.seedProfilesSave)
 	p.PUT("/seed/profiles/:id", a.seedProfilesUpdate)
 	p.DELETE("/seed/profiles/:id", a.seedProfilesDelete)
+	p.POST("/export", a.exportStart)
+	p.GET("/export/presets", a.exportPresetsList)
+	p.POST("/export/presets", a.exportPresetsCreate)
+	p.PUT("/export/presets/:id", a.exportPresetsUpdate)
+	p.DELETE("/export/presets/:id", a.exportPresetsDelete)
+	p.GET("/export/:job/file", a.exportFile)
 	p.GET("/jobs", a.jobsList)
 	p.GET("/jobs/:id", a.jobsGet)
 	p.DELETE("/jobs/:id", a.jobsCancel)

@@ -735,7 +735,7 @@ export interface JobInfo {
   progress: JobProgress
   started_at: string
   ended_at?: string
-  result?: SeedResult | { error: string }
+  result?: SeedResult | ExportResult | { error: string }
 }
 
 export interface SeedProfile {
@@ -746,4 +746,37 @@ export interface SeedProfile {
   config: SeedConfig
   created_at: string
   updated_at: string
+}
+
+export type ExportFormat = 'csv' | 'json' | 'ndjson' | 'xml' | 'excel' | 'cql'
+
+/** Format options of an export (only the ones that apply to the chosen format are used). */
+export interface ExportOptions {
+  header: boolean
+  delimiter: string
+  quote: string
+  null_string: string
+  datetime_format: string
+}
+
+/** Where an export reads from: a whole table (optionally narrowed) or the text of a SELECT. */
+export type ExportSource = { kind: 'table'; keyspace: string; table: string } | { kind: 'query'; cql: string }
+
+/** A saved export configuration. `profile` is empty for presets shared by every profile; `columns` null means all. */
+export interface ExportPreset {
+  id: number
+  profile: string
+  name: string
+  format: ExportFormat
+  options: Partial<ExportOptions>
+  columns: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExportResult {
+  filename: string
+  rows: number
+  bytes: number
+  format: ExportFormat
 }

@@ -23,9 +23,11 @@ import {
   Trash2,
   Lightbulb,
   Sprout,
+  Download,
 } from "lucide-react";
 import { TreeRow } from "./TreeRow";
 import { SeedWizard } from "./SeedWizard";
+import { ExportDialog } from "./ExportDialog";
 import { SchemaContextMenu } from "./SchemaContextMenu";
 import { NewTypeDialog } from "./NewTypeDialog";
 import { FunctionEditor } from "./FunctionEditor";
@@ -96,6 +98,10 @@ export function SchemaTree() {
   const [editKs, setEditKs] = useState<string | null>(null);
   const [dropKs, setDropKs] = useState<string | null>(null);
   const [seedTarget, setSeedTarget] = useState<{
+    keyspace: string;
+    name: string;
+  } | null>(null);
+  const [exportTarget, setExportTarget] = useState<{
     keyspace: string;
     name: string;
   } | null>(null);
@@ -218,6 +224,12 @@ export function SchemaTree() {
           label: "Open",
           icon: <ExternalLink size={14} />,
           onSelect: () => open(m.kind as "table" | "view", m.keyspace, m.name),
+        });
+      if (m.kind === "table" || m.kind === "view")
+        ro.push({
+          label: "Export…",
+          icon: <Download size={14} />,
+          onSelect: () => setExportTarget({ keyspace: m.keyspace, name: m.name }),
         });
       ro.push(
         {
@@ -412,6 +424,11 @@ export function SchemaTree() {
               label: "Seed data…",
               icon: <Sprout size={14} />,
               onSelect: () => setSeedTarget(target),
+            },
+            {
+              label: "Export…",
+              icon: <Download size={14} />,
+              onSelect: () => setExportTarget(target),
             },
             {
               label: "Truncate…",
@@ -961,6 +978,16 @@ export function SchemaTree() {
           keyspace={seedTarget.keyspace}
           table={seedTarget.name}
           onClose={() => setSeedTarget(null)}
+        />
+      )}
+      {exportTarget && (
+        <ExportDialog
+          source={{
+            kind: "table",
+            keyspace: exportTarget.keyspace,
+            table: exportTarget.name,
+          }}
+          onClose={() => setExportTarget(null)}
         />
       )}
       {truncate && (

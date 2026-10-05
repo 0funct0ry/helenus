@@ -14,3 +14,4 @@
 | `@codemirror/lang-java` | web | Java highlighting for user-defined function bodies in the CodeEditor (M9.09). Cassandra UDFs are written in Java (or JavaScript on 4.x). |
 | `@codemirror/autocomplete` | web | Direct import of `autocompletion` and `CompletionSource` for the schema-aware completion source (M5). Already installed as a dependency of `codemirror`; now declared because the editor imports it directly. |
 | `gopkg.in/inf.v0` | Go | Arbitrary-precision `decimal` values. The driver binds decimals only as `inf.Dec`, so the grid change decoder (M6) imports it directly; it was already an indirect dependency of gocql. |
+| `github.com/xuri/excelize/v2` | Go | Writes `.xlsx` files for the Excel export format (M9.16, SPEC §3.2, export only). Rows go through its stream writer, so the sheet is never held in memory. |

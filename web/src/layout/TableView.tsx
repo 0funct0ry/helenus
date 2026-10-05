@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Plus, RefreshCw, Sprout, Trash2, Undo2 } from "lucide-react";
+import { Copy, Download, Plus, RefreshCw, Sprout, Trash2, Undo2 } from "lucide-react";
 import { Tabs } from "../ui/Tabs";
 import { Button } from "../ui/Button";
 import { ReadOnlyBadge } from "../ui/ReadOnlyBadge";
@@ -17,6 +17,7 @@ import { TableAdviceView } from "./TableAdviceView";
 import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
 import { SeedWizard } from "./SeedWizard";
+import { ExportDialog } from "./ExportDialog";
 import { CellEditor } from "./CellEditor";
 import { CollectionPopover } from "./CollectionPopover";
 import { InsertRowDialog } from "./InsertRowDialog";
@@ -60,6 +61,7 @@ export function TableView({ tab }: TableViewProps) {
   const [editSchema, setEditSchema] = useState(false);
   const [droppingView, setDroppingView] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const closeTab = useWorkspace((s) => s.close);
   const consistency = useWorkspace((s) => s.consistency);
   const setConsistency = useWorkspace((s) => s.setConsistency);
@@ -202,6 +204,14 @@ export function TableView({ tab }: TableViewProps) {
             Seed data…
           </Button>
         )}
+        <Button
+          variant="ghost"
+          icon={<Download size={14} />}
+          title="Export this table to a file"
+          onClick={() => setExportOpen(true)}
+        >
+          Export…
+        </Button>
         {editing.ed.editable && !table?.counter && (
           <>
             <Button
@@ -371,6 +381,12 @@ export function TableView({ tab }: TableViewProps) {
           keyspace={tab.keyspace}
           table={tab.object}
           onClose={() => setSeedOpen(false)}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          source={{ kind: "table", keyspace: tab.keyspace, table: tab.object }}
+          onClose={() => setExportOpen(false)}
         />
       )}
       <CountRowsDialog

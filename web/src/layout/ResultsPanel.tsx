@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { Clock, ListTree } from 'lucide-react'
+import { Clock, Download, ListTree } from 'lucide-react'
 import { Tabs } from '../ui/Tabs'
 import { ResultsGrid } from './ResultsGrid'
 import { MessagesView } from './MessagesView'
 import { FilteringError } from './FilteringError'
 import { TraceTab } from './TraceTab'
 import { CountRowsDialog } from './CountRowsDialog'
+import { ExportDialog } from './ExportDialog'
+import { Button } from '../ui/Button'
 import { rowToJson, toGridColumns, toGridRows } from '../lib/rows'
 import { isSelect } from '../lib/statements'
 import type { Message } from '../mocks/types'
@@ -47,6 +49,7 @@ function messagesFor(r: StatementResult | undefined, consistency: string): Messa
 export function ResultsPanel({ results, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
   const [view, setView] = useState('results')
   const [counting, setCounting] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const r = results[active]
   const res = r?.response
   const msgs = useMemo(() => messagesFor(r, consistency), [r, consistency])
@@ -99,6 +102,11 @@ export function ResultsPanel({ results, active, onActive, consistency, onPage, o
           </div>
         )}
         <div className="flex-1" />
+        {res?.kind === 'rows' && r && isSelect(r.cql) && (
+          <Button variant="ghost" icon={<Download size={14} />} title="Export the full result of this query to a file" onClick={() => setExporting(true)}>
+            Export…
+          </Button>
+        )}
         {res && (
           <span className="flex items-center gap-1.5 text-xs text-muted">
             <Clock size={12} aria-hidden />
@@ -110,6 +118,7 @@ export function ResultsPanel({ results, active, onActive, consistency, onPage, o
       {view === 'results' && body}
       {view === 'trace' && <TraceTab response={res} trace={trace} />}
       {view === 'messages' && <MessagesView messages={msgs} />}
+      {exporting && r && <ExportDialog source={{ kind: 'query', cql: r.cql }} onClose={() => setExporting(false)} />}
       <CountRowsDialog open={counting} onClose={() => setCounting(false)} onRun={() => onCount(active)} />
     </section>
   )
