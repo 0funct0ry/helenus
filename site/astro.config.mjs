@@ -19,6 +19,8 @@ export default defineConfig({
             { label: 'Create a keyspace', slug: 'docs/create-a-keyspace' },
             { label: 'Change or drop a keyspace', slug: 'docs/change-or-drop-a-keyspace' },
             { label: 'Create a table', slug: 'docs/create-a-table' },
+            { label: 'Change a table', slug: 'docs/change-a-table' },
+            { label: 'Truncate or drop a table', slug: 'docs/truncate-or-drop-a-table' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

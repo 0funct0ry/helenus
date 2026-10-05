@@ -202,6 +202,30 @@ export interface TableRequest {
   }
 }
 
+/** Options an "options" table action may change; unset fields are left alone. */
+export interface AlterTableOptions {
+  comment?: string
+  default_ttl_seconds?: number
+  gc_grace_seconds?: number
+  bloom_filter_fp_chance?: number
+  compaction?: { class: string }
+  compression?: { class: string }
+  caching?: { keys: string; rows_per_partition: string }
+  speculative_retry?: string
+  read_repair?: string
+}
+
+/** A request to change an existing table (SPEC §9.17), sent to the same preview endpoint as TableRequest. */
+export interface TableActionRequest {
+  action: 'add_column' | 'drop_column' | 'rename_column' | 'options' | 'truncate' | 'drop' | 'drop_view'
+  keyspace: string
+  name: string
+  column?: { name: string; type?: TypeDesc; static?: boolean }
+  from?: string
+  to?: string
+  alter?: AlterTableOptions
+}
+
 /** The CREATE TABLE statement a request would run, with blocking errors and non-blocking notes. */
 export type TablePlan = KeyspacePlan
 

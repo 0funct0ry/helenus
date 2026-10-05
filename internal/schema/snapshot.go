@@ -72,6 +72,14 @@ type Table struct {
 	// Views lists materialized views built on this table.
 	Views   []string `json:"views"`
 	Counter bool     `json:"counter,omitempty"`
+	// DroppedColumns are columns dropped earlier; re-adding one needs the same type.
+	DroppedColumns []DroppedColumn `json:"dropped_columns"`
+}
+
+// DroppedColumn is a column removed from a table, kept by Cassandra in system_schema.dropped_columns.
+type DroppedColumn struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 // View is a materialized view.
@@ -285,6 +293,10 @@ func Build(ctx context.Context, s *gocql.Session) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	dropped, err := fetch(ctx, s, `SELECT * FROM system_schema.dropped_columns`)
+	if err != nil {
+		return nil, err
+	}
 	if err := applyNullBoolDefaults(ctx, s, "tables", "table_name", tabs); err != nil {
 		return nil, err
 	}
@@ -293,6 +305,7 @@ func Build(ctx context.Context, s *gocql.Session) (*Snapshot, error) {
 	}
 	snap := assemble(kss, tabs, cols, views, idxs, types, funcs, aggs)
 	attachTriggers(snap, trigs)
+	attachDropped(snap, dropped)
 	snap.Version = version
 	snap.GeneratedAt = time.Now().UTC()
 	return snap, nil
@@ -312,6 +325,19 @@ func attachTriggers(snap *Snapshot, rows []row) {
 		opts, _ := r["options"].(map[string]string)
 		t.Triggers = append(t.Triggers, Trigger{Name: str(r, "trigger_name"), Class: opts["class"]})
 		sort.Slice(t.Triggers, func(a, b int) bool { return t.Triggers[a].Name < t.Triggers[b].Name })
+	}
+}
+
+// attachDropped adds the rows of system_schema.dropped_columns to their tables.
+func attachDropped(snap *Snapshot, rows []row) {
+	for _, r := range rows {
+		ks := snap.Keyspace(str(r, "keyspace_name"))
+		if ks == nil {
+			continue
+		}
+		if t := ks.Table(str(r, "table_name")); t != nil {
+			t.DroppedColumns = append(t.DroppedColumns, DroppedColumn{Name: str(r, "column_name"), Type: str(r, "type")})
+		}
 	}
 }
 
@@ -362,7 +388,7 @@ func assemble(kss, tabs, cols, views, idxs, types, funcs, aggs []row) *Snapshot 
 		if ks == nil {
 			continue
 		}
-		t := Table{Keyspace: ks.Name, Name: str(r, "table_name"), Options: tableOptions(r), Indexes: []Index{}, Triggers: []Trigger{}, Views: []string{}}
+		t := Table{Keyspace: ks.Name, Name: str(r, "table_name"), Options: tableOptions(r), Indexes: []Index{}, Triggers: []Trigger{}, Views: []string{}, DroppedColumns: []DroppedColumn{}}
 		t.Columns = colsBy[ks.Name+"."+t.Name]
 		if t.Columns == nil {
 			t.Columns = []Column{}

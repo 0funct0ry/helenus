@@ -72,6 +72,17 @@ type TableRequest struct {
 	PartitionKey []string          `json:"partition_key"`
 	Clustering   []TableClustering `json:"clustering"`
 	Options      TableOptions      `json:"options"`
+
+	// Action is "create" (default), "add_column", "drop_column", "rename_column", "options", "truncate" or "drop".
+	// Every action except create targets the existing table Name.
+	Action string `json:"action,omitempty"`
+	// Column is the column to add (add_column) or drop (drop_column; only Name is used).
+	Column TableColumn `json:"column"`
+	// From and To name the column to rename and its new name.
+	From string `json:"from,omitempty"`
+	To   string `json:"to,omitempty"`
+	// Alter holds the options to change; unset fields are left alone.
+	Alter *AlterOptions `json:"alter,omitempty"`
 }
 
 // TablePlanError is a validation problem tied to a wizard step (1 Columns, 2 Keys, 3 Options) and a field.
@@ -92,6 +103,9 @@ type TablePlan struct {
 // PlanTable validates req against the snapshot and renders CREATE TABLE.
 func PlanTable(s *Snapshot, req TableRequest) TablePlan {
 	p := TablePlan{Errors: []TablePlanError{}, Notes: []string{}}
+	if req.Action != "" && req.Action != "create" {
+		return planAlterTable(s, req)
+	}
 	fail := func(step int, field, msg string) {
 		p.Errors = append(p.Errors, TablePlanError{Step: step, Field: field, Message: msg})
 	}

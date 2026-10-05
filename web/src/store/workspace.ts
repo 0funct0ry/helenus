@@ -89,6 +89,9 @@ interface WorkspaceState {
   profileDialogOpen: boolean
   queryCount: number
   consistency: string
+  /** Bumped when table data changed outside the grid (for example a truncate) so open Data views reload. */
+  dataEpoch: number
+  bumpDataEpoch: () => void
   cursor: { line: number; col: number }
   setConsistency: (c: string) => void
   setCursor: (line: number, col: number) => void
@@ -155,6 +158,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       activeId: id,
     }))
   },
+  dataEpoch: 0,
+  bumpDataEpoch: () => set((s) => ({ dataEpoch: s.dataEpoch + 1 })),
   close: (id) => {
     abortInflight(id)
     set((s) => {

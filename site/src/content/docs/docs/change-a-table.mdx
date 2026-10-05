@@ -1,0 +1,28 @@
+---
+title: Change a table
+description: Add, rename and drop columns and change options of an existing table from the web UI.
+---
+
+Open the table, choose the **Schema** sub-view and press **Edit**. Edit mode is not offered for system keyspaces or materialized views. Every action opens a confirmation dialog with the exact CQL and any notes; one action runs one statement.
+
+## Add a column
+
+Fill in the **Add column** row (name, type, optionally **static**) and choose **Add column…**. The preview reads, for example, `ALTER TABLE shop.users ADD phone text;`.
+
+- Static columns need a table with clustering columns.
+- Counter columns can only be added to counter tables, and counter tables accept only counter columns.
+- If a column with the same name was dropped earlier with a different type, Cassandra refuses to reuse the name; re-add it with the original type or choose another name.
+
+## Drop a column
+
+Choose **Drop** on a regular or static column. Primary key columns have no Drop. The column's data is deleted and cannot be recovered. Dropping is blocked while the table has materialized views ("Drop the views first") or the column is indexed ("Drop index … first").
+
+## Rename a key column
+
+Cassandra can only rename primary key columns, so **Rename** appears only on those. It is blocked while the table has views or the column is indexed.
+
+## Change options
+
+The **Edit options** panel covers comment, default TTL, `gc_grace_seconds`, bloom filter chance, compaction, compression, caching, speculative retry and, on 4.x and later, read repair. **Review changes…** previews only the options you changed, for example `ALTER TABLE shop.users WITH default_time_to_live = 86400;`. With no change, the dialog says "Nothing to change".
+
+Cassandra does not support changing a column's type, so that control is disabled.

@@ -1,0 +1,22 @@
+---
+title: Truncate or drop a table
+description: Delete all rows of a table, or remove the table, from the schema tree.
+---
+
+Open the table menu in the schema tree (the three-dot button, or right-click). Both actions are shown in the danger color and neither is available for system keyspaces.
+
+## Truncate
+
+1. Choose **Truncate…**. The dialog notes that the row count is unknown.
+2. Read the notes: truncation requires every node to be up, and a snapshot may be taken first when `auto_snapshot` is on.
+3. Type the exact table name and choose **Truncate**. The statement is `TRUNCATE shop.users;`.
+
+Truncated data cannot be restored.
+
+## Drop a table
+
+1. Choose **Drop table…**.
+2. If materialized views depend on the table, the dialog names them and **Drop table** stays disabled. Drop the views first (the **Drop view…** item on a view works the same way).
+3. Otherwise type the exact table name and choose **Drop table**. The preview notes any indexes and triggers that go with the table.
+
+After the drop the table's tab closes and the tree updates without a manual refresh. The change appears in **Schema changes** with a reverse script that recreates the table definition only; data is not restored.
