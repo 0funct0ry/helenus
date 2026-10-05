@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -25,5 +26,7 @@ func (a *api) triggersPreview(c *gin.Context) {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanTrigger(snap, in))
+	plan := schema.PlanTrigger(snap, in)
+	plan.Explain = advise.ExplainTrigger(in)
+	c.JSON(http.StatusOK, plan)
 }

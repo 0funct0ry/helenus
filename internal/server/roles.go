@@ -10,6 +10,7 @@ import (
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
@@ -323,7 +324,9 @@ func (a *api) rolesPreview(c *gin.Context) {
 	if !ok {
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanRole(snap, rc, in))
+	plan := schema.PlanRole(snap, rc, in)
+	plan.Explain = advise.ExplainRole(in)
+	c.JSON(http.StatusOK, plan)
 }
 
 // rolesApply renders the real statement, runs it, and answers with the masked text only. The real

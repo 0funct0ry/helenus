@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/codec"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
@@ -33,7 +34,9 @@ func (a *api) aggregatesPreview(c *gin.Context) {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanAggregate(snap, in))
+	plan := schema.PlanAggregate(snap, in)
+	plan.Explain = advise.ExplainAggregate(in)
+	c.JSON(http.StatusOK, plan)
 }
 
 type candidatesRequest struct {

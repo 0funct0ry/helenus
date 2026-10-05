@@ -45,6 +45,8 @@ type TypePlan struct {
 	Errors     []string `json:"errors"`
 	Notes      []string `json:"notes"`
 	Dependents []string `json:"dependents"`
+	// Explain is a plain-language description of what the statement does (M9.14).
+	Explain []string `json:"explain"`
 }
 
 // PlanType validates req against the snapshot and renders the CQL for it.

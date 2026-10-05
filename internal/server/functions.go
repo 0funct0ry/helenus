@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/codec"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
@@ -32,7 +33,9 @@ func (a *api) functionsPreview(c *gin.Context) {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanFunction(snap, in))
+	plan := schema.PlanFunction(snap, in)
+	plan.Explain = advise.ExplainFunction(in)
+	c.JSON(http.StatusOK, plan)
 }
 
 type invokeRequest struct {

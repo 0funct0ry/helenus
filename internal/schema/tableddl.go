@@ -98,6 +98,8 @@ type TablePlan struct {
 	Statement string           `json:"statement"`
 	Errors    []TablePlanError `json:"errors"`
 	Notes     []string         `json:"notes"`
+	// Explain is a plain-language description of what the statement does (M9.14).
+	Explain []string `json:"explain"`
 }
 
 // PlanTable validates req against the snapshot and renders CREATE TABLE.

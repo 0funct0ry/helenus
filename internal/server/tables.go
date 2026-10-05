@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -26,5 +27,15 @@ func (a *api) tablesPreview(c *gin.Context) {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanTable(snap, in))
+	plan := schema.PlanTable(snap, in)
+	plan.Explain = advise.ExplainTable(snap, in)
+	if in.Action == "" || in.Action == "create" {
+		facts := a.clusterFacts(c, p)
+		fs := advise.AdviseTable(advise.DraftTable(in), facts)
+		if ks := snap.Keyspace(in.Keyspace); ks != nil {
+			fs = append(fs, advise.AdviseKeyspace(*ks, facts)...)
+		}
+		plan.Notes = withNotes(plan.Notes, fs)
+	}
+	c.JSON(http.StatusOK, plan)
 }

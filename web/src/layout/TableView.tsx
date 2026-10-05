@@ -13,6 +13,7 @@ import { DdlView } from "./DdlView";
 import { ViewsSheet } from "./ViewsSheet";
 import { IndexesSheet } from "./IndexesSheet";
 import { TriggersSheet } from "./TriggersSheet";
+import { TableAdviceView } from "./TableAdviceView";
 import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
 import { CellEditor } from "./CellEditor";
@@ -144,6 +145,7 @@ export function TableView({ tab }: TableViewProps) {
       ? []
       : [{ id: "triggers", label: "Triggers", badge: (table.triggers ?? []).length }]),
     ...(isView || ks?.system ? [] : [{ id: "views", label: "Views", badge: views.length }]),
+    ...(isView || !table || ks?.system ? [] : [{ id: "advice", label: "Advice" }]),
   ];
   const pk = columns.filter((c) => c.kind === "partition");
 
@@ -444,6 +446,9 @@ export function TableView({ tab }: TableViewProps) {
           readOnly={!!ks?.system}
           onChanged={() => refreshSchema.mutate()}
         />
+      )}
+      {sub === "advice" && table && (
+        <TableAdviceView profile={profileId} keyspace={tab.keyspace} table={tab.object} />
       )}
       {sub === "views" && (
         <ViewsSheet

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Activity, Database, Eye, Moon, Plus, Shield, Table2 } from 'lucide-react'
+import { Activity, Database, Eye, Lightbulb, Moon, Plus, Shield, Table2 } from 'lucide-react'
 import { Dialog } from '../ui/Dialog'
 import { useProfiles, useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
@@ -33,6 +33,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const open = useWorkspace((s) => s.open)
   const newQuery = useWorkspace((s) => s.newQuery)
   const openProfiles = useWorkspace((s) => s.setProfileDialogOpen)
+  const reviewKeyspace = useWorkspace((s) => s.setReviewKeyspace)
   const cycleTheme = useThemeStore((s) => s.cycle)
   const profileId = useWorkspace((s) => s.profileId)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
@@ -54,9 +55,10 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       ...['clients', 'settings', 'thread_pools', 'caches']
         .filter((n) => keyspaces.find((k) => k.name === 'system_views')?.tables.some((t) => t.name === n))
         .map<Action>((n) => ({ id: `insight:${n}`, group: 'Commands', label: `Cluster insights: ${n}`, icon: <Activity size={14} />, run: () => open('table', 'system_views', n) })),
+      ...keyspaces.filter((k) => !k.system).map<Action>((k) => ({ id: `review:${k.name}`, group: 'Commands', label: `Review data model: ${k.name}`, icon: <Lightbulb size={14} />, run: () => reviewKeyspace(k.name) })),
       { id: 'theme', group: 'Commands', label: 'Toggle light and dark theme', icon: <Moon size={14} />, run: cycleTheme },
     ],
-    [keyspaces, astra, open, newQuery, openProfiles, cycleTheme],
+    [keyspaces, astra, open, newQuery, openProfiles, reviewKeyspace, cycleTheme],
   )
   const q = query.trim().toLowerCase()
   const shown = actions.filter((a) => a.label.toLowerCase().includes(q))

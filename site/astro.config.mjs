@@ -19,6 +19,7 @@ export default defineConfig({
             { label: 'Create a keyspace', slug: 'docs/create-a-keyspace' },
             { label: 'Change or drop a keyspace', slug: 'docs/change-or-drop-a-keyspace' },
             { label: 'Create a table', slug: 'docs/create-a-table' },
+            { label: 'Data modeling tips in Helenus', slug: 'docs/data-modeling-tips-in-helenus' },
             { label: 'Change a table', slug: 'docs/change-a-table' },
             { label: 'Truncate or drop a table', slug: 'docs/truncate-or-drop-a-table' },
             { label: 'Add an index to a table', slug: 'docs/add-an-index-to-a-table' },

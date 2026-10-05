@@ -86,6 +86,9 @@ interface WorkspaceState {
   setConnection: (name: string, status: ProfileStatus, error?: string) => void
   clearConnection: (name: string) => void
   paletteOpen: boolean
+  /** Keyspace whose data model is being reviewed, or null. */
+  reviewKeyspace: string | null
+  setReviewKeyspace: (ks: string | null) => void
   profileDialogOpen: boolean
   queryCount: number
   consistency: string
@@ -134,6 +137,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       return { connections }
     }),
   paletteOpen: false,
+  reviewKeyspace: null,
   profileDialogOpen: false,
   queryCount: 0,
   consistency: 'LOCAL_QUORUM',
@@ -179,5 +183,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   activate: (id) => set({ activeId: id }),
   setProfile: (id) => set({ profileId: id }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setReviewKeyspace: (reviewKeyspace) => set({ reviewKeyspace }),
   setProfileDialogOpen: (profileDialogOpen) => set({ profileDialogOpen }),
 }))

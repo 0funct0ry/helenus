@@ -21,6 +21,7 @@ import {
   Sigma,
   Table2,
   Trash2,
+  Lightbulb,
 } from "lucide-react";
 import { TreeRow } from "./TreeRow";
 import { SchemaContextMenu } from "./SchemaContextMenu";
@@ -120,6 +121,7 @@ export function SchemaTree() {
   const [pendingKs, setPendingKs] = useState<string | null>(null);
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId));
   const open = useWorkspace((s) => s.open);
+  const setReviewKeyspace = useWorkspace((s) => s.setReviewKeyspace);
   const newQuery = useWorkspace((s) => s.newQuery);
   const profileId = useWorkspace((s) => s.profileId);
   const connected = useWorkspace(
@@ -279,6 +281,11 @@ export function SchemaTree() {
           label: "Refresh",
           icon: <RefreshCw size={14} />,
           onSelect: () => refresh.mutate(),
+        },
+        {
+          label: "Review data model",
+          icon: <Lightbulb size={14} />,
+          onSelect: () => setReviewKeyspace(m.keyspace),
         },
         {
           label: "Edit keyspace…",

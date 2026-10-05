@@ -154,6 +154,7 @@ export interface TypePlan {
   statement: string
   errors: string[]
   notes: string[]
+  explain?: string[]
   dependents: string[]
 }
 
@@ -182,6 +183,8 @@ export interface KeyspacePlan {
   statement: string
   errors: PlanError[]
   notes: string[]
+  /** Plain-language description of what the statement does. */
+  explain?: string[]
 }
 
 /** A request to `POST /p/{profile}/tables/preview` (SPEC §9.13). Unset options mean the server default. */
@@ -645,4 +648,14 @@ export interface RolesResponse {
 export interface RolePermission {
   resource: RoleResource
   permission: string
+}
+
+/** One data-modeling finding from `GET /p/{profile}/advise`. `table` is empty for keyspace-level findings. */
+export interface AdviceFinding {
+  id: string
+  severity: 'info' | 'warning'
+  message: string
+  help_url: string
+  keyspace: string
+  table?: string
 }

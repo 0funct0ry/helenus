@@ -11,6 +11,7 @@ import { TypeView } from './layout/TypeView'
 import { StatusBar } from './layout/StatusBar'
 import { CommandPalette } from './layout/CommandPalette'
 import { ProfileDialog } from './layout/ProfileDialog'
+import { ReviewDataModelDialog } from './layout/ReviewDataModelDialog'
 import { ToastViewport } from './ui/ToastViewport'
 import { useBootstrapProfile } from './api/useBootstrap'
 import { useSchema } from './api/hooks'
@@ -29,6 +30,8 @@ export function App() {
   const close = useWorkspace((s) => s.close)
   const newQuery = useWorkspace((s) => s.newQuery)
   const profileId = useWorkspace((s) => s.profileId)
+  const reviewKeyspace = useWorkspace((s) => s.reviewKeyspace)
+  const setReviewKeyspace = useWorkspace((s) => s.setReviewKeyspace)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: keyspaces } = useSchema(profileId, connected)
   const isSystemTab = (t: { kind: string; keyspace: string }) =>
@@ -76,6 +79,7 @@ export function App() {
       <StatusBar />
       <CommandPalette />
       <ProfileDialog />
+      <ReviewDataModelDialog profile={profileId} keyspace={reviewKeyspace} onClose={() => setReviewKeyspace(null)} />
       <ToastViewport />
     </div>
   )

@@ -10,6 +10,20 @@ class RO {
 globalThis.ResizeObserver ??= RO as unknown as typeof ResizeObserver
 Element.prototype.scrollIntoView ??= () => {}
 
+// This jsdom build has no usable localStorage; give components a Map-backed one.
+if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'function') {
+  const store = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, String(v)),
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => store.clear(),
+    },
+  })
+}
+
 afterEach(() => {
   cleanup()
   document.cookie = 'helenus_theme=; max-age=0; path=/'

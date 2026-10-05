@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { TypePlanPreview } from './TypePlanPreview'
 
 describe('TypePlanPreview', () => {
@@ -16,5 +17,14 @@ describe('TypePlanPreview', () => {
   it('says it is building while pending', () => {
     render(<TypePlanPreview pending plan={{ statement: '', errors: [], notes: [], dependents: [] }} />)
     expect(screen.getByText('Building…')).toBeInTheDocument()
+  })
+  it('shows advice as an amber note that can be hidden, and the explanation', async () => {
+    localStorage.clear()
+    render(<TypePlanPreview pending={false} plan={{ statement: 'CREATE TABLE a.b (id int PRIMARY KEY);', errors: [], notes: ['A002: Partitions grow without bound'], explain: ['Creates table b.'], dependents: [] }} />)
+    expect(screen.getByRole('note')).toHaveTextContent('Partitions grow without bound')
+    await userEvent.click(screen.getByRole('button', { name: /what this does/i }))
+    expect(screen.getByText('Creates table b.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Hide this advice' }))
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 })

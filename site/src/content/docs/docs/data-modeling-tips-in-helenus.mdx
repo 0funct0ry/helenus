@@ -1,0 +1,76 @@
+---
+title: Data modeling tips in Helenus
+description: What the "What this does" explanations and the data-model advice mean, with one section for every advisor rule.
+---
+
+Helenus explains every statement it generates and points out common data-modeling mistakes. Both are fixed text rules that run on your machine; nothing is sent anywhere. Advice never stops you from creating or changing anything.
+
+## Read the explanation
+
+Under every CQL preview, select **What this does** for a plain-language description of the statement, such as which column spreads rows across the cluster and what queries the table supports.
+
+## See and hide advice
+
+Advice appears as an amber note under the preview. Open a table and choose the **Advice** tab to see its findings, or choose **Review data model** from a keyspace menu (or the command palette) to see findings for every table. Select **Hide this advice** to hide a rule for the current profile in this browser, and **Show hidden** to bring it back.
+
+## The rules
+
+<a id="a001"></a>
+
+### A001: Few partitions
+
+A single-column partition key of type `boolean`, `tinyint` or a date has very few distinct values, so a few nodes hold all the data. Pick a column with many values, or add one to the key.
+
+<a id="a002"></a>
+
+### A002: Unbounded partitions
+
+A clustering column of type `timestamp`, `timeuuid` or `date` with no time bucket in the partition key means each partition grows forever. Add a column such as `day date` to the partition key.
+
+<a id="a003"></a>
+
+### A003: Many indexes
+
+More than three indexes on one table slow every write. Keep the ones your queries need.
+
+<a id="a004"></a>
+
+### A004: Index on a high-cardinality column
+
+A legacy secondary index on a `uuid`, `timeuuid` or `timestamp` column, or on a text column named like `*id` or `email`, makes each lookup ask many nodes. Use a separate lookup table instead.
+
+<a id="a005"></a>
+
+### A005: Many collections
+
+More than five non-frozen collection columns in one table make rows heavy to read and write. Use fewer, or move them to their own table.
+
+<a id="a006"></a>
+
+### A006: Lists without clustering
+
+In a table with no clustering columns, lists rewrite on prepend and on remove-by-value. Consider a set, or model the elements as clustering rows.
+
+<a id="a007"></a>
+
+### A007: Many counters
+
+A counter table with more than ten counter columns is slow to update. Split it into several tables.
+
+<a id="a008"></a>
+
+### A008: SimpleStrategy on several datacenters
+
+`SimpleStrategy` ignores datacenters. Use `NetworkTopologyStrategy` on a cluster with more than one datacenter.
+
+<a id="a009"></a>
+
+### A009: Replication factor 1
+
+With a replication factor of 1 on a cluster with more than one node, one node failure makes some data unavailable. Use 3 for production keyspaces.
+
+<a id="a010"></a>
+
+### A010: Time-window compaction without a TTL
+
+`TimeWindowCompactionStrategy` works best when data expires. Set a default TTL on the table.

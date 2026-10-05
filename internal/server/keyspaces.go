@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -33,5 +34,10 @@ func (a *api) keyspacesPreview(c *gin.Context) {
 			dcNodes[n.DC]++
 		}
 	}
-	c.JSON(http.StatusOK, schema.PlanKeyspace(snap, in, dcNodes))
+	plan := schema.PlanKeyspace(snap, in, dcNodes)
+	plan.Explain = advise.ExplainKeyspace(in)
+	if in.Action != "drop" {
+		plan.Notes = withNotes(plan.Notes, advise.AdviseKeyspace(advise.DraftKeyspace(in), a.clusterFacts(c, p)))
+	}
+	c.JSON(http.StatusOK, plan)
 }

@@ -317,6 +317,7 @@ describe("SchemaTree", () => {
         "New query here",
         "Copy name",
         "Refresh",
+        "Review data model",
         "Edit keyspace…",
         "Drop keyspace…",
       ]);

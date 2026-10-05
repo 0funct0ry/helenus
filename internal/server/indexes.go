@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/advise"
 	"github.com/0funct0ry/helenus/internal/schema"
 )
 
@@ -25,5 +26,10 @@ func (a *api) indexesPreview(c *gin.Context) {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, schema.PlanIndex(snap, in))
+	plan := schema.PlanIndex(snap, in)
+	plan.Explain = advise.ExplainIndex(snap, in)
+	if in.Action != schema.IndexDrop {
+		plan.Notes = withNotes(plan.Notes, advise.AdviseIndex(snap, in, a.clusterFacts(c, p)))
+	}
+	c.JSON(http.StatusOK, plan)
 }

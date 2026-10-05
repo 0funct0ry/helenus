@@ -163,6 +163,7 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.GET("/schema-changes", a.listSchemaChanges)
 	p.DELETE("/schema-changes", a.clearSchemaChanges)
 	p.GET("/schema", a.schema)
+	p.GET("/advise", a.adviseGet)
 	p.POST("/schema/refresh", a.refreshSchema)
 	p.GET("/keyspaces/:ks/tables/:t", a.tableDetail)
 	p.GET("/keyspaces/:ks/ddl", a.ddl)

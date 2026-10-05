@@ -51,6 +51,8 @@ type KeyspacePlan struct {
 	Statement string      `json:"statement"`
 	Errors    []PlanError `json:"errors"`
 	Notes     []string    `json:"notes"`
+	// Explain is a plain-language description of what the statement does (M9.14).
+	Explain []string `json:"explain"`
 }
 
 // PlanKeyspace validates req against the snapshot and renders CREATE KEYSPACE. dcNodes maps each
@@ -184,6 +186,9 @@ func planDropKeyspace(s *Snapshot, req KeyspaceRequest, p KeyspacePlan) Keyspace
 
 // currentReplication reads a snapshot replication map into a strategy and per-datacenter factors. For
 // SimpleStrategy the single factor is stored under the key "".
+// CurrentReplication is the exported form of currentReplication for the advisor.
+func CurrentReplication(m map[string]string) (string, map[string]int) { return currentReplication(m) }
+
 func currentReplication(m map[string]string) (string, map[string]int) {
 	class := m["class"]
 	class = class[strings.LastIndex(class, ".")+1:]
