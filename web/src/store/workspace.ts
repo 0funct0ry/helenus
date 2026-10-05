@@ -5,7 +5,7 @@ import { abortInflight } from '../api/inflight'
 import { stage, unstage } from '../lib/changes'
 import type { PendingItem } from '../lib/changes'
 
-export type TabKind = 'table' | 'view' | 'query' | 'type' | 'function' | 'aggregate'
+export type TabKind = 'table' | 'view' | 'query' | 'type' | 'function' | 'aggregate' | 'security'
 
 export interface WorkspaceTab {
   id: string

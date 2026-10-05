@@ -1,0 +1,40 @@
+---
+title: Manage roles and permissions
+description: Create roles, change passwords, grant roles and set permissions from the Security tab.
+---
+
+Open **Security** in the title bar (or press ⌘K and choose *Security: roles and permissions*) to manage roles without writing CQL. The tab is hidden for Astra profiles, where roles are managed in Astra.
+
+## Create a role
+
+1. Click **New role…**.
+2. Enter a name, a password of at least 8 characters (twice), and choose whether the role can log in or is a superuser.
+3. Check the preview and click **Create role**.
+
+```sql
+CREATE ROLE analyst WITH PASSWORD = '••••••' AND LOGIN = true AND SUPERUSER = false;
+```
+
+The preview always shows the password as `••••••`. Role statements are sent to a dedicated endpoint, not the query path, so the password never appears in query history, the schema change history, server logs or any response.
+
+## Change or drop a role
+
+**Edit role…** changes the login and superuser flags; leave the password blank to keep it. **Drop role…** asks you to type the role name. You cannot drop the role your profile is signed in as.
+
+## Membership
+
+On a role, **Member of** lists the roles it was granted. Use **Grant role…** to add one or the trash icon to revoke it. A grant that would create a cycle is rejected.
+
+## Permissions
+
+The matrix has one row per resource and one column per permission. Only applicable combinations have a checkbox: for example `EXECUTE` exists only for functions, and `DESCRIBE` only for roles and MBeans. `UNMASK` and `SELECT_MASKED` appear on Cassandra 5.0 and later.
+
+Use **Add resource** to add a row. Ticking or unticking a box queues a `GRANT` or `REVOKE` in the pending bar. **Review CQL** shows the statements; **Apply changes** runs them in order and stops at the first failure.
+
+```sql
+GRANT SELECT ON KEYSPACE shop TO analyst;
+```
+
+:::caution
+If the cluster uses `AllowAllAuthenticator`, roles have no effect and every action is disabled. With `AllowAllAuthorizer`, permissions are disabled.
+:::

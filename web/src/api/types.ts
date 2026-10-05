@@ -599,3 +599,50 @@ export interface SchemaChangesPage {
   items: SchemaChange[]
   next_before: number | null
 }
+
+/** A resource a permission can be granted on (SPEC §9.23). */
+export interface RoleResource {
+  kind: string
+  keyspace?: string
+  name?: string
+  signature?: string[]
+}
+
+/** A request to `/p/{profile}/roles/preview` or `/roles/apply`. The password only ever travels in these bodies. */
+export interface RoleRequest {
+  action: 'create' | 'alter' | 'drop' | 'grant_role' | 'revoke_role' | 'grant' | 'revoke'
+  role: string
+  password?: string
+  login?: boolean
+  superuser?: boolean
+  options?: Record<string, string>
+  member_of?: string
+  permission?: string
+  resource?: RoleResource
+  if_not_exists?: boolean
+}
+
+export type RolePlan = KeyspacePlan
+
+export interface RoleInfo {
+  name: string
+  login: boolean
+  superuser: boolean
+  options: Record<string, string>
+  member_of: string[]
+  members: string[]
+}
+
+export interface RolesResponse {
+  auth_enabled: boolean
+  authorizer_enabled: boolean
+  connected_role: string
+  roles: RoleInfo[]
+  /** Permissions that apply to each resource kind, ALL first. */
+  applicable: Record<string, string[]>
+}
+
+export interface RolePermission {
+  resource: RoleResource
+  permission: string
+}

@@ -1,7 +1,8 @@
-import { ChevronRight, Eye, Search } from 'lucide-react'
+import { ChevronRight, Eye, Search, Shield } from 'lucide-react'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { useWorkspace } from '../store/workspace'
+import { useProfiles } from '../api/hooks'
 
 /**
  * 34px application title bar: product mark, profile switcher, a keyspace/object breadcrumb for the
@@ -10,6 +11,11 @@ import { useWorkspace } from '../store/workspace'
 export function TitleBar() {
   const active = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId))
   const setPaletteOpen = useWorkspace((s) => s.setPaletteOpen)
+  const openTab = useWorkspace((s) => s.open)
+  const profileId = useWorkspace((s) => s.profileId)
+  const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
+  const { data: profiles } = useProfiles()
+  const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle
   return (
     <header className="flex select-none items-center gap-1.5 border-b border-line bg-titlebar pl-3 pr-2">
       <div className="mr-1.5 flex items-center gap-[7px] font-semibold">
@@ -39,6 +45,12 @@ export function TitleBar() {
         )}
       </nav>
       <div className="flex-1" />
+      {connected && !astra && (
+        <button type="button" onClick={() => openTab('security', '', 'Security')} className="inline-flex h-6 items-center gap-1.5 rounded px-2 text-muted hover:bg-hover">
+          <Shield size={14} aria-hidden />
+          Security
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setPaletteOpen(true)}

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Database, Eye, Moon, Plus, Table2 } from 'lucide-react'
+import { Database, Eye, Moon, Plus, Shield, Table2 } from 'lucide-react'
 import { Dialog } from '../ui/Dialog'
-import { useSchema } from '../api/hooks'
+import { useProfiles, useSchema } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
 import { useThemeStore } from '../store/theme'
 import { cn } from '../lib/cn'
@@ -37,6 +37,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const profileId = useWorkspace((s) => s.profileId)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: keyspaces = [] } = useSchema(profileId, connected)
+  const { data: profiles } = useProfiles()
+  const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle
 
   const actions: Action[] = useMemo(
     () => [
@@ -48,9 +50,10 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
         ]),
       { id: 'new-query', group: 'Commands', label: 'New query', icon: <Plus size={14} />, run: () => newQuery() },
       { id: 'profiles', group: 'Commands', label: 'Switch profile…', icon: <Database size={14} />, run: () => openProfiles(true) },
+      ...(astra ? [] : [{ id: 'security', group: 'Commands' as const, label: 'Security: roles and permissions', icon: <Shield size={14} />, run: () => open('security', '', 'Security') }]),
       { id: 'theme', group: 'Commands', label: 'Toggle light and dark theme', icon: <Moon size={14} />, run: cycleTheme },
     ],
-    [keyspaces, open, newQuery, openProfiles, cycleTheme],
+    [keyspaces, astra, open, newQuery, openProfiles, cycleTheme],
   )
   const q = query.trim().toLowerCase()
   const shown = actions.filter((a) => a.label.toLowerCase().includes(q))

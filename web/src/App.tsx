@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { TitleBar } from './layout/TitleBar'
 import { LeftDock } from './layout/LeftDock'
+import { SecurityView } from './layout/SecurityView'
 import { TabBar } from './layout/TabBar'
 import { TableView } from './layout/TableView'
 import { QueryView } from './layout/QueryView'
@@ -57,6 +58,8 @@ export function App() {
             <TypeView key={active.id} tab={active} />
           ) : active?.kind === 'aggregate' ? (
             <AggregateView key={active.id} tab={active} />
+          ) : active?.kind === 'security' ? (
+            <SecurityView key={active.id} />
           ) : active?.kind === 'function' ? (
             <FunctionView key={active.id} tab={active} />
           ) : (
