@@ -1,0 +1,56 @@
+{
+  "array.json": {
+    "format": "json",
+    "delimiter": "",
+    "quote": "",
+    "header": false
+  },
+  "bom_crlf.csv": {
+    "format": "csv",
+    "delimiter": ",",
+    "quote": "\"",
+    "header": true
+  },
+  "comma_header.csv": {
+    "format": "csv",
+    "delimiter": ",",
+    "quote": "\"",
+    "header": true
+  },
+  "lines.ndjson": {
+    "format": "ndjson",
+    "delimiter": "",
+    "quote": "",
+    "header": false
+  },
+  "pipe_noheader.txt": {
+    "format": "csv",
+    "delimiter": "|",
+    "quote": "\"",
+    "header": false
+  },
+  "quoted_commas.csv": {
+    "format": "csv",
+    "delimiter": ",",
+    "quote": "\"",
+    "header": true
+  },
+  "semicolon_header.csv": {
+    "format": "csv",
+    "delimiter": ";",
+    "quote": "\"",
+    "header": true
+  },
+  "single_line_unknown.dat": {
+    "format": "ndjson",
+    "delimiter": "",
+    "quote": "",
+    "header": false
+  },
+  "tab_noheader.tsv": {
+    "format": "csv",
+    "delimiter": "\t",
+    "quote": "\"",
+    "header": false
+  }
+}

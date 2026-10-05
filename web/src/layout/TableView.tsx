@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Download, Plus, RefreshCw, Sprout, Trash2, Undo2 } from "lucide-react";
+import { Copy, Download, Plus, RefreshCw, Sprout, Trash2, Undo2, Upload } from "lucide-react";
 import { Tabs } from "../ui/Tabs";
 import { Button } from "../ui/Button";
 import { ReadOnlyBadge } from "../ui/ReadOnlyBadge";
@@ -18,6 +18,7 @@ import { DependencyPanel } from "./DependencyPanel";
 import { CountRowsDialog } from "./CountRowsDialog";
 import { SeedWizard } from "./SeedWizard";
 import { ExportDialog } from "./ExportDialog";
+import { ImportWizard } from "./ImportWizard";
 import { CellEditor } from "./CellEditor";
 import { CollectionPopover } from "./CollectionPopover";
 import { InsertRowDialog } from "./InsertRowDialog";
@@ -62,6 +63,7 @@ export function TableView({ tab }: TableViewProps) {
   const [droppingView, setDroppingView] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const closeTab = useWorkspace((s) => s.close);
   const consistency = useWorkspace((s) => s.consistency);
   const setConsistency = useWorkspace((s) => s.setConsistency);
@@ -212,6 +214,16 @@ export function TableView({ tab }: TableViewProps) {
         >
           Export…
         </Button>
+        {!ks?.system && !isView && (
+          <Button
+            variant="ghost"
+            icon={<Upload size={14} />}
+            title="Load rows from a CSV or JSON file"
+            onClick={() => setImportOpen(true)}
+          >
+            Import…
+          </Button>
+        )}
         {editing.ed.editable && !table?.counter && (
           <>
             <Button
@@ -381,6 +393,13 @@ export function TableView({ tab }: TableViewProps) {
           keyspace={tab.keyspace}
           table={tab.object}
           onClose={() => setSeedOpen(false)}
+        />
+      )}
+      {importOpen && (
+        <ImportWizard
+          keyspace={tab.keyspace}
+          table={tab.object}
+          onClose={() => setImportOpen(false)}
         />
       )}
       {exportOpen && (

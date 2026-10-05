@@ -1,0 +1,34 @@
+---
+title: Import data from CSV or JSON
+description: Load a CSV, TSV, JSON or NDJSON file into a table with automatic column mapping, a dry run and a row-level error report.
+---
+
+The import wizard uploads a file once, works out its format and how its columns map to the table, lets you check the result without writing anything, and then loads it as a background job. Rows that cannot be loaded are rejected one by one and collected in an error report; the rest still go in.
+
+## Open the wizard
+
+Choose **Import…** from the table menu in the schema tree (the three-dot button, or right-click), or from the toolbar of the table's tab. It is not offered for materialized views or system keyspaces, and counter tables cannot be imported.
+
+## The six steps
+
+1. **Upload.** Drop a file or pick one. The largest upload is 1 GB; raise it with `--max-upload` (megabytes), `HELENUS_MAX_UPLOAD` or `ui.max_upload_mb`. The file is kept in Helenus's data directory under `imports/` and deleted after an hour.
+2. **Format.** Helenus detects the format from the extension and the first 64 KB: CSV or TSV (delimiter `,` `;` tab or `|`), a JSON array of objects, or NDJSON. A leading byte order mark and CRLF line endings are handled. A header row is detected when the first row is not parsable as the types of the rows below it. All of these can be edited, and the raw preview of the first 20 records updates. **NULL text** is the cell text that means NULL; it is empty by default.
+3. **Mapping.** Each table column gets a source column, matched in this order: exact name, case-insensitive, normalized (`_`, `-`, spaces and case ignored, so `UserId` matches `user_id`), then fuzzy (edit distance of 2 or less). A chip shows how each was matched. Non-key columns can be set to **Skip**; every primary key column needs a source, and **Next** stays blocked with "Map a source column to `user_id`" until it has one. The first 1,000 rows are type-checked per column, with the number of failures and up to five samples.
+4. **Options.** Consistency (`ANY` is not offered), TTL, `IF NOT EXISTS` (much slower: it uses lightweight transactions), concurrency (1–64, default 8), batch size (1–100, default 1) and the number of rejected rows after which the import aborts (default 1,000). Batches are unlogged and only ever group consecutive rows of the same partition.
+5. **Dry run.** Parses and validates the first N rows (default 100) and shows how many are valid, with a table of the rejected values. Nothing is written.
+6. **Run.** Progress, rate, ETA and the rejected count, with **Cancel**. Rows written before a cancel stay in the table. When rows were rejected, **Download error report** gives a CSV.
+
+## Values
+
+- CSV cells are converted by the column's type: numbers, `true`/`false`, UUIDs, ISO-8601 or cqlsh-style timestamps (`2024-01-02 03:04:05+0000`), `YYYY-MM-DD` dates, `0x…` blobs.
+- Collections, tuples and user-defined types in CSV can be JSON or CQL literals (`{'a': 1}`, `[1, 2]`, `{street: 'Main'}`), which is what [export](/helenus/docs/export-data/) writes.
+- In JSON and NDJSON, nested objects load into user-defined type columns. A map column accepts either an object (`{"a": 1}`) or a list of `[key, value]` pairs.
+- Empty values are skipped instead of written as null, so an import never creates tombstones. It also means an empty cell does not overwrite an existing value.
+
+## The error report
+
+The report is a CSV with the columns `line, column, value, reason`, followed by the original record's fields. `line` is the line of the file where the record starts (the position in the array for a JSON array). A record can appear more than once if several of its columns fail. Records that fail on write (after up to three attempts on timeouts and unavailable errors) are reported with an empty column. The report is deleted after an hour, and jobs are lost when `helenus ui` restarts.
+
+## From the shell
+
+The shell has `COPY … FROM` for CSV; see the [COPY FROM reference](/helenus/docs/copy-from-reference/).

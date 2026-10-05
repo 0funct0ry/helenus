@@ -15,8 +15,16 @@ import (
 	"github.com/0funct0ry/helenus/internal/exec"
 )
 
-// copyCmd is a parsed COPY ... TO statement.
+// copyCmd is a parsed COPY ... TO or COPY ... FROM statement.
 type copyCmd struct {
+	// From is true for COPY FROM; Stdin then reads the shell's input instead of File.
+	From  bool
+	Stdin bool
+	// MaxBatchSize, MaxErrors and ErrFile are COPY FROM options (ChunkSize is accepted and ignored).
+	MaxBatchSize int
+	MaxErrors    int
+	ErrFile      string
+
 	Keyspace, Table string
 	Columns         []string
 	// File is the target path; Stdout writes to the shell's output instead.
@@ -135,7 +143,7 @@ func (l *copyLexer) value() (string, error) {
 	return l.s[start:l.i], nil
 }
 
-// parseCopy parses COPY [ks.]table [(cols)] TO 'file'|STDOUT [WITH opt=val [AND opt=val]...].
+// parseCopy parses COPY [ks.]table [(cols)] TO 'file'|STDOUT or FROM 'file'|STDIN [WITH opt=val [AND opt=val]...].
 func parseCopy(text, defaultKS string) (*copyCmd, error) {
 	l := &copyLexer{s: strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(text), ";"))}
 	if l.word() != "COPY" {
@@ -180,12 +188,17 @@ func parseCopy(text, defaultKS string) (*copyCmd, error) {
 	switch kw := l.word(); kw {
 	case "TO":
 	case "FROM":
-		return nil, errors.New("COPY FROM is not supported yet")
+		c.From = true
 	default:
-		return nil, errors.New("COPY: expected TO after the table name")
+		return nil, errors.New("COPY: expected TO or FROM after the table name")
 	}
 	l.skip()
-	if l.peek() == '\'' {
+	if c.From && l.peek() != '\'' {
+		if l.word() != "STDIN" {
+			return nil, errors.New("COPY: expected 'file' or STDIN after FROM")
+		}
+		c.Stdin = true
+	} else if l.peek() == '\'' {
 		if c.File, err = l.str(); err != nil {
 			return nil, fmt.Errorf("COPY: %w", err)
 		}
@@ -231,6 +244,17 @@ func parseCopy(text, defaultKS string) (*copyCmd, error) {
 
 func (c *copyCmd) set(opt, v string) error {
 	switch opt {
+	case "PAGESIZE", "MAXOUTPUTSIZE", "DATETIMEFORMAT":
+		if c.From {
+			return fmt.Errorf("COPY: %s only applies to COPY TO", opt)
+		}
+	case "CHUNKSIZE", "MAXBATCHSIZE", "MAXERRORS", "ERRFILE":
+		if !c.From {
+			return fmt.Errorf("COPY: %s only applies to COPY FROM", opt)
+		}
+		return c.setFrom(opt, v)
+	}
+	switch opt {
 	case "HEADER":
 		b, err := strconv.ParseBool(strings.ToLower(v))
 		if err != nil {
@@ -266,8 +290,8 @@ func (c *copyCmd) set(opt, v string) error {
 	return nil
 }
 
-// copyTo runs a COPY ... TO statement.
-func (s *Shell) copyTo(ctx context.Context, text string) error {
+// copyStmt parses a COPY statement and runs it in the direction it names.
+func (s *Shell) copyStmt(ctx context.Context, text string) error {
 	if s.Exec == nil {
 		return errors.New("not connected")
 	}
@@ -275,6 +299,14 @@ func (s *Shell) copyTo(ctx context.Context, text string) error {
 	if err != nil {
 		return syntaxErr(err.Error())
 	}
+	if c.From {
+		return s.copyFrom(ctx, c)
+	}
+	return s.copyTo(ctx, c)
+}
+
+// copyTo runs a COPY ... TO statement.
+func (s *Shell) copyTo(ctx context.Context, c *copyCmd) error {
 	c.Opts.Table = c.Keyspace + "." + c.Table
 	if err := c.Opts.Validate(export.CSV); err != nil {
 		return syntaxErr("COPY: " + err.Error())

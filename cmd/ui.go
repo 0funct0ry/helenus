@@ -24,6 +24,7 @@ var uiCmd = &cobra.Command{
 			Addr:       s.V.GetString("ui.addr"),
 			Open:       s.V.GetBool("ui.open_browser"),
 			DB:         s.V.GetString("paths.db"),
+			MaxUpload:  int64(s.V.GetInt("ui.max_upload_mb")) << 20,
 			Version:    Version,
 			Stderr:     cmd.ErrOrStderr(),
 		})

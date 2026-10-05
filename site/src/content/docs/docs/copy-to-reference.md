@@ -7,7 +7,7 @@ description: Export a table to CSV from the Helenus shell with the cqlsh-compati
 COPY [keyspace.]table [(column, ...)] TO 'file' | STDOUT [WITH option = value [AND option = value ...]]
 ```
 
-`COPY … TO` writes CSV. Names are case-insensitive unless double-quoted. Without a keyspace, the keyspace chosen with `USE` is used. The file is written by the shell process, on the machine where the shell runs. `COPY … FROM` is not supported yet.
+`COPY … TO` writes CSV. Names are case-insensitive unless double-quoted. Without a keyspace, the keyspace chosen with `USE` is used. The file is written by the shell process, on the machine where the shell runs. To load a file, see the [COPY FROM reference](/helenus/docs/copy-from-reference/).
 
 | Option | Default | Meaning |
 | --- | --- | --- |

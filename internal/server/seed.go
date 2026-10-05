@@ -31,6 +31,12 @@ type seedRequest struct {
 
 // seedTarget resolves the request's table; views and system keyspaces are refused.
 func (a *api) seedTarget(c *gin.Context, p config.Profile, ksName, name string) (*schema.Snapshot, schema.Table, bool) {
+	return a.writableTable(c, p, ksName, name, "seeded", "seed")
+}
+
+// writableTable resolves a table that may receive generated or imported rows;
+// verb is the past participle used in the refusal message.
+func (a *api) writableTable(c *gin.Context, p config.Profile, ksName, name, verb, action string) (*schema.Snapshot, schema.Table, bool) {
 	snap, err := a.conn.Schema(c.Request.Context(), p.Name, p, false)
 	if err != nil {
 		fail(c, http.StatusBadGateway, "schema_failed", err.Error(), nil)
@@ -49,7 +55,7 @@ func (a *api) seedTarget(c *gin.Context, p config.Profile, ksName, name string) 
 	if t == nil {
 		for _, v := range ks.Views {
 			if v.Name == name {
-				fail(c, http.StatusUnprocessableEntity, "read_only", "materialized views cannot be seeded; seed the base table", nil)
+				fail(c, http.StatusUnprocessableEntity, "read_only", "materialized views cannot be "+verb+"; "+action+" the base table", nil)
 				return nil, schema.Table{}, false
 			}
 		}

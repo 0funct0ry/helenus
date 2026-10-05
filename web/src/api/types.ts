@@ -735,7 +735,7 @@ export interface JobInfo {
   progress: JobProgress
   started_at: string
   ended_at?: string
-  result?: SeedResult | ExportResult | { error: string }
+  result?: SeedResult | ExportResult | ImportResult | { error: string }
 }
 
 export interface SeedProfile {
@@ -779,4 +779,85 @@ export interface ExportResult {
   rows: number
   bytes: number
   format: ExportFormat
+}
+
+export type ImportFormatKind = 'csv' | 'json' | 'ndjson'
+
+/** How the uploaded file is read; the server detects the first value. */
+export interface ImportFormat {
+  format: ImportFormatKind
+  delimiter: string
+  quote: string
+  header: boolean
+  null_string: string
+}
+
+export interface ImportUploadResult {
+  upload: string
+  name: string
+  size: number
+  detect: Omit<ImportFormat, 'null_string'>
+}
+
+/** A target column and the source column feeding it; an empty source skips the target. */
+export interface ImportMapping {
+  target: string
+  source: string
+}
+
+export interface ImportOptions {
+  consistency: string
+  ttl: number
+  if_not_exists: boolean
+  concurrency: number
+  batch_size: number
+  max_errors: number
+}
+
+export interface ImportRowError {
+  line: number
+  column: string
+  value: string
+  reason: string
+}
+
+export type ImportConfidence = '' | 'exact' | 'case' | 'normalized' | 'fuzzy' | 'manual'
+
+export interface ImportPlanColumn {
+  target: string
+  type: string
+  kind: 'partition' | 'clustering' | 'static' | 'regular'
+  source: string
+  confidence: ImportConfidence
+  failures: number
+  samples: ImportRowError[]
+}
+
+export interface ImportPlan {
+  format: ImportFormat
+  size: number
+  source_columns: string[]
+  /** The first 20 records as text, in source column order. */
+  preview: string[][]
+  columns: ImportPlanColumn[]
+  /** Problems that block the import, such as "Map a source column to user_id". */
+  errors: string[]
+  rows_checked: number
+}
+
+export interface ImportDryRun {
+  rows: number
+  valid: number
+  invalid: number
+  errors: ImportRowError[]
+  truncated: boolean
+}
+
+export interface ImportResult {
+  rows: number
+  written: number
+  rejected: number
+  first_errors: ImportRowError[]
+  keyspace: string
+  table: string
 }

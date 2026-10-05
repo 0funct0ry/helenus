@@ -103,6 +103,7 @@ var (
 		setting("auth", "A", Bool, false, "Require sign-in", "ui.auth.enabled"),
 		setting("tls-cert", "C", String, "", "Serve HTTPS with this certificate", "ui.tls.cert"),
 		setting("tls-key", "K", String, "", "Private key for --tls-cert", "ui.tls.key"),
+		setting("max-upload", "U", Int, 1024, "Largest import upload in MB", "ui.max_upload_mb"),
 	}
 
 	// DBFlag is declared on ui and the user commands.

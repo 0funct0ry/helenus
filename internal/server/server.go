@@ -43,6 +43,8 @@ type Options struct {
 	DB string
 	// Store holds the schema change history. Without one the history routes are empty and nothing is recorded.
 	Store *store.Store
+	// MaxUpload is the largest import upload in bytes; zero means 1 GB.
+	MaxUpload int64
 }
 
 // Run serves until ctx is cancelled or SIGINT/SIGTERM arrives, then shuts down gracefully.
@@ -124,7 +126,7 @@ func NewRouter(opts Options) http.Handler {
 	r.GET("/api/v1/meta", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"version": opts.Version, "auth_enabled": false})
 	})
-	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store, jobs: jobs.New()}).routes(r.Group("/api/v1"))
+	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store, jobs: jobs.New(), maxUpload: opts.MaxUpload}).routes(r.Group("/api/v1"))
 	r.NoRoute(staticHandler(opts.Assets))
 	return r
 }

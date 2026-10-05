@@ -24,10 +24,12 @@ import {
   Lightbulb,
   Sprout,
   Download,
+  Upload,
 } from "lucide-react";
 import { TreeRow } from "./TreeRow";
 import { SeedWizard } from "./SeedWizard";
 import { ExportDialog } from "./ExportDialog";
+import { ImportWizard } from "./ImportWizard";
 import { SchemaContextMenu } from "./SchemaContextMenu";
 import { NewTypeDialog } from "./NewTypeDialog";
 import { FunctionEditor } from "./FunctionEditor";
@@ -102,6 +104,10 @@ export function SchemaTree() {
     name: string;
   } | null>(null);
   const [exportTarget, setExportTarget] = useState<{
+    keyspace: string;
+    name: string;
+  } | null>(null);
+  const [importTarget, setImportTarget] = useState<{
     keyspace: string;
     name: string;
   } | null>(null);
@@ -429,6 +435,11 @@ export function SchemaTree() {
               label: "Export…",
               icon: <Download size={14} />,
               onSelect: () => setExportTarget(target),
+            },
+            {
+              label: "Import…",
+              icon: <Upload size={14} />,
+              onSelect: () => setImportTarget(target),
             },
             {
               label: "Truncate…",
@@ -988,6 +999,13 @@ export function SchemaTree() {
             table: exportTarget.name,
           }}
           onClose={() => setExportTarget(null)}
+        />
+      )}
+      {importTarget && (
+        <ImportWizard
+          keyspace={importTarget.keyspace}
+          table={importTarget.name}
+          onClose={() => setImportTarget(null)}
         />
       )}
       {truncate && (

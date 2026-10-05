@@ -43,6 +43,7 @@ export default defineConfig({
             { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
             { label: 'Create and change user-defined types', slug: 'docs/create-and-change-user-defined-types' },
             { label: 'Export data', slug: 'docs/export-data' },
+            { label: 'Import data from CSV or JSON', slug: 'docs/import-data-from-csv-or-json' },
             { label: 'Consistency levels', slug: 'docs/consistency-levels' },
             { label: 'Trace a slow query', slug: 'docs/trace-a-slow-query' },
             { label: 'Read a trace', slug: 'docs/read-a-trace' },
@@ -51,6 +52,7 @@ export default defineConfig({
             { label: 'Run scripts with -f and -e', slug: 'docs/run-scripts-with-f-and-e' },
             { label: 'Shell command reference', slug: 'docs/shell-command-reference' },
             { label: 'COPY TO reference', slug: 'docs/copy-to-reference' },
+            { label: 'COPY FROM reference', slug: 'docs/copy-from-reference' },
           ],
         },
         {

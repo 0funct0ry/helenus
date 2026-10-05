@@ -161,6 +161,7 @@ describe("SchemaTree", () => {
         "New index…",
         "Seed data…",
         "Export…",
+        "Import…",
         "Truncate…",
         "Drop table…",
         "Copy name",

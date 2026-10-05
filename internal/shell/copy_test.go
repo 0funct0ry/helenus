@@ -25,7 +25,10 @@ func TestParseCopy(t *testing.T) {
 		t.Fatalf("%+v %v", c, err)
 	}
 	for in, want := range map[string]string{
-		`COPY t FROM 'x'`:                          "not supported",
+		`COPY t FROM`:                             "expected 'file' or STDIN",
+		`COPY t FROM STDIN WITH PAGESIZE=5`:       "only applies to COPY TO",
+		`COPY t TO STDOUT WITH MAXERRORS=5`:       "only applies to COPY FROM",
+		`COPY t FROM STDIN WITH MAXBATCHSIZE=101`: "MAXBATCHSIZE",
 		`COPY t TO`:                                "expected 'file' or STDOUT",
 		`COPY t TO STDOUT WITH BOGUS=1`:            "unsupported option BOGUS",
 		`COPY t TO STDOUT WITH HEADER=maybe`:       "HEADER must be",

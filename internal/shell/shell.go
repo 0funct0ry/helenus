@@ -143,7 +143,7 @@ func (s *Shell) Execute(ctx context.Context, text string) error {
 		}
 	}
 	if isCopy(body) {
-		return s.copyTo(ctx, stmt)
+		return s.copyStmt(ctx, stmt)
 	}
 	return s.query(ctx, stmt)
 }

@@ -88,6 +88,11 @@ golden-mutate:
 golden-seed:
 	$(GO) test ./internal/seed -run TestSeedGolden -update
 
+.PHONY: golden-dataio
+## golden-dataio: Rewrite the import format detection golden file
+golden-dataio:
+	$(GO) test ./internal/dataio/detect -run TestDetectGolden -update
+
 .PHONY: lint
 ## lint: Run linters (Go and web)
 lint:
