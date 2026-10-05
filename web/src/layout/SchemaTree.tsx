@@ -27,6 +27,7 @@ import { NewTypeDialog } from "./NewTypeDialog";
 import { NewKeyspaceDialog } from "./NewKeyspaceDialog";
 import { EditKeyspaceDialog } from "./EditKeyspaceDialog";
 import { DropKeyspaceDialog } from "./DropKeyspaceDialog";
+import { NewViewWizard } from "./NewViewWizard";
 import { NewTableWizard } from "./NewTableWizard";
 import { TruncateTableDialog } from "./TruncateTableDialog";
 import { DropTableDialog } from "./DropTableDialog";
@@ -91,6 +92,10 @@ export function SchemaTree() {
   const [dropView, setDropView] = useState<{
     keyspace: string;
     name: string;
+  } | null>(null);
+  const [newView, setNewView] = useState<{
+    keyspace: string;
+    baseTable?: string;
   } | null>(null);
   const [newIndex, setNewIndex] = useState<{
     keyspace: string;
@@ -246,6 +251,11 @@ export function SchemaTree() {
               label: "Edit schema",
               icon: <Pencil size={14} />,
               onSelect: () => open("table", m.keyspace, m.name),
+            },
+            {
+              label: "New view…",
+              icon: <Eye size={14} />,
+              onSelect: () => setNewView({ keyspace: m.keyspace, baseTable: m.name }),
             },
             {
               label: "New index…",
@@ -534,6 +544,9 @@ export function SchemaTree() {
               "Views",
               views.length,
               views.map((v) => viewRow(v, 40)),
+              k.system
+                ? undefined
+                : { label: "New view", run: () => setNewView({ keyspace: k.name }) },
             )}
             {group(
               `types:${k.name}`,
@@ -820,6 +833,23 @@ export function SchemaTree() {
             pushToast(`View ${dropView.name} dropped`);
           }}
           onClose={() => setDropView(null)}
+        />
+      )}
+      {newView && (
+        <NewViewWizard
+          keyspace={newView.keyspace}
+          baseTable={newView.baseTable}
+          onCreated={(name) => {
+            setToggled((t) => ({
+              ...t,
+              [`ks:${newView.keyspace}`]: true,
+              [`views:${newView.keyspace}`]: true,
+            }));
+            open("view", newView.keyspace, name);
+            pushToast(`View ${name} created`);
+            refresh.mutate();
+          }}
+          onClose={() => setNewView(null)}
         />
       )}
       {newTableKs && (

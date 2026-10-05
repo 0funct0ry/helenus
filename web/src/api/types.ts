@@ -217,7 +217,7 @@ export interface AlterTableOptions {
 
 /** A request to change an existing table (SPEC §9.17), sent to the same preview endpoint as TableRequest. */
 export interface TableActionRequest {
-  action: 'add_column' | 'drop_column' | 'rename_column' | 'options' | 'truncate' | 'drop' | 'drop_view'
+  action: 'add_column' | 'drop_column' | 'rename_column' | 'options' | 'truncate' | 'drop' | 'drop_view' | 'alter_view'
   keyspace: string
   name: string
   column?: { name: string; type?: TypeDesc; static?: boolean }
@@ -228,6 +228,22 @@ export interface TableActionRequest {
 
 /** The CREATE TABLE statement a request would run, with blocking errors and non-blocking notes. */
 export type TablePlan = KeyspacePlan
+
+/** Body of POST /p/:profile/views/preview (SPEC §9.19). `columns` is `['*']` for all columns. */
+export interface ViewRequest {
+  action?: 'create' | 'alter' | 'drop'
+  keyspace: string
+  name: string
+  base_table: string
+  columns: string[]
+  partition_key: string[]
+  clustering: { column: string; order: 'ASC' | 'DESC' }[]
+  extra_where: string
+  options: TableRequest['options']
+  if_not_exists: boolean
+}
+
+export type ViewPlan = KeyspacePlan
 
 export type IndexTarget = 'plain' | 'VALUES' | 'KEYS' | 'ENTRIES' | 'FULL'
 export type IndexKind = 'legacy' | 'sai'

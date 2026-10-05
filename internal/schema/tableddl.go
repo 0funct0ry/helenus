@@ -246,34 +246,7 @@ func PlanTable(s *Snapshot, req TableRequest) TablePlan {
 	if s != nil {
 		major = MajorVersion(s.Version)
 	}
-	if o.DefaultTTLSeconds < 0 || o.DefaultTTLSeconds > maxDefaultTTL {
-		fail(tableStepOptions, "default_ttl_seconds", fmt.Sprintf("Default TTL must be between 0 and %d seconds", maxDefaultTTL))
-	}
-	if o.GCGraceSeconds != nil && *o.GCGraceSeconds < 0 {
-		fail(tableStepOptions, "gc_grace_seconds", "gc_grace_seconds must be at least 0")
-	}
-	if o.BloomFilterFPChance != nil && (*o.BloomFilterFPChance <= 0 || *o.BloomFilterFPChance > 1) {
-		fail(tableStepOptions, "bloom_filter_fp_chance", "Bloom filter false-positive chance must be above 0 and at most 1")
-	}
-	if len(o.Comment) > maxTableComment {
-		fail(tableStepOptions, "comment", fmt.Sprintf("Comment must be at most %d characters", maxTableComment))
-	}
-	switch o.Compaction.Class {
-	case "", CompactionSTCS, CompactionLCS, CompactionTWCS:
-	case CompactionUCS:
-		if major < 5 {
-			fail(tableStepOptions, "compaction", "UnifiedCompactionStrategy needs server 5.0 or later")
-		}
-	default:
-		fail(tableStepOptions, "compaction", fmt.Sprintf("Unknown compaction strategy %s", o.Compaction.Class))
-	}
-	if c := o.Compression.Class; c != "" && c != CompressionNone {
-		if min, ok := compressors[c]; !ok {
-			fail(tableStepOptions, "compression", fmt.Sprintf("Unknown compressor %s", c))
-		} else if major < min {
-			fail(tableStepOptions, "compression", fmt.Sprintf("%s needs server %d.0 or later", c, min))
-		}
-	}
+	checkTableOptions(o, major, func(field, msg string) { fail(tableStepOptions, field, msg) })
 	if o.Compaction.Class == CompactionTWCS && o.DefaultTTLSeconds == 0 {
 		note("Time-window compaction works best with a default TTL")
 	}
@@ -391,7 +364,49 @@ func renderTable(req TableRequest, cols []TableColumn, inKey map[string]bool) st
 	if desc {
 		with = append(with, "CLUSTERING ORDER BY ("+strings.Join(order, ", ")+")")
 	}
-	o := req.Options
+	with = append(with, renderOptions(req.Options)...)
+	if len(with) > 0 {
+		b.WriteString(" WITH " + strings.Join(with, " AND "))
+	}
+	b.WriteString(";")
+	return b.String()
+}
+
+// checkTableOptions validates the optional WITH settings shared by tables and views.
+func checkTableOptions(o TableOptions, major int, fail func(field, msg string)) {
+	if o.DefaultTTLSeconds < 0 || o.DefaultTTLSeconds > maxDefaultTTL {
+		fail("default_ttl_seconds", fmt.Sprintf("Default TTL must be between 0 and %d seconds", maxDefaultTTL))
+	}
+	if o.GCGraceSeconds != nil && *o.GCGraceSeconds < 0 {
+		fail("gc_grace_seconds", "gc_grace_seconds must be at least 0")
+	}
+	if o.BloomFilterFPChance != nil && (*o.BloomFilterFPChance <= 0 || *o.BloomFilterFPChance > 1) {
+		fail("bloom_filter_fp_chance", "Bloom filter false-positive chance must be above 0 and at most 1")
+	}
+	if len(o.Comment) > maxTableComment {
+		fail("comment", fmt.Sprintf("Comment must be at most %d characters", maxTableComment))
+	}
+	switch o.Compaction.Class {
+	case "", CompactionSTCS, CompactionLCS, CompactionTWCS:
+	case CompactionUCS:
+		if major < 5 {
+			fail("compaction", "UnifiedCompactionStrategy needs server 5.0 or later")
+		}
+	default:
+		fail("compaction", fmt.Sprintf("Unknown compaction strategy %s", o.Compaction.Class))
+	}
+	if c := o.Compression.Class; c != "" && c != CompressionNone {
+		if min, ok := compressors[c]; !ok {
+			fail("compression", fmt.Sprintf("Unknown compressor %s", c))
+		} else if major < min {
+			fail("compression", fmt.Sprintf("%s needs server %d.0 or later", c, min))
+		}
+	}
+}
+
+// renderOptions renders the non-default WITH settings as `name = value` parts.
+func renderOptions(o TableOptions) []string {
+	var with []string
 	if o.Comment != "" {
 		with = append(with, "comment = "+quote(o.Comment))
 	}
@@ -421,9 +436,5 @@ func renderTable(req TableRequest, cols []TableColumn, inKey map[string]bool) st
 	default:
 		with = append(with, "compression = "+literalMap(map[string]string{"class": c}))
 	}
-	if len(with) > 0 {
-		b.WriteString(" WITH " + strings.Join(with, " AND "))
-	}
-	b.WriteString(";")
-	return b.String()
+	return with
 }

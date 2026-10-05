@@ -50,7 +50,7 @@ export function ViewsSheet({ views, onOpen }: ViewsSheetProps) {
         )}
         <div className="mt-2.5 flex gap-2 rounded-md bg-surface px-2.5 py-2 text-[12.5px] text-muted">
           <Info size={14} className="mt-0.5 shrink-0" aria-hidden />
-          Views are read-only in Helenus. Edit rows in the base table and Cassandra updates the view.
+          Views cannot be edited row by row. Edit rows in the base table and Cassandra updates the view.
         </div>
       </div>
     </div>

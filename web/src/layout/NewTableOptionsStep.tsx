@@ -3,11 +3,11 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Field } from '../ui/Field'
 import { Select } from '../ui/Select'
 import { DEFAULT_OPTIONS, TTL_UNITS } from '../lib/tableDraft'
-import type { TableDraft, TtlUnit } from '../lib/tableDraft'
+import type { OptionsDraft, TtlUnit } from '../lib/tableDraft'
 
-export interface NewTableOptionsStepProps {
-  draft: TableDraft
-  onChange: (draft: TableDraft) => void
+export interface NewTableOptionsStepProps<D extends { options: OptionsDraft } = { options: OptionsDraft }> {
+  draft: D
+  onChange: (draft: D) => void
   /** Server major version (for example 5); gates UnifiedCompactionStrategy (5+) and ZstdCompressor (4+). */
   serverMajor: number
   /** Visible validation messages by planner field (`comment`, `default_ttl_seconds`, …). */
@@ -17,9 +17,9 @@ export interface NewTableOptionsStepProps {
 /**
  * Step 3 of the New table wizard: optional table settings (comment, default TTL with a unit helper,
  * gc_grace_seconds, compaction, compression, bloom filter chance), collapsed under "Defaults are fine for
- * most tables". Version-gated choices are omitted for older servers. "Reset to defaults" clears them all.
+ * most tables". Also used by the New view wizard. Version-gated choices are omitted for older servers. "Reset to defaults" clears them all.
  */
-export function NewTableOptionsStep({ draft, onChange, serverMajor, errors }: NewTableOptionsStepProps) {
+export function NewTableOptionsStep<D extends { options: OptionsDraft }>({ draft, onChange, serverMajor, errors }: NewTableOptionsStepProps<D>) {
   const [expanded, setExpanded] = useState(false)
   const o = draft.options
   const set = (patch: Partial<typeof o>) => onChange({ ...draft, options: { ...o, ...patch } })

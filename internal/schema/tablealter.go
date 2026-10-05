@@ -15,6 +15,7 @@ const (
 	TableTruncate     = "truncate"
 	TableDrop         = "drop"
 	ViewDrop          = "drop_view"
+	ViewOptionsAlter  = "alter_view"
 )
 
 var speculativeRetryRe = regexp.MustCompile(`(?i)^(NONE|ALWAYS|\d+(\.\d+)?(ms|p|percentile))$`)
@@ -59,6 +60,18 @@ func planAlterTable(s *Snapshot, req TableRequest) TablePlan {
 			fail("name", fmt.Sprintf("View %s not found in %s", req.Name, ks.Name))
 		} else {
 			p.Statement = fmt.Sprintf("DROP MATERIALIZED VIEW %s.%s;", Ident(ks.Name), Ident(req.Name))
+		}
+		return p
+	case req.Action == ViewOptionsAlter:
+		v := ks.View(req.Name)
+		if v == nil {
+			fail("name", fmt.Sprintf("View %s not found in %s", req.Name, ks.Name))
+			return p
+		}
+		// A view's options live in the same shape as a table's, so reuse the table option planner.
+		planAlterOptions(s, &Table{Keyspace: v.Keyspace, Name: v.Name, Options: v.Options}, Ident(v.Keyspace)+"."+Ident(v.Name), req.Alter, &p)
+		if p.Statement != "" {
+			p.Statement = strings.Replace(p.Statement, "ALTER TABLE ", "ALTER MATERIALIZED VIEW ", 1)
 		}
 		return p
 	default:

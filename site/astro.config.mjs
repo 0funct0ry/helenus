@@ -22,6 +22,7 @@ export default defineConfig({
             { label: 'Change a table', slug: 'docs/change-a-table' },
             { label: 'Truncate or drop a table', slug: 'docs/truncate-or-drop-a-table' },
             { label: 'Add an index to a table', slug: 'docs/add-an-index-to-a-table' },
+            { label: 'Create a materialized view', slug: 'docs/create-a-materialized-view' },
             { label: 'Understand key and type markers', slug: 'docs/key-and-type-markers' },
             { label: 'DESCRIBE reference', slug: 'docs/describe-reference' },
           ],

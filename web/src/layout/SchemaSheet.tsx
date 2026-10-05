@@ -15,7 +15,10 @@ import type { Column, Index } from '../lib/schemaModel'
 /** What the Schema sub-view needs to offer edits on a table. */
 export interface SchemaEditProps {
   keyspace: string
+  /** The table, or the view when `view` is set. */
   table: string
+  /** Edit a materialized view: only the Options panel is offered. */
+  view?: boolean
   /** UDT names of the keyspace, offered by the type picker of the Add column row. */
   udts: string[]
   serverMajor: number
@@ -42,6 +45,7 @@ export function SchemaSheet({ columns, options = {}, indexes = [], edit }: Schem
   const [pending, setPending] = useState<Pending | null>(null)
   const [draft, setDraft] = useState(() => newColumn())
   const close = () => setPending(null)
+  const colEdit = edit && !edit.view
   const applied = () => {
     setDraft(newColumn())
     edit?.onChanged()
@@ -83,7 +87,7 @@ export function SchemaSheet({ columns, options = {}, indexes = [], edit }: Schem
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr>
-              {['Key', 'Name', 'Type', ...(edit ? ['Actions'] : [])].map((h) => (
+              {['Key', 'Name', 'Type', ...(colEdit ? ['Actions'] : [])].map((h) => (
                 <th key={h} className="border-b border-line bg-surface px-2.5 py-1.5 text-left font-medium text-muted">
                   {h}
                 </th>
@@ -100,7 +104,7 @@ export function SchemaSheet({ columns, options = {}, indexes = [], edit }: Schem
                 <td className="border-b border-line2 px-2.5 py-1.5">
                   <TypeBadge type={c.type} />
                 </td>
-                {edit && (
+                {colEdit && (
                   <td className="border-b border-line2 px-2.5 py-1.5">
                     <span className="flex items-center gap-1.5">
                       {c.kind === 'partition' || c.kind === 'clustering' ? (
@@ -126,7 +130,7 @@ export function SchemaSheet({ columns, options = {}, indexes = [], edit }: Schem
             ))}
           </tbody>
         </table>
-        {edit && (
+        {colEdit && (
           <ul className="m-0 mt-2 list-none p-0">
             <ColumnRow column={draft} index={0} count={1} udts={edit.udts} onChange={setDraft} onRemove={() => undefined} onMove={() => undefined} />
             <li className="py-2">
@@ -170,7 +174,7 @@ export function SchemaSheet({ columns, options = {}, indexes = [], edit }: Schem
           <TableActionDialog
             title="Change options"
             subtitle={`${edit.keyspace}.${edit.table}`}
-            request={{ action: 'options', keyspace: edit.keyspace, name: edit.table, alter: pending.alter }}
+            request={{ action: edit.view ? 'alter_view' : 'options', keyspace: edit.keyspace, name: edit.table, alter: pending.alter }}
             applyLabel="Apply changes"
             onApplied={applied}
             onClose={close}

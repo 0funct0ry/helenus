@@ -65,6 +65,15 @@ describe('TableView', () => {
     expect(await screen.findByRole('button', { name: /Insert row/ })).toBeDisabled()
     expect(screen.queryByRole('tab', { name: /Views/ })).not.toBeInTheDocument()
   })
+  it('offers Edit options and Drop view on a materialized view', async () => {
+    render(<TableView tab={viewTab} />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Schema' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Edit options' }))
+    expect(screen.getByRole('heading', { name: 'Edit options' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add column…' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Drop view…' }))
+    expect(await screen.findByRole('heading', { name: 'Drop view' })).toBeInTheDocument()
+  })
   it('opens the DDL in a query tab', async () => {
     render(<TableView tab={tableTab} />)
     await userEvent.click(await screen.findByRole('tab', { name: 'DDL' }))

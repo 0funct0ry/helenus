@@ -6,6 +6,7 @@ import { IconButton } from "../ui/IconButton";
 import { Select } from "../ui/Select";
 import { ResultsGrid } from "./ResultsGrid";
 import { SchemaSheet } from "./SchemaSheet";
+import { DropViewDialog } from "./DropViewDialog";
 import { DdlView } from "./DdlView";
 import { ViewsSheet } from "./ViewsSheet";
 import { IndexesSheet } from "./IndexesSheet";
@@ -52,6 +53,8 @@ export interface TableViewProps {
 export function TableView({ tab }: TableViewProps) {
   const [sub, setSub] = useState("data");
   const [editSchema, setEditSchema] = useState(false);
+  const [droppingView, setDroppingView] = useState(false);
+  const closeTab = useWorkspace((s) => s.close);
   const consistency = useWorkspace((s) => s.consistency);
   const setConsistency = useWorkspace((s) => s.setConsistency);
   const open = useWorkspace((s) => s.open);
@@ -340,27 +343,37 @@ export function TableView({ tab }: TableViewProps) {
         onClose={() => setCounting(false)}
         onRun={data.count}
       />
-      {sub === "schema" && !isView && !ks?.system && (
-        <div className="flex flex-none items-center border-b border-line2 px-3 py-1">
+      {sub === "schema" && !ks?.system && (
+        <div className="flex flex-none items-center gap-1 border-b border-line2 px-3 py-1">
           <Button
             variant="ghost"
             aria-pressed={editSchema}
             onClick={() => setEditSchema(!editSchema)}
           >
-            {editSchema ? "Done editing" : "Edit"}
+            {editSchema
+              ? "Done editing"
+              : isView
+                ? "Edit options"
+                : "Edit"}
           </Button>
+          {isView && view && (
+            <Button variant="ghost" onClick={() => setDroppingView(true)}>
+              Drop view…
+            </Button>
+          )}
         </div>
       )}
       {sub === "schema" && (
         <SchemaSheet
           columns={columns}
-          options={table?.options}
+          options={table?.options ?? view?.options}
           indexes={table?.indexes}
           edit={
-            editSchema && table && !ks?.system
+            editSchema && (table || view) && !ks?.system
               ? {
                   keyspace: tab.keyspace,
                   table: tab.object,
+                  view: isView || undefined,
                   udts: ks?.types.map((u) => u.name) ?? [],
                   serverMajor:
                     parseInt(cluster?.release_version ?? "0", 10) || 0,
@@ -383,6 +396,17 @@ export function TableView({ tab }: TableViewProps) {
           onOpenInQuery={() =>
             newQuery({ keyspace: tab.keyspace, cql: ddlQuery.data?.trim() })
           }
+        />
+      )}
+      {droppingView && (
+        <DropViewDialog
+          keyspace={tab.keyspace}
+          view={tab.object}
+          onDropped={() => {
+            closeTab(tab.id);
+            refreshSchema.mutate();
+          }}
+          onClose={() => setDroppingView(false)}
         />
       )}
       {sub === "deps" && (

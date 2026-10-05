@@ -156,6 +156,7 @@ describe("SchemaTree", () => {
         "Open",
         "New query here",
         "Edit schema",
+        "New view…",
         "New index…",
         "Truncate…",
         "Drop table…",

@@ -49,6 +49,7 @@ export interface MaterializedView {
   baseTable: string
   columns: Column[]
   filter: string
+  options?: Record<string, string>
 }
 
 export interface Udt {

@@ -1,0 +1,30 @@
+---
+title: Create a materialized view
+description: Build a materialized view with a four-step wizard, change its options, or drop it.
+---
+
+A materialized view keeps a second copy of a table's rows under a different primary key, so you can query by a column the base table does not partition on. Materialized views are experimental in Cassandra and can drift from the base table, so Helenus shows that note on every review.
+
+## Create a view
+
+1. Choose **New view…** in a table's menu, or the **+** on the **Views** group of a keyspace. From a table's menu the base table is preselected.
+2. **Base & columns.** Name the view, pick the base table and tick the columns to select, or turn on **All columns**. Key columns are always selected. Static columns cannot be in a view, and counter tables cannot have one.
+3. **Keys.** The base table's key columns are already placed in their original positions and locked; you can reorder them and set ASC or DESC on clustering columns. You may add **at most one** non-key column of the base table to the view key. Adding two shows "A view can add at most one non-key column to the primary key" and blocks **Next**. An optional extra `WHERE` restriction is appended as typed.
+4. **Options.** The same optional settings as a new table.
+5. **Review.** Check the CQL, then choose **Create view**.
+
+For example:
+
+```sql
+CREATE MATERIALIZED VIEW shop.orders_by_status AS
+  SELECT merchant, id, total
+  FROM shop.orders
+  WHERE status IS NOT NULL AND merchant IS NOT NULL AND id IS NOT NULL
+  PRIMARY KEY (status, merchant, id);
+```
+
+If the cluster has materialized views disabled, Cassandra's message appears on the Review step and the wizard stays open.
+
+## Change options or drop a view
+
+Open the view, choose the **Schema** tab, then **Edit options** to change comment, TTL, compaction and other settings (`ALTER MATERIALIZED VIEW …`). **Drop view…** asks you to type the view name. The view also lists under its base table, and under **Dependencies** on that table. All changes appear in **Schema changes**.
