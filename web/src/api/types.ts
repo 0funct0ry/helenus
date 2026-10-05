@@ -248,6 +248,8 @@ export interface QueryRequest {
   page_state: string | null
   allow_filtering: boolean
   trace: boolean
+  /** `ui` marks a statement issued by a UI dialog so the server logs it in the schema change history. */
+  ddl_origin?: 'ui'
 }
 
 /** Response of `POST /p/{profile}/query`. Rows are positional, aligned with `columns`. */
@@ -414,4 +416,27 @@ export interface DepItem {
 export interface DepsResponse {
   dependents: DepItem[]
   dependencies: DepItem[]
+}
+
+/** One logged UI DDL statement (SPEC §9.15). The statement has passwords masked. */
+export interface SchemaChange {
+  id: number
+  keyspace: string
+  object_kind: string
+  object_name: string
+  action: string
+  statement: string
+  /** Empty when no reverse could be derived. */
+  reverse: string
+  reverse_note: string
+  status: 'ok' | 'error'
+  error: string
+  duration_ms: number
+  created_at: string
+}
+
+/** Response of `GET /p/{profile}/schema-changes`; `next_before` is null on the last page. */
+export interface SchemaChangesPage {
+  items: SchemaChange[]
+  next_before: number | null
 }

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, describeError } from './client'
-import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, DepsResponse, PreviewStatement, QueryRequest, QueryResponse, SchemaSnapshot, SplitStatement, TestResult, TraceResponse } from './types'
+import type { ApiProfile, ApplyResponse, BundleInfo, ChangesRequest, ClusterInfo, ConnectResult, DepsResponse, PreviewStatement, QueryRequest, QueryResponse, SchemaChangesPage, SchemaSnapshot, SplitStatement, TestResult, TraceResponse } from './types'
 import { toKeyspaces } from './schema'
 import { useWorkspace } from '../store/workspace'
 
@@ -148,7 +148,13 @@ export function useRunQuery(profile: string) {
   const qc = useQueryClient()
   return useCallback(
     async (body: QueryRequest, signal?: AbortSignal) => {
-      const res = await api<QueryResponse>(`/p/${enc(profile)}/query`, { body, signal })
+      let res: QueryResponse
+      try {
+        res = await api<QueryResponse>(`/p/${enc(profile)}/query`, { body, signal })
+      } finally {
+        // Failed UI DDL is logged too.
+        if (body.ddl_origin === 'ui') void qc.invalidateQueries({ queryKey: schemaChangesKey(profile) })
+      }
       if (res.kind === 'schema_change') {
         void qc.invalidateQueries({ queryKey: schemaKey(profile) })
         void qc.invalidateQueries({ queryKey: ['ddl', profile] })
@@ -203,5 +209,33 @@ export function useDeps(profile: string, ref: { kind: string; keyspace: string; 
       if (ref.signature) q.set('signature', ref.signature)
       return api<DepsResponse>(`/p/${enc(profile)}/deps?${q}`)
     },
+  })
+}
+
+export const schemaChangesKey = (profile: string) => ['schema-changes', profile] as const
+const CHANGES_PAGE = 50
+
+/** The profile's schema change history, newest first, fetched in pages of 50; `q` filters server-side. */
+export function useSchemaChanges(profile: string, q: string) {
+  return useInfiniteQuery({
+    queryKey: [...schemaChangesKey(profile), q],
+    enabled: !!profile,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ limit: String(CHANGES_PAGE) })
+      if (pageParam) params.set('before', String(pageParam))
+      if (q) params.set('q', q)
+      return api<SchemaChangesPage>(`/p/${enc(profile)}/schema-changes?${params}`)
+    },
+    getNextPageParam: (last) => last.next_before ?? undefined,
+  })
+}
+
+/** Clears the profile's schema change history. */
+export function useClearSchemaChanges(profile: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api<{ deleted: number }>(`/p/${enc(profile)}/schema-changes`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: schemaChangesKey(profile) }),
   })
 }

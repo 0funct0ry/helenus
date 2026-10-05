@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"time"
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
 	"github.com/gin-gonic/gin"
 
 	"github.com/0funct0ry/helenus/internal/cql"
 	"github.com/0funct0ry/helenus/internal/exec"
+	"github.com/0funct0ry/helenus/internal/schema"
 )
 
 type queryRequest struct {
@@ -22,6 +24,8 @@ type queryRequest struct {
 	PageState         *string `json:"page_state"`
 	AllowFiltering    bool    `json:"allow_filtering"`
 	Trace             bool    `json:"trace"`
+	// DDLOrigin is "ui" when a UI dialog issued the statement; only those are logged (SPEC §9.15).
+	DDLOrigin string `json:"ddl_origin"`
 }
 
 // query executes one statement (SPEC §11.3). Cancelling the HTTP request
@@ -53,7 +57,16 @@ func (a *api) query(c *gin.Context) {
 		}
 		req.PageState = ps
 	}
+	var before *schema.Snapshot
+	record := in.DDLOrigin == "ui" && a.store != nil
+	if record {
+		before, _ = a.conn.Schema(c.Request.Context(), p.Name, p, false)
+	}
+	started := time.Now()
 	res, err := a.conn.Query(c.Request.Context(), p.Name, p, req)
+	if record {
+		a.recordChange(p.Name, in.Keyspace, req.CQL, before, err, time.Since(started))
+	}
 	if err != nil {
 		status, code, msg, detail := queryFailure(err, req.CQL)
 		fail(c, status, code, msg, detail)

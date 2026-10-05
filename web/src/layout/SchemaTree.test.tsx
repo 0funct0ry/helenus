@@ -26,7 +26,8 @@ describe('SchemaTree', () => {
     expect(screen.getAllByRole('treeitem', { name: /^Types/ })[0]).toBeInTheDocument()
     expect(screen.getByRole('treeitem', { name: /System/ })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText('system_auth')).not.toBeInTheDocument()
-    expect(screen.getAllByText('NTS · eu-west-1:3')).toHaveLength(2)
+    expect(screen.getAllByRole('img', { name: 'Replication: NTS · eu-west-1:3' })).toHaveLength(2)
+    expect(screen.getByRole('img', { name: 'Counter table' })).toBeInTheDocument()
     expect(screen.getAllByText('2 keyspaces')).toHaveLength(2) // footer count and the System group
     expect(screen.getByText('4 tables')).toBeInTheDocument()
   })

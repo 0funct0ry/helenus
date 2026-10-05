@@ -23,6 +23,7 @@ var uiCmd = &cobra.Command{
 			ConfigPath: cfgPath,
 			Addr:       s.V.GetString("ui.addr"),
 			Open:       s.V.GetBool("ui.open_browser"),
+			DB:         s.V.GetString("paths.db"),
 			Version:    Version,
 			Stderr:     cmd.ErrOrStderr(),
 		})

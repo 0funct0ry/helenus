@@ -1,0 +1,43 @@
+---
+title: Review and undo schema changes
+description: See every DDL statement the web UI ran, and open a reverse script to undo it.
+---
+
+Every DDL statement you run from a Helenus dialog or wizard (new keyspace, table or type, field changes, drops) is logged for the active profile. Open the **Schema changes** tab next to **Schema** in the left dock to browse the log.
+
+Each entry shows when it ran (hover for the exact time), an action badge, the object, a status dot and how long it took. Expand an entry to see:
+
+- the **statement** that ran,
+- the **server error**, if it failed,
+- the **reverse script** and a note about what it cannot do.
+
+## Undo a change
+
+Choose **Open reverse in editor**. Helenus opens the reverse CQL in a new query tab and runs nothing, so you can read and edit it first. The button is disabled when no reverse could be derived.
+
+| Statement | Reverse |
+|---|---|
+| `CREATE` an object | `DROP` it (functions and aggregates keep their signature) |
+| `DROP` an object or keyspace | The `CREATE` statements from the schema before the drop. Data is not restored. |
+| `ALTER TABLE … ADD c` | `ALTER TABLE … DROP c` (the column's data is lost) |
+| `ALTER TABLE … DROP c` | `ALTER TABLE … ADD c <type>` (data is not restored) |
+| `ALTER TABLE … RENAME a TO b` | `RENAME b TO a` |
+| `ALTER TABLE … WITH …` | `WITH` the previous values of exactly the options you changed |
+| `ALTER KEYSPACE` | The previous replication and `durable_writes` |
+| `ALTER TYPE … RENAME` | Rename back. Adding a field has no reverse, because Cassandra cannot remove UDT fields. |
+| `GRANT` / `REVOKE` | The opposite statement |
+| `CREATE ROLE` | `DROP ROLE` |
+| `TRUNCATE`, `ALTER ROLE … PASSWORD` | None |
+
+Reverse scripts are best effort and never restore data.
+
+## What is and is not logged
+
+- Only statements issued by the UI are logged. Statements you type and run in the query editor or the shell are not.
+- Failed statements are logged with the server's error and no reverse script.
+- A password in a statement is replaced with `'••••••'` before it is stored and is never returned by the API.
+- History is kept per profile in the SQLite file given by `-D, --db` (`HELENUS_DB`, `paths.db`; default: Helenus's data directory), so it survives restarts.
+
+## Search and clear
+
+Type in the search box to match statement text or object names. The list loads 50 entries at a time as you scroll. **Clear history** removes only the active profile's entries after you confirm.

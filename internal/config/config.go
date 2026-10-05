@@ -92,6 +92,14 @@ func configDir() string { return xdgDir("XDG_CONFIG_HOME", ".config") }
 // DataDir returns the directory for the SQLite file and bundles.
 func DataDir() string { return xdgDir("XDG_DATA_HOME", filepath.Join(".local", "share")) }
 
+// DBPath returns the SQLite file: override when set, else helenus.db in DataDir.
+func DBPath(override string) string {
+	if override != "" {
+		return override
+	}
+	return filepath.Join(DataDir(), "helenus.db")
+}
+
 // StateDir returns the directory for shell history.
 func StateDir() string { return xdgDir("XDG_STATE_HOME", filepath.Join(".local", "state")) }
 

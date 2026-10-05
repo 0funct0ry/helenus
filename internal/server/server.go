@@ -20,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/0funct0ry/helenus/internal/config"
+	"github.com/0funct0ry/helenus/internal/store"
 	"github.com/0funct0ry/helenus/web"
 )
 
@@ -37,6 +38,10 @@ type Options struct {
 	DataDir string
 	// Connector backs the connect routes; defaults to a conn.Manager.
 	Connector Connector
+	// DB is the SQLite file Run opens when Store is nil; empty means the XDG data path.
+	DB string
+	// Store holds the schema change history. Without one the history routes are empty and nothing is recorded.
+	Store *store.Store
 }
 
 // Run serves until ctx is cancelled or SIGINT/SIGTERM arrives, then shuts down gracefully.
@@ -55,6 +60,15 @@ func Run(ctx context.Context, opts Options) error {
 		opts.Connector = newManagerConnector()
 	}
 	defer opts.Connector.CloseAll()
+	if opts.Store == nil {
+		st, err := store.Open(config.DBPath(opts.DB))
+		if err != nil {
+			_ = ln.Close()
+			return fmt.Errorf("open database: %w", err)
+		}
+		defer func() { _ = st.Close() }()
+		opts.Store = st
+	}
 	srv := &http.Server{Handler: NewRouter(opts), ReadHeaderTimeout: 10 * time.Second}
 
 	url := "http://" + ln.Addr().String()
@@ -109,7 +123,7 @@ func NewRouter(opts Options) http.Handler {
 	r.GET("/api/v1/meta", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"version": opts.Version, "auth_enabled": false})
 	})
-	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector}).routes(r.Group("/api/v1"))
+	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store}).routes(r.Group("/api/v1"))
 	r.NoRoute(staticHandler(opts.Assets))
 	return r
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/store"
 	"github.com/0funct0ry/helenus/internal/trace"
 )
 
@@ -103,6 +104,7 @@ type api struct {
 	configPath string
 	dataDir    string
 	conn       Connector
+	store      *store.Store
 	// writeMu serializes config file edits made through the API.
 	writeMu sync.Mutex
 }
@@ -145,6 +147,8 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/tables/preview", a.tablesPreview)
 	p.POST("/complete", a.complete)
 	p.GET("/deps", a.deps)
+	p.GET("/schema-changes", a.listSchemaChanges)
+	p.DELETE("/schema-changes", a.clearSchemaChanges)
 	p.GET("/schema", a.schema)
 	p.POST("/schema/refresh", a.refreshSchema)
 	p.GET("/keyspaces/:ks/tables/:t", a.tableDetail)

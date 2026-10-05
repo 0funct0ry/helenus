@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { TitleBar } from './layout/TitleBar'
-import { SchemaTree } from './layout/SchemaTree'
+import { LeftDock } from './layout/LeftDock'
 import { TabBar } from './layout/TabBar'
 import { TableView } from './layout/TableView'
 import { QueryView } from './layout/QueryView'
@@ -44,7 +44,7 @@ export function App() {
     <div className="grid h-full grid-rows-[34px_1fr_24px]">
       <TitleBar />
       <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
-        <SchemaTree />
+        <LeftDock />
         <main className="flex min-h-0 min-w-0 flex-col">
           <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0 }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (

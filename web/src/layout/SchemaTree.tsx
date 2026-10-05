@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { Braces, Copy, Menu, Database, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { Braces, Copy, EllipsisVertical, Database, Hash, Layers, ExternalLink, Eye, FileText, FolderPlus, FunctionSquare, Lock, Zap, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { TreeRow } from './TreeRow'
 import { SchemaContextMenu } from './SchemaContextMenu'
 import { NewTypeDialog } from './NewTypeDialog'
@@ -10,6 +10,7 @@ import type { ContextMenuItem } from './SchemaContextMenu'
 import { KeyMarker } from '../ui/KeyMarker'
 import { TypeBadge } from '../ui/TypeBadge'
 import { IconButton } from '../ui/IconButton'
+import { Tooltip } from '../ui/Tooltip'
 import { useCopyDdl, useProfiles, useRefreshSchema, useSchema } from '../api/hooks'
 import type { DdlObject } from '../api/hooks'
 import { describeError } from '../api/client'
@@ -148,7 +149,7 @@ export function SchemaTree() {
                 label={add.label}
                 icon={<Plus size={13} />}
                 onClick={add.run}
-                className="absolute right-7 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
+                className="absolute right-1 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
               />
             )}
           </div>
@@ -163,17 +164,17 @@ export function SchemaTree() {
     return (
       <div key={k.name} role="group">
         <div data-ks={k.name} className="group relative" onContextMenu={(e) => onContext(e, k.name, 'keyspace', k.name)}>
-          <TreeRow indent={6} label={k.name} selected={selectedKs === k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : k.replication} onClick={() => toggle(`ks:${k.name}`)} />
+          <TreeRow indent={6} label={k.name} selected={selectedKs === k.name} icon={<Database size={14} />} expanded={kOpen} meta={k.system ? undefined : <span className="mr-5 inline-flex"><Tooltip content={`Replication: ${k.replication}`}><span role="img" aria-label={`Replication: ${k.replication}`}><Layers size={13} /></span></Tooltip></span>} onClick={() => toggle(`ks:${k.name}`)} />
           {!k.system && (
             <IconButton
               label="Keyspace actions"
-              icon={<Menu size={13} />}
+              icon={<EllipsisVertical size={13} />}
               aria-haspopup="menu"
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect()
                 setMenu({ x: r.left, y: r.bottom, keyspace: k.name, kind: 'keyspace', name: k.name })
               }}
-              className={`absolute right-7 top-[1px] focus:opacity-100 group-hover:opacity-100 ${selectedKs === k.name ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute right-1 top-[1px] focus:opacity-100 group-hover:opacity-100 ${selectedKs === k.name ? 'opacity-100' : 'opacity-0'}`}
             />
           )}
         </div>
@@ -194,7 +195,7 @@ export function SchemaTree() {
                       mono
                       selected={sel}
                       icon={<Table2 size={14} />}
-                      meta={t.counter ? 'counter' : undefined}
+                      meta={t.counter ? <Tooltip content="Counter table"><span role="img" aria-label="Counter table"><Hash size={13} /></span></Tooltip> : undefined}
                       title={keySummary(t.columns)}
                       onClick={() => open('table', k.name, t.name)}
                     />
