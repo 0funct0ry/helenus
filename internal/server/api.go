@@ -187,6 +187,8 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.GET("/deps", a.deps)
 	p.GET("/schema-changes", a.listSchemaChanges)
 	p.DELETE("/schema-changes", a.clearSchemaChanges)
+	p.GET("/ui-state", uiStateAPI{a}.get)
+	p.PUT("/ui-state", uiStateAPI{a}.put)
 	p.GET("/schema", a.schema)
 	p.GET("/advise", a.adviseGet)
 	p.POST("/schema/refresh", a.refreshSchema)

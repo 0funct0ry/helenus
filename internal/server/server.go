@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/0funct0ry/helenus/internal/auth"
 	"github.com/0funct0ry/helenus/internal/config"
 	"github.com/0funct0ry/helenus/internal/jobs"
 	"github.com/0funct0ry/helenus/internal/store"
@@ -45,6 +46,10 @@ type Options struct {
 	Store *store.Store
 	// MaxUpload is the largest import upload in bytes; zero means 1 GB.
 	MaxUpload int64
+	// Auth requires sign-in on every API route except meta, healthz and auth/login (SPEC §12.2).
+	Auth bool
+	// TLSCert and TLSKey serve HTTPS when both are set.
+	TLSCert, TLSKey string
 }
 
 // Run serves until ctx is cancelled or SIGINT/SIGTERM arrives, then shuts down gracefully.
@@ -55,10 +60,17 @@ func Run(ctx context.Context, opts Options) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if err := CheckBind(opts.Addr, opts.Auth); err != nil {
+		return err
+	}
+	if (opts.TLSCert == "") != (opts.TLSKey == "") {
+		return errors.New("--tls-cert and --tls-key must be given together")
+	}
 	ln, err := net.Listen("tcp", opts.Addr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", opts.Addr, err)
 	}
+	opts.Addr = ln.Addr().String()
 	if opts.Connector == nil {
 		opts.Connector = newManagerConnector()
 	}
@@ -72,10 +84,23 @@ func Run(ctx context.Context, opts Options) error {
 		defer func() { _ = st.Close() }()
 		opts.Store = st
 	}
+	if opts.Auth {
+		if n, err := opts.Store.CountUsers(); err != nil || n == 0 {
+			_ = ln.Close()
+			return errors.New("sign-in is on but there are no users. Create one with: helenus user add <username>")
+		}
+	}
 	srv := &http.Server{Handler: NewRouter(opts), ReadHeaderTimeout: 10 * time.Second}
 
-	url := "http://" + ln.Addr().String()
+	scheme := "http"
+	if opts.TLSCert != "" {
+		scheme = "https"
+	}
+	url := scheme + "://" + opts.Addr
 	fmt.Fprintf(opts.Stderr, "helenus ui listening on %s\n", url)
+	if InsecureBind(opts.Addr, opts.TLSCert != "") {
+		fmt.Fprintf(opts.Stderr, "warning: %s is reachable from the network over plain HTTP; passwords and sessions can be sniffed. Serve HTTPS with --tls-cert and --tls-key.\n", opts.Addr)
+	}
 	if opts.Open {
 		if err := openBrowser(url); err != nil {
 			fmt.Fprintf(opts.Stderr, "could not open the browser: %v\n", err)
@@ -83,7 +108,13 @@ func Run(ctx context.Context, opts Options) error {
 	}
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- srv.Serve(ln) }()
+	go func() {
+		if opts.TLSCert != "" {
+			errCh <- srv.ServeTLS(ln, opts.TLSCert, opts.TLSKey)
+			return
+		}
+		errCh <- srv.Serve(ln)
+	}()
 	select {
 	case err := <-errCh:
 		return err
@@ -119,14 +150,42 @@ func NewRouter(opts Options) http.Handler {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	// Client IPs for rate limiting come from the socket, never from forwarded headers.
+	_ = r.SetTrustedProxies(nil)
 	// Request logging goes to stderr; request bodies are never logged (SPEC §11.4).
 	r.Use(gin.LoggerWithWriter(opts.Stderr), gin.Recovery())
 
+	tls := opts.TLSCert != "" && opts.TLSKey != ""
+	var svc *auth.Service
+	if opts.Auth && opts.Store != nil {
+		svc = auth.New(opts.Store)
+	} else if opts.Addr != "" {
+		r.Use(hostCheck(opts.Addr))
+	}
+
 	r.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
-	r.GET("/api/v1/meta", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"version": opts.Version, "auth_enabled": false})
+	public := r.Group("/api/v1", csrf())
+	public.GET("/meta", func(c *gin.Context) {
+		meta := gin.H{"version": opts.Version, "auth_enabled": svc != nil, "tls": tls, "insecure_bind": opts.Addr != "" && InsecureBind(opts.Addr, tls)}
+		if svc != nil {
+			if tok, err := c.Cookie(sessionCookie); err == nil {
+				if sess, err := svc.Verify(tok); err == nil {
+					meta["user"] = sess.User.Username
+				}
+			}
+		}
+		c.JSON(http.StatusOK, meta)
 	})
-	(&api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store, jobs: jobs.New(), maxUpload: opts.MaxUpload}).routes(r.Group("/api/v1"))
+	protected := public.Group("")
+	h := &api{configPath: opts.ConfigPath, dataDir: opts.DataDir, conn: opts.Connector, store: opts.Store, jobs: jobs.New(), maxUpload: opts.MaxUpload}
+	if svc != nil {
+		a := &authAPI{svc: svc, secure: tls}
+		public.POST("/auth/login", a.login)
+		protected.Use(requireAuth(svc, tls))
+		protected.POST("/auth/logout", a.logout)
+		protected.GET("/auth/me", a.me)
+	}
+	h.routes(protected)
 	r.NoRoute(staticHandler(opts.Assets))
 	return r
 }

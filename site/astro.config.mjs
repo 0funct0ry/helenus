@@ -63,6 +63,14 @@ export default defineConfig({
             { label: 'Profiles reference', slug: 'docs/profiles-reference' },
           ],
         },
+        {
+          label: 'Secure',
+          items: [
+            { label: 'Protect the web UI with a password', slug: 'docs/protect-the-web-ui-with-a-password' },
+            { label: 'Run Helenus on a shared machine', slug: 'docs/run-helenus-on-a-shared-machine' },
+            { label: 'Security reference', slug: 'docs/security-reference' },
+          ],
+        },
       ],
     }),
   ],

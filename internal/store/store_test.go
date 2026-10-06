@@ -32,7 +32,7 @@ func TestOpenWALAndMigrate(t *testing.T) {
 	}
 	defer func() { _ = s2.Close() }()
 	var n int
-	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 3 {
+	if err := s2.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil || n != 4 {
 		t.Fatalf("migrations applied: %d, %v", n, err)
 	}
 }

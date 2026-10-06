@@ -1,0 +1,39 @@
+---
+title: Run Helenus on a shared machine
+description: Bind helenus ui to a network address safely, with sign-in and HTTPS.
+---
+
+Helenus refuses to listen on a non-loopback address without sign-in, because anyone who could reach the port could run CQL against every cluster you have saved.
+
+```bash
+helenus ui --addr 0.0.0.0:4042
+```
+
+```text
+Error: refusing to listen on 0.0.0.0:4042: it is not a loopback address and sign-in is off.
+...
+  1. helenus user add <username>
+  2. start with --auth (or set HELENUS_AUTH=true, or ui.auth.enabled: true in the config file)
+```
+
+## Steps
+
+1. Create at least one user: `helenus user add alice`.
+2. Start with sign-in: `helenus ui --addr 0.0.0.0:4042 --auth`.
+3. Serve HTTPS so passwords and session cookies are not sent in clear text:
+
+```bash
+helenus ui --addr 0.0.0.0:4042 --auth --tls-cert server.crt --tls-key server.key
+```
+
+Without TLS, a network bind still starts, but Helenus prints a warning and the status bar shows **Not secure: plain HTTP on the network**. The session cookie is marked `Secure` only when Helenus itself serves HTTPS.
+
+The same settings are available as `HELENUS_TLS_CERT`, `HELENUS_TLS_KEY`, `ui.tls.cert` and `ui.tls.key`.
+
+## Behind a reverse proxy
+
+Keep Helenus on loopback (`127.0.0.1:4042`) and let the proxy terminate TLS. With sign-in off, Helenus only accepts requests whose `Host` header is `localhost`, `127.0.0.1` or `[::1]` on the listen port, and answers anything else with 421, so the proxy must forward such a Host header, or you should turn sign-in on. Rate limiting uses the connecting socket address, not `X-Forwarded-For`, so behind a proxy all sign-ins share one address limit.
+
+## Share the profiles, not the passwords
+
+Everyone who signs in uses the same saved profiles and therefore the same Cassandra credentials. Create separate Cassandra roles per person if you need to tell them apart on the cluster.

@@ -185,12 +185,6 @@ func describeFailure(ctx context.Context, p config.Profile, cause error) error {
 	return fmt.Errorf("connection failed at the %s stage: %s", res.FailedStage, res.Error)
 }
 
-// notImplemented reports an unbuilt command and exits with the usage code (2).
-func notImplemented(what, milestone string) {
-	fmt.Fprintf(os.Stderr, "%s: not implemented yet (planned for %s)\n", what, milestone)
-	os.Exit(cli.ExitUsage)
-}
-
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

@@ -3,6 +3,8 @@ import { StatusDot } from '../ui/StatusDot'
 import { JobsIndicator } from './JobsIndicator'
 import { useCluster, useProfiles } from '../api/hooks'
 import { useWorkspace } from '../store/workspace'
+import { useMeta } from '../api/useAuth'
+import { InsecureBindBadge } from './InsecureBindBadge'
 
 /**
  * 24px footer: profile status, server version, datacenter and node count (from /cluster), TLS, a
@@ -15,6 +17,7 @@ export function StatusBar() {
   const cursor = useWorkspace((s) => s.cursor)
   const activeKind = useWorkspace((s) => s.tabs.find((t) => t.id === s.activeId)?.kind)
   const { data: profiles = [] } = useProfiles()
+  const { data: meta } = useMeta()
   const p = profiles.find((x) => x.name === profileId)
   const connected = conn?.status === 'connected'
   const { data: cluster } = useCluster(profileId, connected)
@@ -48,6 +51,7 @@ export function StatusBar() {
           Insecure TLS
         </span>
       )}
+      {meta?.insecure_bind && <InsecureBindBadge className={item} />}
       {conn?.status === 'error' && conn.error && <span className={`${item} min-w-0 truncate text-danger`}>{conn.error}</span>}
       <div className="flex-1" />
       <JobsIndicator profile={profileId} enabled={connected} className={item} />

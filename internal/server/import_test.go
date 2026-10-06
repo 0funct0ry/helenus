@@ -29,6 +29,7 @@ func importUploadReq(e *env, name, content string) *httptest.ResponseRecorder {
 	_ = mw.Close()
 	req := httptest.NewRequest("POST", "/api/v1/p/local/import/upload", &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("X-Helenus-Request", "1")
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, req)
 	return rec

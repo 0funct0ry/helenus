@@ -17,6 +17,10 @@ import { useBootstrapProfile } from './api/useBootstrap'
 import { useSchema } from './api/hooks'
 import { useWorkspace } from './store/workspace'
 import { initTheme } from './store/theme'
+import { SignInScreen } from './layout/SignInScreen'
+import { useAuthGate } from './api/useAuth'
+import { useUiStateSync } from './api/useUiStateSync'
+import { useSession } from './store/session'
 
 /**
  * Application shell: title bar, schema dock, tab bar with the active tab's view, status bar and the
@@ -38,6 +42,9 @@ export function App() {
     (t.kind === 'table' || t.kind === 'view') && !!keyspaces?.find((k) => k.name === t.keyspace)?.system
   const active = tabs.find((t) => t.id === activeId)
   useBootstrapProfile()
+  const { authEnabled, user, needsSignIn } = useAuthGate()
+  const expired = useSession((s) => s.expired)
+  useUiStateSync(authEnabled && !!user && !needsSignIn, profileId)
 
   useEffect(() => initTheme(), [])
   useEffect(() => {
@@ -54,6 +61,7 @@ export function App() {
 
   return (
     <div className="grid h-full grid-rows-[34px_1fr_24px]">
+      {needsSignIn && <SignInScreen expired={expired && !!user} />}
       <TitleBar />
       <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
         <LeftDock />

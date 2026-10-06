@@ -3,6 +3,8 @@ import { ProfileSwitcher } from './ProfileSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { useWorkspace } from '../store/workspace'
 import { useProfiles } from '../api/hooks'
+import { useAuthGate } from '../api/useAuth'
+import { UserMenu } from './UserMenu'
 
 /**
  * 34px application title bar: product mark, profile switcher, a keyspace/object breadcrumb for the
@@ -15,6 +17,7 @@ export function TitleBar() {
   const profileId = useWorkspace((s) => s.profileId)
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: profiles } = useProfiles()
+  const { authEnabled, user } = useAuthGate()
   const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle
   return (
     <header className="flex select-none items-center gap-1.5 border-b border-line bg-titlebar pl-3 pr-2">
@@ -61,6 +64,7 @@ export function TitleBar() {
         <span className="rounded-[3px] border border-line px-1 font-mono text-[11px] leading-4">⌘K</span>
       </button>
       <ThemeToggle />
+      {authEnabled && user && <UserMenu username={user} />}
     </header>
   )
 }

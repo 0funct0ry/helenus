@@ -3,16 +3,18 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/0funct0ry/helenus/internal/cli"
 	"github.com/0funct0ry/helenus/internal/config"
 )
 
 var userRemoveCmd = &cobra.Command{
-	Use:   "remove <username>",
-	Short: "Delete a web UI user and revoke their tokens",
-	Long:  `Delete a web UI user and revoke their tokens.`,
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		notImplemented(cmd.CommandPath(), "M10")
+	Use:          "remove <username>",
+	Short:        "Delete a web UI user and revoke their tokens",
+	Long:         `Delete a web UI user and revoke their tokens.`,
+	Args:         cli.Args(cobra.ExactArgs(1)),
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cli.UserRemove(cmd, cmd.OutOrStdout(), args[0])
 	},
 }
 

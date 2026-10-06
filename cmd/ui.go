@@ -10,8 +10,11 @@ import (
 var uiCmd = &cobra.Command{
 	Use:   "ui",
 	Short: "Start the web UI",
-	Long:  `Serve the Helenus web UI on a local address (default 127.0.0.1:4042).`,
-	Args:  cobra.NoArgs,
+	Long: `Serve the Helenus web UI on a local address (default 127.0.0.1:4042).
+
+Binding to a non-loopback address requires --auth (create users with "helenus user add").
+Use --tls-cert and --tls-key to serve HTTPS.`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := config.Resolve(cmd)
 		cfgFlag, _ := cmd.Flags().GetString(config.ConfigFlag.Name)
@@ -24,6 +27,9 @@ var uiCmd = &cobra.Command{
 			Addr:       s.V.GetString("ui.addr"),
 			Open:       s.V.GetBool("ui.open_browser"),
 			DB:         s.V.GetString("paths.db"),
+			Auth:       s.V.GetBool("ui.auth.enabled"),
+			TLSCert:    s.V.GetString("ui.tls.cert"),
+			TLSKey:     s.V.GetString("ui.tls.key"),
 			MaxUpload:  int64(s.V.GetInt("ui.max_upload_mb")) << 20,
 			Version:    Version,
 			Stderr:     cmd.ErrOrStderr(),
