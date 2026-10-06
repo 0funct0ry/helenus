@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Clock, Download, ListTree } from 'lucide-react'
+import { ChevronDown, ChevronUp, Clock, Download, ListTree, Maximize2, Minimize2 } from 'lucide-react'
+import { IconButton } from '../ui/IconButton'
 import { Tabs } from '../ui/Tabs'
 import { ResultsGrid } from './ResultsGrid'
 import { MessagesView } from './MessagesView'
@@ -14,7 +15,12 @@ import type { Message } from '../mocks/types'
 import type { StatementResult } from '../store/workspace'
 import type { TraceState } from './TraceTab'
 
+export type PanelMode = 'normal' | 'min' | 'max'
+
 export interface ResultsPanelProps {
+  /** Panel state: normal, minimized to its header, or maximized over the editor. Omit to hide the controls. */
+  mode?: PanelMode
+  onMode?: (mode: PanelMode) => void
   results: StatementResult[]
   /** Index of the shown statement result. */
   active: number
@@ -46,7 +52,7 @@ function messagesFor(r: StatementResult | undefined, consistency: string): Messa
  * viewer for the active statement, a loading note while Cassandra writes the trace, or a retry state when
  * it is not yet available. The footer adds the coordinator time once the trace is loaded.
  */
-export function ResultsPanel({ results, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
+export function ResultsPanel({ mode = 'normal', onMode, results, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
   const [view, setView] = useState('results')
   const [counting, setCounting] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -84,7 +90,7 @@ export function ResultsPanel({ results, active, onActive, consistency, onPage, o
   }
 
   return (
-    <section aria-label="Query output" className="flex min-h-0 flex-1 flex-col bg-editor">
+    <section aria-label="Query output" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-editor">
       <div className="flex h-[30px] flex-none items-center gap-0.5 border-b border-line2 bg-surface px-2">
         <Tabs
           aria-label="Output"
@@ -114,10 +120,24 @@ export function ResultsPanel({ results, active, onActive, consistency, onPage, o
             {trace?.data && ` · ${(trace.data.duration_us / 1000).toFixed(1)} ms coordinator`}
           </span>
         )}
+        {onMode && (
+          <div className="ml-1 flex items-center gap-0.5">
+            <IconButton
+              label={mode === 'min' ? 'Restore results panel' : 'Minimize results panel'}
+              icon={mode === 'min' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              onClick={() => onMode(mode === 'min' ? 'normal' : 'min')}
+            />
+            <IconButton
+              label={mode === 'max' ? 'Restore results panel' : 'Maximize results panel'}
+              icon={mode === 'max' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              onClick={() => onMode(mode === 'max' ? 'normal' : 'max')}
+            />
+          </div>
+        )}
       </div>
-      {view === 'results' && body}
-      {view === 'trace' && <TraceTab response={res} trace={trace} />}
-      {view === 'messages' && <MessagesView messages={msgs} />}
+      {mode !== 'min' && view === 'results' && body}
+      {mode !== 'min' && view === 'trace' && <TraceTab response={res} trace={trace} />}
+      {mode !== 'min' && view === 'messages' && <MessagesView messages={msgs} />}
       {exporting && r && <ExportDialog source={{ kind: 'query', cql: r.cql }} onClose={() => setExporting(false)} />}
       <CountRowsDialog open={counting} onClose={() => setCounting(false)} onRun={() => onCount(active)} />
     </section>

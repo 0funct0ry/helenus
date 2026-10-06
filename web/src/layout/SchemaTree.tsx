@@ -90,6 +90,12 @@ export function SchemaTree() {
   const [filter, setFilter] = useState("");
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [groupMenu, setGroupMenu] = useState<{
+    x: number;
+    y: number;
+    label: string;
+    items: ContextMenuItem[];
+  } | null>(null);
   const [newTypeKs, setNewTypeKs] = useState<string | null>(null);
   const [newFnKs, setNewFnKs] = useState<string | null>(null);
   const [dropFn, setDropFn] = useState<Fn | null>(null);
@@ -586,10 +592,34 @@ export function SchemaTree() {
       count: number,
       children: ReactNode,
       add?: { label: string; run: () => void },
-    ) =>
-      count > 0 || !q ? (
+      extra: ContextMenuItem[] = [],
+    ) => {
+      const items = (): ContextMenuItem[] => [
+        ...(add
+          ? [{ label: add.label, icon: <Plus size={14} />, onSelect: add.run }]
+          : []),
+        ...extra,
+        {
+          label: "New query here",
+          icon: <FileText size={14} />,
+          onSelect: () => newQuery({ keyspace: k.name }),
+        },
+        {
+          label: "Refresh",
+          icon: <RefreshCw size={14} />,
+          onSelect: () => refresh.mutate(),
+        },
+      ];
+      const label = `${k.name} · ${name}`;
+      return count > 0 || !q ? (
         <div key={id}>
-          <div className="group relative">
+          <div
+            className="group relative [&>button[role=treeitem]]:pr-7"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setGroupMenu({ x: e.clientX, y: e.clientY, label, items: items() });
+            }}
+          >
             <TreeRow
               indent={22}
               label={name}
@@ -598,18 +628,21 @@ export function SchemaTree() {
               meta={count}
               onClick={() => toggle(id)}
             />
-            {add && (
-              <IconButton
-                label={add.label}
-                icon={<Plus size={13} />}
-                onClick={add.run}
-                className="absolute right-1 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
-              />
-            )}
+            <IconButton
+              label={`${name} actions for ${k.name}`}
+              icon={<EllipsisVertical size={13} />}
+              aria-haspopup="menu"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setGroupMenu({ x: r.left, y: r.bottom, label, items: items() });
+              }}
+              className="absolute right-1 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
+            />
           </div>
           {isOpen(id) && children}
         </div>
       ) : null;
+    };
     const viewRow = (
       v: Keyspace["views"][number],
       indent: number,
@@ -617,7 +650,7 @@ export function SchemaTree() {
     ) => (
       <div
         key={key}
-        className="group relative"
+        className="group relative [&>button[role=treeitem]]:pr-7"
         onContextMenu={(e) => onContext(e, k.name, "view", v.name)}
       >
         <TreeRow
@@ -636,7 +669,7 @@ export function SchemaTree() {
       <div key={k.name} role="group">
         <div
           data-ks={k.name}
-          className="group relative"
+          className="group relative [&>button[role=treeitem]]:pr-7"
           onContextMenu={(e) => onContext(e, k.name, "keyspace", k.name)}
         >
           <TreeRow
@@ -647,7 +680,7 @@ export function SchemaTree() {
             expanded={kOpen}
             meta={
               k.system ? undefined : (
-                <span className="mr-5 inline-flex">
+                <span className="inline-flex">
                   <Tooltip content={`Replication: ${k.replication}`}>
                     <span
                       role="img"
@@ -694,7 +727,7 @@ export function SchemaTree() {
                     key={t.name}
                     onContextMenu={(e) => onContext(e, k.name, "table", t.name)}
                   >
-                    <div className="group relative">
+                    <div className="group relative [&>button[role=treeitem]]:pr-7">
                       <TreeRow
                         indent={40}
                         label={t.name}
@@ -731,6 +764,12 @@ export function SchemaTree() {
                   </div>
                 );
               }),
+              k.system
+                ? undefined
+                : {
+                    label: "New table…",
+                    run: () => setNewTableKs(k.name),
+                  },
             )}
             {group(
               `views:${k.name}`,
@@ -740,7 +779,7 @@ export function SchemaTree() {
               k.system
                 ? undefined
                 : {
-                    label: "New view",
+                    label: "New view…",
                     run: () => setNewView({ keyspace: k.name }),
                   },
             )}
@@ -751,6 +790,7 @@ export function SchemaTree() {
               types.map((t) => (
                 <div
                   key={t.name}
+                  className="group relative [&>button[role=treeitem]]:pr-7"
                   onContextMenu={(e) => onContext(e, k.name, "type", t.name)}
                 >
                   <TreeRow
@@ -761,10 +801,11 @@ export function SchemaTree() {
                     icon={<Braces size={14} />}
                     onClick={() => open("type", k.name, t.name)}
                   />
+                  {rowMenuButton(k.name, "type", t.name, `Type actions for ${t.name}`)}
                 </div>
               )),
               {
-                label: `New type in ${k.name}`,
+                label: "New type…",
                 run: () => setNewTypeKs(k.name),
               },
             )}
@@ -776,6 +817,7 @@ export function SchemaTree() {
                 ...fns.map((f) => (
                   <div
                     key={f.signature}
+                    className="group relative [&>button[role=treeitem]]:pr-7"
                     onContextMenu={(e) =>
                       onContext(e, k.name, "function", f.signature)
                     }
@@ -788,13 +830,14 @@ export function SchemaTree() {
                       icon={<FunctionSquare size={14} />}
                       onClick={() => open("function", k.name, f.signature)}
                     />
+                    {rowMenuButton(k.name, "function", f.signature, `Function actions for ${f.signature}`)}
                   </div>
                 )),
               ],
               k.system
                 ? undefined
                 : {
-                    label: `New function in ${k.name}`,
+                    label: "New function…",
                     run: () => setNewFnKs(k.name),
                   },
             )}
@@ -805,6 +848,7 @@ export function SchemaTree() {
               aggs.map((a) => (
                 <div
                   key={a.signature}
+                  className="group relative [&>button[role=treeitem]]:pr-7"
                   onContextMenu={(e) =>
                     onContext(e, k.name, "aggregate", a.signature)
                   }
@@ -817,12 +861,13 @@ export function SchemaTree() {
                     icon={<Sigma size={14} />}
                     onClick={() => open("aggregate", k.name, a.signature)}
                   />
+                  {rowMenuButton(k.name, "aggregate", a.signature, `Aggregate actions for ${a.signature}`)}
                 </div>
               )),
               k.system
                 ? undefined
                 : {
-                    label: `New aggregate in ${k.name}`,
+                    label: "New aggregate…",
                     run: () => setNewAggKs(k.name),
                   },
             )}
@@ -830,16 +875,70 @@ export function SchemaTree() {
               `trg:${k.name}`,
               "Triggers",
               triggers.length,
-              triggers.map((g) => (
-                <TreeRow
-                  key={`${g.table}/${g.name}`}
-                  indent={40}
-                  label={`${g.table}.${g.name}`}
-                  mono
-                  icon={<Zap size={14} />}
-                  title={g.class}
-                />
-              )),
+              triggers.map((g) => {
+                const name = `${g.table}.${g.name}`;
+                const label = `${k.name}.${name}`;
+                const items = (): ContextMenuItem[] => [
+                  {
+                    label: "Copy name",
+                    icon: <Copy size={14} />,
+                    onSelect: () => void navigator.clipboard?.writeText(label),
+                  },
+                  ...(k.system
+                    ? []
+                    : [
+                        {
+                          label: "Drop trigger…",
+                          icon: <Trash2 size={14} />,
+                          danger: true,
+                          separatorBefore: true,
+                          onSelect: () =>
+                            newQuery({
+                              keyspace: k.name,
+                              cql: `DROP TRIGGER ${g.name} ON ${k.name}.${g.table};`,
+                            }),
+                        },
+                      ]),
+                ];
+                return (
+                  <div
+                    key={`${g.table}/${g.name}`}
+                    className="group relative [&>button[role=treeitem]]:pr-7"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setGroupMenu({ x: e.clientX, y: e.clientY, label, items: items() });
+                    }}
+                  >
+                    <TreeRow
+                      indent={40}
+                      label={name}
+                      mono
+                      icon={<Zap size={14} />}
+                      title={g.class}
+                    />
+                    <IconButton
+                      label={`Trigger actions for ${name}`}
+                      icon={<EllipsisVertical size={13} />}
+                      aria-haspopup="menu"
+                      onClick={(e) => {
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setGroupMenu({ x: r.left, y: r.bottom, label, items: items() });
+                      }}
+                      className="absolute right-1 top-[1px] opacity-0 focus:opacity-100 group-hover:opacity-100"
+                    />
+                  </div>
+                );
+              }),
+              k.system
+                ? undefined
+                : {
+                    label: "New trigger…",
+                    run: () =>
+                      newQuery({
+                        keyspace: k.name,
+                        cql: `CREATE TRIGGER trigger_name ON ${k.name}.table_name USING 'com.example.TriggerClass';`,
+                      }),
+                  },
             )}
           </>
         )}
@@ -1183,6 +1282,15 @@ export function SchemaTree() {
             setDropAgg(null);
           }}
           onClose={() => setDropAgg(null)}
+        />
+      )}
+      {groupMenu && (
+        <SchemaContextMenu
+          x={groupMenu.x}
+          y={groupMenu.y}
+          label={groupMenu.label}
+          items={groupMenu.items}
+          onClose={() => setGroupMenu(null)}
         />
       )}
       {menu && (

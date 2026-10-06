@@ -43,9 +43,7 @@ export function TitleBar() {
               </>
             )}
           </>
-        ) : (
-          <span>No tab open</span>
-        )}
+        ) : null}
       </nav>
       <div className="flex-1" />
       {connected && !astra && (

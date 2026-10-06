@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { TitleBar } from './layout/TitleBar'
+import { SidebarResizer } from './layout/SidebarResizer'
+import { useSidebarWidth } from './lib/useSidebarWidth'
 import { LeftDock } from './layout/LeftDock'
 import { SecurityView } from './layout/SecurityView'
 import { TabBar } from './layout/TabBar'
@@ -42,6 +44,7 @@ export function App() {
     (t.kind === 'table' || t.kind === 'view') && !!keyspaces?.find((k) => k.name === t.keyspace)?.system
   const active = tabs.find((t) => t.id === activeId)
   useBootstrapProfile()
+  const [sidebarW, setSidebarW] = useSidebarWidth()
   const { authEnabled, user, needsSignIn } = useAuthGate()
   const expired = useSession((s) => s.expired)
   useUiStateSync(authEnabled && !!user && !needsSignIn, profileId)
@@ -63,8 +66,18 @@ export function App() {
     <div className="grid h-full grid-rows-[34px_1fr_24px]">
       {needsSignIn && <SignInScreen expired={expired && !!user} />}
       <TitleBar />
-      <div className="grid min-h-0 grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]">
-        <LeftDock />
+      <div
+        className={`grid min-h-0 ${sidebarW === null ? 'grid-cols-[220px_1fr] min-[1100px]:grid-cols-[264px_1fr]' : ''}`}
+        style={sidebarW === null ? undefined : { gridTemplateColumns: `${sidebarW}px 1fr` }}
+      >
+        <div className="relative grid min-h-0 min-w-0">
+          <LeftDock />
+          <SidebarResizer
+            width={sidebarW ?? (window.innerWidth >= 1100 ? 264 : 220)}
+            onResize={setSidebarW}
+            onReset={() => setSidebarW(null)}
+          />
+        </div>
         <main className="flex min-h-0 min-w-0 flex-col">
           <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t) }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (

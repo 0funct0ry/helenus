@@ -112,7 +112,7 @@ export function ResultsGrid({ columns, rows, page = 1, elapsedMs, consistency, h
   const template = `${RN_W}px ${columns.map((c) => `${widthFor(c)}px`).join(' ')}`
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div
         ref={scrollRef}
         tabIndex={edit ? 0 : undefined}

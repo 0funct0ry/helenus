@@ -85,7 +85,7 @@ export function Dialog({ open, onClose, title, children, footer, subtitle, width
             <IconButton label="Close" icon={<X size={14} />} onClick={onClose} />
           </div>
         )}
-        {children}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
         {footer && <div className="flex items-center gap-2 border-t border-line2 px-3.5 py-2.5">{footer}</div>}
       </div>
     </div>,

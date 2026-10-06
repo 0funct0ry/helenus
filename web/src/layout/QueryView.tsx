@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Play, Square, StepForward } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Select } from '../ui/Select'
 import { Toggle } from '../ui/Toggle'
 import { SqlEditor } from './SqlEditor'
 import { ResultsPanel } from './ResultsPanel'
+import type { PanelMode } from './ResultsPanel'
+import { PanelSplitter } from './PanelSplitter'
 import { CONSISTENCY_LEVELS } from './TableView'
 import { ApiError } from '../api/client'
 import { useSchema, useTrace } from '../api/hooks'
@@ -36,6 +38,12 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
   const st = useMemo(() => stored ?? newQueryState({ keyspace: tab?.keyspace ?? '', ...(tab?.initialCql !== undefined && { text: tab.initialCql }) }, globalConsistency), [stored, tab, globalConsistency])
   const [initialText] = useState(st.text)
   const q = useQueryTab(id)
+  const splitRef = useRef<HTMLDivElement>(null)
+  const [mode, setMode] = useState<PanelMode>('normal')
+  /** Results pane height in px; null = the default ~46% split. */
+  const [resultsH, setResultsH] = useState<number | null>(null)
+  const clampH = (h: number) => Math.max(60, Math.min(h, (splitRef.current?.clientHeight ?? 600) - 100))
+  const currentH = () => resultsH ?? Math.round((splitRef.current?.clientHeight ?? 600) * 0.46)
   const traceQuery = useTrace(profileId, st.results[st.activeResult]?.response?.trace_id)
   const trace = {
     data: traceQuery.data,
@@ -62,7 +70,7 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex flex-none flex-wrap items-center gap-1 border-b border-line2 px-2.5 py-[5px]">
         <Button variant="primary" icon={<Play size={14} fill="currentColor" />} kbd="⌘↵" disabled={st.running || !connected} onClick={() => onRun({ all: false, text: st.text, pos: cursorIndex() })}>
           Run
@@ -96,12 +104,33 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
         <div className="flex-1" />
         <Select label="Keyspace" mono value={st.keyspace} onChange={(v) => patch(id, { keyspace: v })} options={ksOptions} />
       </div>
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(160px,54%)_1px_1fr]">
-        <div className="min-h-0 py-2">
+      <div
+        ref={splitRef}
+        className="grid min-h-0 min-w-0 flex-1"
+        style={{
+          gridTemplateRows:
+            mode === 'max' ? '0px 0px minmax(0,1fr)' : mode === 'min' ? 'minmax(0,1fr) 1px 31px' : resultsH === null ? 'minmax(160px,54%) 1px minmax(0,1fr)' : `minmax(0,1fr) 1px ${resultsH}px`,
+        }}
+      >
+        <div className={mode === 'max' ? 'min-h-0 overflow-hidden' : 'min-h-0 py-2'}>
           <SqlEditor initialValue={initialText} profile={connected ? profileId : ''} keyspace={st.keyspace} onCursor={setCursor} onChange={(text) => patch(id, { text })} onRun={onRun} />
         </div>
-        <div role="separator" aria-orientation="horizontal" className="bg-line" />
+        {mode === 'normal' ? (
+          <PanelSplitter
+            label="Resize results panel"
+            onDrag={(y) => {
+              const r = splitRef.current?.getBoundingClientRect()
+              if (r) setResultsH(clampH(r.bottom - y))
+            }}
+            onNudge={(d) => setResultsH(clampH(currentH() - d))}
+            onReset={() => setResultsH(null)}
+          />
+        ) : (
+          <div role="separator" aria-orientation="horizontal" className="bg-line" />
+        )}
         <ResultsPanel
+          mode={mode}
+          onMode={setMode}
           results={st.results}
           active={st.activeResult}
           onActive={(i) => patch(id, { activeResult: i })}

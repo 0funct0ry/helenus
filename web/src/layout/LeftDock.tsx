@@ -14,7 +14,7 @@ type DockTab = 'schema' | 'changes'
 export function LeftDock() {
   const [tab, setTab] = useState<DockTab>('schema')
   return (
-    <div className="flex min-h-0 flex-col border-r border-line bg-surface">
+    <div className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-line bg-surface">
       <div className="border-b border-line2 px-2 py-1.5">
         <Tabs
           aria-label="Left dock"

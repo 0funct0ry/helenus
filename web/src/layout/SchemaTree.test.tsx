@@ -239,8 +239,9 @@ describe("SchemaTree", () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "New type in payments" }),
+      screen.getByRole("button", { name: "Types actions for payments" }),
     );
+    await userEvent.click(screen.getByRole("menuitem", { name: "New type…" }));
     expect(
       screen.getByRole("dialog", { name: "New type" }),
     ).toBeInTheDocument();
@@ -257,7 +258,8 @@ describe("SchemaTree", () => {
     });
     await userEvent.click(screen.getByRole("menuitem", { name: "Open" }));
     expect(useWorkspace.getState().activeId).toBe("aggregate:payments.total(int)");
-    await userEvent.click(screen.getByRole("button", { name: "New aggregate in payments" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aggregates actions for payments" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "New aggregate…" }));
     expect(screen.getByRole("dialog", { name: "New aggregate" })).toBeInTheDocument();
   });
 

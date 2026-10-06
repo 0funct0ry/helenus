@@ -37,7 +37,7 @@ export function TreeRow({ indent, label, expanded, icon, meta, marker, selected,
       {expanded !== undefined && <ChevronDown size={14} className={cn('shrink-0 text-muted transition-transform', !expanded && '-rotate-90')} aria-hidden />}
       {marker !== undefined && <span className="inline-flex w-[26px] shrink-0">{marker}</span>}
       {icon && <span className="shrink-0 text-muted">{icon}</span>}
-      <span className={cn('overflow-hidden text-ellipsis', mono && 'font-mono text-[12.5px]', muted && 'text-muted')}>{label}</span>
+      <span className={cn('min-w-0 overflow-hidden text-ellipsis', mono && 'font-mono text-[12.5px]', muted && 'text-muted')}>{label}</span>
       {meta !== undefined && <span className="ml-auto pl-2 text-[11.5px] text-faint">{meta}</span>}
     </button>
   )

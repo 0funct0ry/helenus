@@ -11,6 +11,8 @@ import { App } from './App'
 import { initTheme } from './store/theme'
 
 initTheme()
+// The app supplies its own context menus; suppress the browser's default one everywhere.
+document.addEventListener('contextmenu', (e) => e.preventDefault())
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
 createRoot(document.getElementById('root')!).render(
