@@ -863,7 +863,7 @@ export interface ImportResult {
 }
 
 /** The ten Copy As formats of `POST /p/{profile}/rows/format` (SPEC §9.5.1). */
-export type RowFormat = 'json' | 'csv' | 'tsv' | 'xml' | 'yaml' | 'markdown' | 'html' | 'sql_inserts' | 'sql_updates' | 'where'
+export type RowFormat = 'json' | 'csv' | 'tsv' | 'xml' | 'yaml' | 'markdown' | 'html' | 'sql_inserts' | 'sql_updates' | 'where' | 'sql_in'
 
 /** Body of `POST /p/{profile}/rows/format`. Rows are positional wire values aligned with `columns`. */
 export interface RowsFormatRequest {

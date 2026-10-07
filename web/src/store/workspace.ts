@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { emptyColumnView } from '../lib/columnView'
+import type { ColumnView } from '../lib/columnView'
 import type { ProfileStatus } from '../lib/schemaModel'
 import type { QueryResponse } from '../api/types'
 import { abortInflight } from '../api/inflight'
@@ -72,6 +74,9 @@ interface WorkspaceState {
   profileId: string
   connections: Record<string, Connection>
   queryStates: Record<string, QueryTabState>
+  /** Column selection, sort, filters and hidden columns per results tab; in memory only. */
+  columnViews: Record<string, ColumnView>
+  updateColumnView: (id: string, fn: (v: ColumnView) => ColumnView) => void
   /** Staged grid edits per table tab, in the order they were made. They survive tab switches. */
   edits: Record<string, PendingItem[]>
   /** The last apply error of each staged item, by tab then item id. */
@@ -113,6 +118,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   profileId: '',
   connections: {},
   queryStates: {},
+  columnViews: {},
+  updateColumnView: (id, fn) => set((s) => ({ columnViews: { ...s.columnViews, [id]: fn(s.columnViews[id] ?? emptyColumnView) } })),
   edits: {},
   editErrors: {},
   stageEdit: (tabId, item) =>
@@ -172,12 +179,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       const tabs = s.tabs.filter((t) => t.id !== id)
       const queryStates = { ...s.queryStates }
       delete queryStates[id]
+      const columnViews = { ...s.columnViews }
+      delete columnViews[id]
       const edits = { ...s.edits }
       const editErrors = { ...s.editErrors }
       delete edits[id]
       delete editErrors[id]
       const activeId = s.activeId === id ? (tabs[Math.min(i, tabs.length - 1)]?.id ?? '') : s.activeId
-      return { tabs, activeId, queryStates, edits, editErrors }
+      return { tabs, activeId, queryStates, columnViews, edits, editErrors }
     })
   },
   activate: (id) => set({ activeId: id }),

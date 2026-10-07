@@ -1,0 +1,34 @@
+---
+title: Work with grid columns
+description: Select, sort, filter, copy and hide columns in the results grid.
+---
+
+Click a column header to select that column. **Ctrl/Cmd+click** adds or removes a column, **Shift+click** selects a range, and **Escape** clears the selection. Picking a cell or a row clears the column selection. Headers are keyboard operable: **Left** and **Right** move between them, **Enter** or **Space** selects, and **Shift+F10** (or the **Menu** key) opens the menu.
+
+## The column menu
+
+Right-click a header. If that column is in the selection the menu acts on the whole selection, otherwise on that column alone and your selection stays as it is. The header of the menu shows the column name, or **3 columns**.
+
+- **Copy Column Name** copies the names in grid order, separated by `, `, quoted only where CQL needs it (`id, "Name"`).
+- **Select Column** makes the target the selection.
+- **Sort ascending / descending / Clear sorting**, and **Set local filter**, always act on the column you right-clicked.
+- **Copy Column as** copies the target columns in JSON, CSV, TSV, XML, YAML, Markdown, HTML or SQL.
+- **Hide column** and **Show All Columns**.
+
+## Sort
+
+Sorting is single-column and applies to the **current page only**; the footer says so. Values are compared by type (numbers numerically, text by code point, times chronologically). NULL is always last, in both directions. Collections, maps, tuples, UDTs and duration cannot be sorted. Editing and row actions still act on the right record after sorting.
+
+## Local filter
+
+**Set local filter** opens a popover with operators for the column type (text: contains, equals, starts with and so on, with an optional **Match case**; numbers: `=`, `≠`, `<`, `≤`, `>`, `≥`, between; times: before, after, between with ISO 8601 input; booleans; and **is null** / **is not null** for everything). One filter per column; filters on several columns combine with AND. NULL cells match only **is null**.
+
+A filtered header shows a funnel icon, and the footer reads **Filtered: 12 of 50 rows on this page** with a **Clear filters** link. Rows hidden by a filter leave the row selection. Sort and filters reset when you change page or re-run the statement.
+
+## Copy Column as
+
+It copies the target columns over the rows currently shown, in the order shown, using the loaded values (staged edits and staged inserts are not included). **SQL** writes `col IN (…)` per column, skipping NULLs and duplicates; a column with no values gives an error and copies nothing.
+
+## Hide and show columns
+
+Hiding is display only. Hidden columns are left out of **Copy As** and of the aggregate view, but still appear in the record view and the insert form, and a sort or filter on a hidden column stays active. The footer shows **2 columns hidden · Show all**. Hidden columns survive paging and re-runs of the same statement, and reset when you open a different statement or table. At least one column must stay visible.

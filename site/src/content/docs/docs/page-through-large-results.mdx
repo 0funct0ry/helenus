@@ -26,6 +26,7 @@ Paging does not tell you the total. Choose **Count rows** in the footer to run `
 ## Good to know
 
 - Pages come from Cassandra's own paging, so there are no offsets and nothing is kept on the server between pages.
+- Sorting and filtering a column apply to the current page only, and reset when you change page. See [Work with grid columns](/helenus/docs/work-with-grid-columns/).
 - Changing the query text, consistency or page size starts again from the first page.
 - **Cancel** stops a slow page request. Closing the tab does too.
 - The **Data** view is read-only. To change data, use a query tab.

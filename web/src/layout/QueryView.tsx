@@ -132,6 +132,7 @@ export function QueryView({ tab }: { tab?: WorkspaceTab }) {
           mode={mode}
           onMode={setMode}
           results={st.results}
+          tabId={id}
           active={st.activeResult}
           onActive={(i) => patch(id, { activeResult: i })}
           consistency={st.consistency}

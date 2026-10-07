@@ -187,3 +187,19 @@ func TestAggregateSpecialAndZeroAvg(t *testing.T) {
 		t.Errorf("%v", m)
 	}
 }
+
+func TestSQLIn(t *testing.T) {
+	cols := []exec.Column{col("id", "int", "partition", 0), col("Name", "text", "regular", 0)}
+	req := Request{Format: "sql_in", Columns: cols, Rows: rows([]string{`3`, `"a'b"`}, []string{`null`, `"x"`}, []string{`3`, `"x"`}, []string{`1`, `null`})}
+	got, err := Format(req)
+	want := "id IN (3, 1)\n\"Name\" IN ('a''b', 'x')"
+	if err != nil || got != want {
+		t.Fatalf("%q %v", got, err)
+	}
+	req.Columns = cols[1:]
+	req.Rows = rows([]string{`null`})
+	var de *DisabledError
+	if _, err := Format(req); !errors.As(err, &de) {
+		t.Errorf("empty: %v", err)
+	}
+}

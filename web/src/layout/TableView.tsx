@@ -298,6 +298,9 @@ export function TableView({ tab }: TableViewProps) {
         <ResultsGrid
           columns={dataColumns}
           rows={shownRows}
+          tabId={tab.id}
+          viewKey={`${tab.keyspace}.${tab.object}`}
+          resetKey={data.response}
           page={data.page}
           elapsedMs={data.response.timing.client_ms}
           consistency={consistency}

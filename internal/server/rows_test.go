@@ -56,3 +56,17 @@ func TestRowsFormatResolvesUDTFromSchema(t *testing.T) {
 	rec = e.do("POST", "/api/v1/p/local/rows/aggregate", `{"columns":`+cols+`,"rows":[[1,{"city":"x"}]]}`)
 	require.Equal(t, 200, rec.Code, rec.Body.String())
 }
+
+func TestRowsFormatColumnSubsetSQLIn(t *testing.T) {
+	e := newEnv(t, seed)
+	cols := `[{"name":"name","type":{"name":"text"},"kind":"regular"}]`
+	rec := e.do("POST", "/api/v1/p/local/rows/format", `{"format":"sql_in","source":null,"columns":`+cols+`,"rows":[["a"],[null],["a"],["b'c"]]}`)
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	var out struct{ Text string }
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+	require.Equal(t, "name IN ('a', 'b''c')", out.Text)
+
+	rec = e.do("POST", "/api/v1/p/local/rows/format", `{"format":"sql_in","columns":`+cols+`,"rows":[[null]]}`)
+	require.Equal(t, 422, rec.Code)
+	require.Contains(t, rec.Body.String(), "format_unavailable")
+}

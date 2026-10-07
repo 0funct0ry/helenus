@@ -122,3 +122,23 @@ newline', 12.50, [1,2,3], {'k': 7}, 0x0aff, '2026-09-30 10:00:00+0000', '2026-09
 		require.Equal(t, 1, n, line)
 	}
 }
+
+// TestSQLInRunsAgainstTable runs the generated `col IN (...)` text as a WHERE clause.
+func TestSQLInRunsAgainstTable(t *testing.T) {
+	s := itSession(t)
+	require.NoError(t, s.Query(`DROP KEYSPACE IF EXISTS rowfmt_it`).Exec())
+	require.NoError(t, s.Query(`CREATE KEYSPACE rowfmt_it WITH replication = {'class':'SimpleStrategy','replication_factor':1}`).Exec())
+	require.NoError(t, s.Query(`CREATE TABLE rowfmt_it.inq (id int PRIMARY KEY, v text)`).Exec())
+	for i, v := range []string{"a", "b", "b", "c"} {
+		require.NoError(t, s.Query(`INSERT INTO rowfmt_it.inq (id, v) VALUES (?, ?)`, i+1, v).Exec())
+	}
+	req := selectAll(t, s, "inq")
+	req.Format = "sql_in"
+	text, err := Format(req)
+	require.NoError(t, err)
+	lines := strings.Split(text, "\n")
+	require.Len(t, lines, 2)
+	var n int
+	require.NoError(t, s.Query("SELECT count(*) FROM rowfmt_it.inq WHERE "+lines[0]).Scan(&n))
+	require.Equal(t, 4, n)
+}

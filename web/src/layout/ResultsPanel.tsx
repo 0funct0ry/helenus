@@ -22,6 +22,8 @@ export interface ResultsPanelProps {
   mode?: PanelMode
   onMode?: (mode: PanelMode) => void
   results: StatementResult[]
+  /** Query tab that keeps the grid's column selection, sort, filters and hidden columns. */
+  tabId?: string
   /** Index of the shown statement result. */
   active: number
   onActive: (index: number) => void
@@ -52,7 +54,7 @@ function messagesFor(r: StatementResult | undefined, consistency: string): Messa
  * viewer for the active statement, a loading note while Cassandra writes the trace, or a retry state when
  * it is not yet available. The footer adds the coordinator time once the trace is loaded.
  */
-export function ResultsPanel({ mode = 'normal', onMode, results, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
+export function ResultsPanel({ mode = 'normal', onMode, results, tabId, active, onActive, consistency, onPage, onRunWithFiltering, onCount, trace }: ResultsPanelProps) {
   const [view, setView] = useState('results')
   const [counting, setCounting] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -75,6 +77,9 @@ export function ResultsPanel({ mode = 'normal', onMode, results, active, onActiv
       <ResultsGrid
         columns={columns}
         rows={rows}
+        tabId={tabId}
+        viewKey={`${active}:${r.cql}`}
+        resetKey={res}
         page={r.pageStates.length}
         elapsedMs={res.timing.client_ms}
         consistency={consistency}

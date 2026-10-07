@@ -20,7 +20,7 @@ import (
 )
 
 // Formats lists the Copy As formats in menu order.
-var Formats = []string{"json", "csv", "tsv", "xml", "yaml", "markdown", "html", "sql_inserts", "sql_updates", "where"}
+var Formats = []string{"json", "csv", "tsv", "xml", "yaml", "markdown", "html", "sql_inserts", "sql_updates", "where", "sql_in"}
 
 // Source names the single table a result came from.
 type Source struct {
@@ -138,6 +138,8 @@ func Format(req Request) (string, error) {
 		s, err = t.updates(req.Source, req.Counter)
 	case "where":
 		s, err = t.where(req.Source)
+	case "sql_in":
+		s, err = t.in()
 	}
 	return strings.TrimRight(s, "\n"), err
 }
@@ -509,6 +511,34 @@ func (t *table) where(src *Source) (string, error) {
 			return "", err
 		}
 		lines = append(lines, cond)
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// in renders one `col IN (lit, …)` line per column: NULLs are skipped and
+// duplicates dropped, keeping first-seen order. It needs no source table.
+func (t *table) in() (string, error) {
+	var lines []string
+	for c := range t.cols {
+		seen := map[string]bool{}
+		var lits []string
+		for r := range t.vals {
+			if t.vals[r][c] == nil {
+				continue
+			}
+			l, err := t.literal(r, c)
+			if err != nil {
+				return "", err
+			}
+			if !seen[l] {
+				seen[l] = true
+				lits = append(lits, l)
+			}
+		}
+		if len(lits) == 0 {
+			return "", &DisabledError{Reason: fmt.Sprintf("column %q has no non-null values", t.cols[c].Name)}
+		}
+		lines = append(lines, cql.QuoteIdent(t.cols[c].Name)+" IN ("+strings.Join(lits, ", ")+")")
 	}
 	return strings.Join(lines, "\n"), nil
 }
