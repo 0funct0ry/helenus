@@ -1,4 +1,4 @@
-import { rowsToTsv, rowToJson, toGridColumns, toGridRows } from './rows'
+import { toGridColumns, toGridRows } from './rows'
 import { rowsResponse } from '../test/schemaFixture'
 
 describe('rows helpers', () => {
@@ -11,12 +11,5 @@ describe('rows helpers', () => {
   })
   it('converts positional rows to records with null preserved', () => {
     expect(toGridRows(res)).toEqual([{ status: 'SETTLED', amount: '49.99' }, { status: null, amount: '1180.00' }])
-  })
-  it('serialises a row to JSON of raw values', () => {
-    expect(JSON.parse(rowToJson(res, 1))).toEqual({ status: null, amount: '1180.00' })
-  })
-  it('builds TSV with a header and flattened whitespace', () => {
-    const cols = toGridColumns(res.columns)
-    expect(rowsToTsv(cols, [{ status: 'a\tb', amount: null }])).toBe('status\tamount\na b\t')
   })
 })

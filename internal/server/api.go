@@ -146,6 +146,8 @@ func (a *api) routes(r *gin.RouterGroup) {
 	p.POST("/query", a.query)
 	p.POST("/split", a.split)
 	p.GET("/traces/:id", a.trace)
+	p.POST("/rows/format", a.rowsFormat)
+	p.POST("/rows/aggregate", a.rowsAggregate)
 	p.POST("/changes/preview", a.changesPreview)
 	p.POST("/changes/apply", a.changesApply)
 	p.POST("/types/preview", a.typesPreview)

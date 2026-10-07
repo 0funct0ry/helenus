@@ -861,3 +861,27 @@ export interface ImportResult {
   keyspace: string
   table: string
 }
+
+/** The ten Copy As formats of `POST /p/{profile}/rows/format` (SPEC §9.5.1). */
+export type RowFormat = 'json' | 'csv' | 'tsv' | 'xml' | 'yaml' | 'markdown' | 'html' | 'sql_inserts' | 'sql_updates' | 'where'
+
+/** Body of `POST /p/{profile}/rows/format`. Rows are positional wire values aligned with `columns`. */
+export interface RowsFormatRequest {
+  format: RowFormat
+  source: { keyspace: string; table: string } | null
+  columns: QueryColumn[]
+  rows: unknown[][]
+  counter?: boolean
+}
+
+/** Body of `POST /p/{profile}/rows/aggregate`. */
+export interface RowsAggregateRequest {
+  columns: QueryColumn[]
+  rows: unknown[][]
+}
+
+/** Response of `POST /p/{profile}/rows/aggregate`: the figures in display order and as copyable text. */
+export interface RowsAggregateResponse {
+  lines: { key: string; value: string }[]
+  text: string
+}

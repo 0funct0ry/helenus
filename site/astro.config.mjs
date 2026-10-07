@@ -39,6 +39,7 @@ export default defineConfig({
             { label: 'Run queries in the web UI', slug: 'docs/run-queries-in-the-web-ui' },
             { label: 'Page through large results', slug: 'docs/page-through-large-results' },
             { label: 'Edit rows in the grid', slug: 'docs/edit-rows-in-the-grid' },
+            { label: 'Use the row menu', slug: 'docs/use-the-row-menu' },
             { label: 'Edit lists, sets, and maps', slug: 'docs/edit-lists-sets-and-maps' },
             { label: 'How Helenus turns edits into CQL', slug: 'docs/how-helenus-turns-edits-into-cql' },
             { label: 'Create and change user-defined types', slug: 'docs/create-and-change-user-defined-types' },

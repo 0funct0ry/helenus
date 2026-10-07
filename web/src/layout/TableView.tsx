@@ -7,6 +7,7 @@ import { SystemTableBanner } from "./SystemTableBanner";
 import { IconButton } from "../ui/IconButton";
 import { Select } from "../ui/Select";
 import { ResultsGrid } from "./ResultsGrid";
+import { CloneRowsDialog } from "./CloneRowsDialog";
 import { SchemaSheet } from "./SchemaSheet";
 import { DropViewDialog } from "./DropViewDialog";
 import { DdlView } from "./DdlView";
@@ -27,7 +28,7 @@ import { ReviewChangesDialog } from "./ReviewChangesDialog";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { usePagedSelect } from "../api/usePagedSelect";
 import { useTableEditing } from "../api/useTableEditing";
-import { rowToJson, toGridColumns, toGridRows } from "../lib/rows";
+import { toGridColumns, toGridRows } from "../lib/rows";
 import { useCluster, useDdl, useProfiles, useRefreshSchema, useSchema } from "../api/hooks";
 import { describeError } from "../api/client";
 import { useWorkspace } from "../store/workspace";
@@ -308,11 +309,11 @@ export function TableView({ tab }: TableViewProps) {
           onPageSize={setPageSize}
           showCount
           onCount={() => setCounting(true)}
-          rowJson={(i) => {
-            const src = editing.composed?.meta[i]?.source;
-            return src === null
-              ? JSON.stringify(shownRows[i], null, 2)
-              : rowToJson(data.response!, src ?? i);
+          data={{
+            columns: data.response.columns,
+            wireRow: editing.wireRow,
+            source: isView ? null : { keyspace: tab.keyspace, table: tab.object, counter: !!table?.counter, keysComplete: editing.keysComplete },
+            actions: editing.rowActions,
           }}
           edit={
             editing.grid && {
@@ -367,6 +368,13 @@ export function TableView({ tab }: TableViewProps) {
         duplicate={editing.inserting?.duplicate}
         udtFields={editing.udtFields}
         onStage={editing.stageInsert}
+      />
+      <CloneRowsDialog
+        open={!!editing.cloning}
+        onClose={editing.closeClone}
+        columns={data.response?.columns ?? []}
+        rows={editing.cloning ?? []}
+        onConfirm={editing.stageClones}
       />
       <ReviewChangesDialog
         open={editing.reviewing}

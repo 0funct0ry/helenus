@@ -1,10 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TableView } from './TableView'
 import { renderWithClient as render } from '../test/api'
 import type { Call } from '../test/api'
 import { connectedWorkspace, mockSchemaApi, tableTab, viewTab } from '../test/schemaFixture'
-import { MERCHANT, TXN, counterResponse, txnResponse } from '../test/editFixture'
+import { MERCHANT, TXN, TXN2, counterResponse, txnResponse } from '../test/editFixture'
 import { useWorkspace } from '../store/workspace'
 import type { WorkspaceTab } from '../store/workspace'
 import type { ApplyResponse } from '../api/types'
@@ -322,5 +322,110 @@ describe('TableView editing', () => {
     render(<TableView tab={tableTab} />)
     const cell = (await screen.findByText('1180.00')).closest('[role="cell"]')!
     expect(cell).toHaveAttribute('title', expect.stringMatching(/too large to send back/))
+  })
+
+  describe('row menu', () => {
+    const NEW1 = '3f1a2b10-9d3c-11ef-8a6e-0242ac120010'
+    const NEW2 = '3f1a2b10-9d3c-11ef-8a6e-0242ac120011'
+    const menuOn = async (...heads: number[]) => {
+      const rowheads = await screen.findAllByRole('rowheader')
+      await userEvent.click(rowheads[heads[0]])
+      if (heads.length > 1) fireEvent.click(rowheads[heads[heads.length - 1]], { shiftKey: true })
+      fireEvent.contextMenu(screen.getAllByText('Acme')[heads[0]])
+      return screen.findByRole('menu', { name: 'Row actions' })
+    }
+
+    it('stages one delete per selected row, struck through, and applies them', async () => {
+      const calls = open({ 'POST /p/local/changes/apply': { body: applied(2) } })
+      render(<TableView tab={tableTab} />)
+      await menuOn(0, 1)
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Delete 2 rows' }))
+      expect(await screen.findByText('2 deletes')).toBeInTheDocument()
+      expect(screen.getByText('1180.00').closest('[role="cell"]')).toHaveClass('line-through')
+      expect(screen.getByText('49.99').closest('[role="cell"]')).toHaveClass('line-through')
+      await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+      await waitFor(() => expect(applyCall(calls)).toBeDefined())
+      expect(applyCall(calls).changes).toEqual([
+        { kind: 'delete_row', key },
+        { kind: 'delete_row', key: { ...key, txn_time: TXN2 } },
+      ])
+    })
+
+    it('restores a staged delete with the toolbar before apply', async () => {
+      open()
+      render(<TableView tab={tableTab} />)
+      await menuOn(0)
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Delete row' }))
+      expect(await screen.findByText('1 delete')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Restore row' }))
+      expect(screen.queryByText(/pending change|1 delete/)).not.toBeInTheDocument()
+    })
+
+    it('Add row opens a blank insert dialog even with rows selected', async () => {
+      open()
+      render(<TableView tab={tableTab} />)
+      await menuOn(0, 1)
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Add row' }))
+      const dialog = screen.getByRole('dialog', { name: 'Insert row' })
+      expect(within(dialog).getByRole('textbox', { name: 'amount' })).toHaveValue('')
+    })
+
+    it('Clone row on one row opens the prefilled dialog', async () => {
+      open()
+      render(<TableView tab={tableTab} />)
+      await menuOn(0)
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Clone row' }))
+      const dialog = screen.getByRole('dialog', { name: 'Duplicate row' })
+      expect(within(dialog).getByRole('textbox', { name: 'amount' })).toHaveValue('1180.00')
+    })
+
+    it('Clone N rows asks for new keys, rejects a key equal to its source, and stages N inserts', async () => {
+      open()
+      render(<TableView tab={tableTab} />)
+      await menuOn(0, 1)
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Clone 2 rows' }))
+      const dialog = screen.getByRole('dialog', { name: 'Clone 2 rows' })
+      const stage = within(dialog).getByRole('button', { name: 'Stage 2 inserts' })
+      expect(stage).toBeDisabled()
+      expect(within(dialog).getAllByRole('alert')[0]).toHaveTextContent(/same as the source row/)
+      const set = async (name: string, v: string) => {
+        const box = within(dialog).getByRole('textbox', { name })
+        await userEvent.clear(box)
+        await userEvent.type(box, v)
+      }
+      await set('txn_time (new row 1)', NEW1)
+      expect(stage).toBeDisabled()
+      await set('txn_time (new row 2)', NEW1)
+      expect(within(dialog).getByText(/same as new row 1/)).toBeInTheDocument()
+      expect(stage).toBeDisabled()
+      await set('txn_time (new row 2)', NEW2)
+      expect(stage).toBeEnabled()
+      await userEvent.click(stage)
+      expect(await screen.findByText('2 inserts')).toBeInTheDocument()
+      const staged = useWorkspace.getState().edits[tableTab.id]
+      expect(staged.map((i) => i.values?.txn_time)).toEqual([NEW1, NEW2])
+      expect(staged[0].values).toMatchObject({ merchant_id: MERCHANT, amount: '1180.00' })
+    })
+
+    it('disables Add / Clone / Delete on a view, a system table and a counter table, but keeps Copy As and the views', async () => {
+      for (const [tab, rows, why] of [
+        [viewTab, txnResponse(), /Materialized views are read-only/],
+        [systemTab, txnResponse(), /system keyspaces are read-only/],
+        [counterTab, counterResponse(), /Counter tables/],
+      ] as const) {
+        const { unmount } = (open({}, tab, rows), render(<TableView tab={tab} />))
+        fireEvent.contextMenu((await screen.findAllByRole('rowheader'))[0])
+        const menu = await screen.findByRole('menu', { name: 'Row actions' })
+        for (const name of ['Add row', 'Clone row', 'Delete row']) {
+          const item = within(menu).getByRole('menuitem', { name })
+          expect(item).toHaveAttribute('aria-disabled', 'true')
+          expect(item).toHaveAttribute('title', expect.stringMatching(why))
+        }
+        expect(within(menu).getByRole('menuitem', { name: 'Show record view' })).not.toHaveAttribute('aria-disabled')
+        expect(within(menu).getByRole('menuitem', { name: 'Show aggregate view' })).not.toHaveAttribute('aria-disabled')
+        await userEvent.keyboard('{Escape}')
+        unmount()
+      }
+    })
   })
 })

@@ -194,8 +194,14 @@
 .cm-activeLineGutter {
   color: var(--text);
 }
-.cm-cursor {
-  border-left: 2px solid var(--accent);
+/* CodeMirror's base theme sets a black caret with higher specificity, which vanishes on the dark background. */
+.cm-editor .cm-cursor,
+.cm-editor .cm-dropCursor,
+.cm-editor .cm-focused .cm-cursor {
+  border-left: 2px solid var(--text) !important;
+}
+.cm-editor .cm-content {
+  caret-color: var(--text);
 }
 .cm-selectionBackground,
 .cm-focused .cm-selectionBackground {

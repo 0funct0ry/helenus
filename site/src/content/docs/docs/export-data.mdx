@@ -5,6 +5,8 @@ description: Export a table or a query result to CSV, JSON, NDJSON, XML, Excel o
 
 Export streams rows to a file page by page, so memory stays flat however large the table is. It runs as a background job: you see progress, can cancel it, and the browser downloads the file when it finishes.
 
+> To copy only the rows on screen, right-click them and choose **Copy As**. See [Use the row menu](/helenus/docs/use-the-row-menu/). Export is for whole tables and whole query results; Copy As is for the rows you selected.
+
 ## Open the dialog
 
 - **Table:** choose **Export…** from the table menu in the schema tree (the three-dot button, or right-click), or from the toolbar of the table's tab. System keyspace tables export too; credential columns such as `salted_hash` are masked as `••••••`.

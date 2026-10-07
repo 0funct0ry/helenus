@@ -1,0 +1,54 @@
+---
+title: Use the row menu
+description: Right-click rows in the results grid to add, clone or delete them, copy them in ten formats, or look at one row or a summary of several.
+---
+
+Right-click a row in any results grid, or select a row and press **Shift+F10** (or the **Menu** key). The menu acts on the selected rows. If you right-click a row outside the selection, that row becomes the selection first. The menu header shows how many rows it acts on, such as **3 rows**.
+
+Close the menu with **Escape**, by clicking elsewhere, or by scrolling. Use the arrow keys to move, **Enter** to pick, and **Right** and **Left** to open and close the **Copy As** submenu.
+
+## Add, clone and delete
+
+These only stage changes. Nothing is written until you review and apply them, as described in [Edit rows in the grid](/helenus/docs/edit-rows-in-the-grid/).
+
+- **Add row** opens the insert form with blank values, whatever is selected.
+- **Clone row** on one row opens the insert form filled with that row, with the key still editable.
+- **Clone N rows** lists each row with its primary key columns as inputs. Every other value is copied. A new key must differ from its source row and from the other new keys, because an insert with an existing key replaces that row. **Stage N inserts** stays disabled until every key is valid.
+- **Delete row** stages one delete per row, shown struck through. Rows that you inserted but have not applied are removed from the pending list instead.
+
+These three items are greyed out, with the reason as a tooltip, for query results that do not come from a single table, materialized views, system keyspaces, results missing a key column, and counter tables.
+
+## Copy As
+
+**Copy As** copies the selected rows, with every visible column, in grid order. The text is built by the server, then copied, and a message such as "Copied 3 rows as CSV" confirms it.
+
+| Format | What you get |
+| --- | --- |
+| JSON | A pretty-printed array of objects, one per row. |
+| CSV | A header row, then rows. NULL is an empty field. |
+| TSV | Tab-separated, with tab, newline and backslash escaped. |
+| XML | `<rows><row><col name="…">…</col></row></rows>`; NULL has `nil="true"`. |
+| YAML | A list of maps; NULL is `null`. |
+| Markdown | A GitHub table. |
+| HTML | A `<table>` with escaped text; NULL cells have class `null`. |
+| SQL Inserts | One `INSERT INTO ks.table (…) VALUES (…);` per row. |
+| SQL Updates | One `UPDATE … SET … WHERE …;` per row, with the key columns in `WHERE`. |
+| Where Clause | One condition per line, such as `id = 1 AND ck = 'a'`. CQL has no `OR`, so rows are never combined. |
+
+The three SQL formats need a result from a single table. SQL Updates and Where Clause also need every primary key column in the result, and SQL Updates is not available for counter tables.
+
+To export a whole table or query instead of the rows you selected, see [Export data](/helenus/docs/export-data/).
+
+## Record view
+
+**Show record view** opens a read-only panel on the right of the grid. It lists every column with its key marker, type and value. Long text, collections and user-defined types appear in a wrapped block with their own copy button. Blobs show hex and a byte count.
+
+- With several rows selected, **◀** and **▶** step through the selection. With one row, they step through the whole page.
+- Click another row to make the panel follow.
+- Cells with a pending edit show the new value, marked as changed.
+- **Copy row as** repeats the Copy As formats for the row shown.
+- Drag the left edge to resize. Helenus remembers the width. Close it with **✕** or **Escape**.
+
+## Aggregate view
+
+**Show aggregate view** summarises every cell of the selected rows: `ROWS`, `COLS`, `COUNT` (non-null cells), `COUNT_NUMS`, `SUM`, `AVG`, `MIN`, `MAX`, `MEDIAN` and `COEFFICIENT_OF_VARIATION`. Numeric figures use only numeric columns and exact decimal arithmetic, so there is no float rounding. When there are no numbers, they show `—`. **Copy** puts the same lines on the clipboard.

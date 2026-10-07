@@ -69,6 +69,7 @@ export function useTableEditing({ tab, profile, consistency, response, refetch, 
   const [popover, setPopover] = useState<{ row: number; column: string; el: HTMLElement } | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [inserting, setInserting] = useState<{ initial?: Record<string, unknown>; duplicate?: boolean } | null>(null)
+  const [cloning, setCloning] = useState<Record<string, unknown>[] | null>(null)
   const [reviewing, setReviewing] = useState(false)
   const [discarding, setDiscarding] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -203,6 +204,30 @@ export function useTableEditing({ tab, profile, consistency, response, refetch, 
     }
   }
 
+  /** The wire values of the displayed row: a fetched row, or the values of a staged insert. */
+  const wireRow = (row: number): unknown[] | null => {
+    const rm = meta(row)
+    if (!rm || !cols) return null
+    if (rm.source !== null) return response?.rows[rm.source] ?? null
+    const it = items.find((i) => i.id === rm.itemId)
+    return cols.map((c) => it?.values?.[c.name] ?? null)
+  }
+  const rowValues = (row: number): Record<string, unknown> => {
+    const w = wireRow(row)
+    return w && cols ? Object.fromEntries(cols.map((c, i) => [c.name, w[i] ?? null])) : {}
+  }
+
+  /** Stage a delete for every given row; staged inserts are dropped instead, and rows already staged are left alone. */
+  const deleteRows = (rows: number[]) => {
+    for (const row of rows) {
+      const rm = meta(row)
+      const raw = rawRow(row)
+      if (!rm || rm.locked) continue
+      if (rm.kind === 'new' && rm.itemId) unstageEdit(tab.id, rm.itemId)
+      else if (rm.kind === 'row' && rm.rowKey && raw && cols) stageEdit(tab.id, { id: deleteItemId(rm.rowKey), type: 'delete', rowKey: rm.rowKey, changes: [{ kind: 'delete_row', key: keyObject(cols, raw) }] })
+    }
+  }
+
   const stageInsert = (values: Record<string, unknown>, ifNotExists: boolean) =>
     stageEdit(tab.id, { id: newInsertId(), type: 'insert', values, changes: [{ kind: 'insert_row', values, if_not_exists: ifNotExists || undefined }] })
 
@@ -254,6 +279,21 @@ export function useTableEditing({ tab, profile, consistency, response, refetch, 
     },
     collection,
     udtFields,
+    wireRow,
+    /** Row menu actions (SPEC §9.5.1): all staged, none executed. `disabledReason` is null when editing is on. */
+    rowActions: {
+      disabledReason: !ed.editable ? (ed.reason ?? 'Editing is off') : counterTable ? 'Counter tables cannot have rows inserted, cloned or deleted. Edit counters in the grid.' : null,
+      onAdd: () => setInserting({}),
+      onClone: (rows: number[]) => {
+        if (rows.length === 1) setInserting({ initial: rowValues(rows[0]), duplicate: true })
+        else if (rows.length > 1) setCloning(rows.map(rowValues))
+      },
+      onDelete: deleteRows,
+    },
+    keysComplete: editability({ isView: false, system: false, tableColumns, result: cols }).editable,
+    cloning,
+    closeClone: () => setCloning(null),
+    stageClones: (all: Record<string, unknown>[]) => all.forEach((v) => stageInsert(v, false)),
     toolbar: {
       canInsert: canRowAction,
       canDuplicate: canRowAction && !!selRow && selRow.source !== null && !selRow.locked,

@@ -9,7 +9,7 @@ import { TraceTab } from './TraceTab'
 import { CountRowsDialog } from './CountRowsDialog'
 import { ExportDialog } from './ExportDialog'
 import { Button } from '../ui/Button'
-import { rowToJson, toGridColumns, toGridRows } from '../lib/rows'
+import { toGridColumns, toGridRows } from '../lib/rows'
 import { isSelect } from '../lib/statements'
 import type { Message } from '../mocks/types'
 import type { StatementResult } from '../store/workspace'
@@ -84,7 +84,7 @@ export function ResultsPanel({ mode = 'normal', onMode, results, active, onActiv
         onNext={() => onPage(active, 1)}
         showCount={isSelect(r.cql)}
         onCount={() => setCounting(true)}
-        rowJson={(i) => rowToJson(res, i)}
+        data={{ columns: res.columns, wireRow: (i) => res.rows[i] ?? null, source: null }}
       />
     )
   }
