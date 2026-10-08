@@ -106,6 +106,8 @@ interface WorkspaceState {
   open: (kind: Exclude<TabKind, 'query'>, keyspace: string, object: string) => void
   newQuery: (opts?: { keyspace?: string; cql?: string }) => void
   close: (id: string) => void
+  /** Close several tabs in one update; `activeAfter` becomes active if the active tab is among them. */
+  closeMany: (ids: string[], activeAfter?: string) => void
   activate: (id: string) => void
   setProfile: (id: string) => void
   setPaletteOpen: (open: boolean) => void
@@ -171,22 +173,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
   dataEpoch: 0,
   bumpDataEpoch: () => set((s) => ({ dataEpoch: s.dataEpoch + 1 })),
-  close: (id) => {
-    abortInflight(id)
+  close: (id) => get().closeMany([id]),
+  closeMany: (ids, activeAfter) => {
+    const gone = new Set(get().tabs.filter((t) => ids.includes(t.id)).map((t) => t.id))
+    if (gone.size === 0) return
+    gone.forEach((id) => abortInflight(id))
     set((s) => {
-      const i = s.tabs.findIndex((t) => t.id === id)
-      if (i < 0) return s
-      const tabs = s.tabs.filter((t) => t.id !== id)
-      const queryStates = { ...s.queryStates }
-      delete queryStates[id]
-      const columnViews = { ...s.columnViews }
-      delete columnViews[id]
-      const edits = { ...s.edits }
-      const editErrors = { ...s.editErrors }
-      delete edits[id]
-      delete editErrors[id]
-      const activeId = s.activeId === id ? (tabs[Math.min(i, tabs.length - 1)]?.id ?? '') : s.activeId
-      return { tabs, activeId, queryStates, columnViews, edits, editErrors }
+      const tabs = s.tabs.filter((t) => !gone.has(t.id))
+      const drop = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => !gone.has(k)))
+      let activeId = s.activeId
+      if (gone.has(s.activeId)) {
+        if (activeAfter && tabs.some((t) => t.id === activeAfter)) activeId = activeAfter
+        else {
+          const before = s.tabs.slice(0, s.tabs.findIndex((t) => t.id === s.activeId)).filter((t) => !gone.has(t.id)).length
+          activeId = tabs[Math.min(before, tabs.length - 1)]?.id ?? ''
+        }
+      }
+      return { tabs, activeId, queryStates: drop(s.queryStates), columnViews: drop(s.columnViews), edits: drop(s.edits), editErrors: drop(s.editErrors) }
     })
   },
   activate: (id) => set({ activeId: id }),

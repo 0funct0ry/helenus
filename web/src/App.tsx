@@ -34,6 +34,7 @@ export function App() {
   const activeId = useWorkspace((s) => s.activeId)
   const activate = useWorkspace((s) => s.activate)
   const close = useWorkspace((s) => s.close)
+  const closeMany = useWorkspace((s) => s.closeMany)
   const newQuery = useWorkspace((s) => s.newQuery)
   const profileId = useWorkspace((s) => s.profileId)
   const reviewKeyspace = useWorkspace((s) => s.reviewKeyspace)
@@ -79,7 +80,7 @@ export function App() {
           />
         </div>
         <main className="flex min-h-0 min-w-0 flex-col">
-          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t) }))} activeId={activeId} onSelect={activate} onClose={close} onNew={() => newQuery()} />
+          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t) }))} activeId={activeId} onSelect={activate} onClose={close} onCloseMany={closeMany} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (
             <TableView key={active.id} tab={active} />
           ) : active?.kind === 'query' ? (

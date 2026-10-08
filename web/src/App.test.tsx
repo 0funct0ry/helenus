@@ -1,6 +1,7 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
+import { useWorkspace } from './store/workspace'
 import { renderWithClient as render } from './test/api'
 import { connectedWorkspace, mockSchemaApi, queryTab, tableTab, typeTab } from './test/schemaFixture'
 
@@ -33,5 +34,18 @@ describe('App', () => {
   it('has no native select elements', () => {
     const { container } = render(<App />)
     expect(container.querySelector('select, dialog')).toBeNull()
+  })
+  it('closes tabs from the tab menu and confirms discarding staged edits', async () => {
+    render(<App />)
+    fireEvent.contextMenu(screen.getByRole('tab', { name: 'query-1.cql' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Close tabs to the left' }))
+    expect(screen.queryByRole('tab', { name: tableTab.title })).not.toBeInTheDocument()
+    useWorkspace.setState({ edits: { [typeTab.id]: [{ id: 'x' } as never] } })
+    fireEvent.contextMenu(screen.getByRole('tab', { name: 'query-1.cql' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Close all tabs' }))
+    expect(screen.getByRole('dialog', { name: 'Discard unapplied changes?' })).toHaveTextContent(typeTab.title)
+    await userEvent.click(screen.getByRole('button', { name: 'Discard and close' }))
+    expect(within(screen.getByRole('tablist', { name: 'Open tabs' })).queryAllByRole('tab')).toHaveLength(0)
+    expect(useWorkspace.getState()).toMatchObject({ tabs: [], activeId: '', edits: {} })
   })
 })

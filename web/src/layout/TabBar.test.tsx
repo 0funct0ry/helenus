@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TabBar } from './TabBar'
 
@@ -9,7 +9,7 @@ const tabs = [
 ]
 
 function setup(extra: Partial<React.ComponentProps<typeof TabBar>> = {}) {
-  const props = { tabs, activeId: 'a', onSelect: vi.fn(), onClose: vi.fn(), onNew: vi.fn(), ...extra }
+  const props = { tabs, activeId: 'a', onSelect: vi.fn(), onClose: vi.fn(), onCloseMany: vi.fn(), onNew: vi.fn(), ...extra }
   render(<TabBar {...props} />)
   return props
 }
@@ -48,5 +48,60 @@ describe('TabBar', () => {
   it('hides the close button for non-closable tabs', () => {
     setup({ tabs: [{ ...tabs[0], closable: false }], activeId: 'a' })
     expect(screen.queryByRole('button', { name: /^Close/ })).not.toBeInTheDocument()
+  })
+
+  describe('context menu', () => {
+    const item = (name: string) => screen.getByRole('menuitem', { name })
+    it('opens on right-click for that tab without activating it', () => {
+      const p = setup()
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'query-1.cql' }))
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['Close all tabs', 'Close other tabs', 'Close tabs to the left', 'Close tabs to the right'])
+      expect(p.onSelect).not.toHaveBeenCalled()
+      expect(screen.getByRole('tab', { name: 'transactions_by_merchant' })).toHaveAttribute('aria-selected', 'true')
+    })
+    it('opens on the close button and via Shift+F10', async () => {
+      setup()
+      fireEvent.contextMenu(screen.getByRole('button', { name: 'Close address' }))
+      expect(screen.getByRole('menu', { name: 'Tab actions' })).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+      screen.getByRole('tab', { name: 'address' }).focus()
+      await userEvent.keyboard('{Shift>}{F10}{/Shift}')
+      expect(item('Close tabs to the right')).toHaveAttribute('aria-disabled', 'true')
+    })
+    it('closes the tabs to the left of the target immediately', async () => {
+      const p = setup()
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'query-1.cql' }))
+      await userEvent.click(item('Close tabs to the left'))
+      expect(p.onCloseMany).toHaveBeenCalledWith(['a'], 'b')
+    })
+    it('disables items with reasons for the first, last and only tab', () => {
+      const { unmount } = render(<TabBar tabs={tabs} activeId="a" onSelect={vi.fn()} onClose={vi.fn()} onCloseMany={vi.fn()} onNew={vi.fn()} />)
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'transactions_by_merchant' }))
+      expect(item('Close tabs to the left')).toHaveAttribute('title', 'No tabs to the left')
+      expect(item('Close tabs to the right')).not.toHaveAttribute('aria-disabled', 'true')
+      unmount()
+      setup({ tabs: [tabs[0]] })
+      fireEvent.contextMenu(screen.getByRole('tab'))
+      expect(item('Close other tabs')).toHaveAttribute('title', 'No other tabs')
+      expect(item('Close tabs to the right')).toHaveAttribute('title', 'No tabs to the right')
+      expect(item('Close all tabs')).not.toHaveAttribute('aria-disabled', 'true')
+    })
+    it('asks before discarding unapplied changes, listing only affected tabs', async () => {
+      const p = setup({ tabs: tabs.map((t) => (t.id === 'c' ? { ...t, modified: true } : t)) })
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'transactions_by_merchant' }))
+      await userEvent.click(item('Close other tabs'))
+      expect(p.onCloseMany).not.toHaveBeenCalled()
+      const dlg = screen.getByRole('dialog', { name: 'Discard unapplied changes?' })
+      expect(dlg).toHaveTextContent('address')
+      expect(dlg).not.toHaveTextContent('query-1.cql')
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+      await userEvent.keyboard('{Escape}')
+      expect(p.onCloseMany).not.toHaveBeenCalled()
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'transactions_by_merchant' }))
+      await userEvent.click(item('Close other tabs'))
+      await userEvent.click(screen.getByRole('button', { name: 'Discard and close' }))
+      expect(p.onCloseMany).toHaveBeenCalledWith(['b', 'c'], 'a')
+    })
   })
 })

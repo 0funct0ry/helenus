@@ -1,0 +1,20 @@
+---
+title: Manage open tabs
+description: Close all, other, left or right tabs from the tab bar menu, with a prompt before unapplied changes are discarded.
+---
+
+Right-click a tab (its title, icon or close button), or focus it and press **Shift+F10** or the **Menu** key. Opening the menu does not activate or reorder any tab.
+
+## The tab menu
+
+- **Close all tabs** closes every closable tab. The workspace shows its empty state.
+- **Close other tabs** closes every closable tab except the one you clicked, which becomes active.
+- **Close tabs to the left** and **Close tabs to the right** close the closable tabs on that side of the clicked tab, in the order shown in the bar. That tab becomes active if the active tab was among those closed; otherwise the active tab stays active.
+
+An item is disabled, with a tooltip, when it has nothing to close. Tabs that cannot be closed are always skipped.
+
+## Unapplied changes
+
+A tab with a dot has staged grid edits that have not been applied. If any tab about to close has one, Helenus asks **Discard unapplied changes?** and lists only those tabs. **Cancel** (the default) and **Escape** change nothing; **Discard and close** closes the whole set. Query text is not counted, and the single close button on a tab does not prompt.
+
+Tabs that stay open keep their order and pending edits. See [Edit rows in the grid](/docs/edit-rows-in-the-grid/) for staging changes.
