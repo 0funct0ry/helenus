@@ -1,0 +1,32 @@
+---
+title: Save and open queries in the web UI
+description: Keep a library of named queries, organize them in folders, and move .cql files in and out of the editor.
+---
+
+## Save a query
+
+Press **⌘S** (Ctrl-S) in a query tab, or use the **Save** button in the toolbar. The first time, a dialog asks for a name.
+
+- Names are folder paths: `reports/daily payments` puts `daily payments` in a `reports` folder. Names are 1–200 characters, with no leading or trailing `/`, no empty folder, no `\`.
+- Names are unique per scope, ignoring case.
+- Tick **Global (all profiles)** to share the query with every profile; otherwise it belongs to the current profile.
+
+The tab is then bound to the query and titled with the last name segment plus `.cql`. When the text differs from the saved text, the tab shows a dot with the tooltip "Unsaved changes". **Save as** (⇧⌘S) saves under a new name and binds the tab to it.
+
+## Open a query
+
+Open the **Queries** tab in the left dock, filter by name, and click a query. A tab already bound to it is activated; otherwise a new tab opens. Right-click (or the ⋯ button) for Open in new tab, Rename / Move…, Duplicate, Copy name, Download .cql and Delete. The command palette lists queries under "Saved queries".
+
+## If the query changed elsewhere
+
+Saving checks the version you opened. If someone changed the query since, you can **Overwrite**, **Save as copy**, **Reload** (discarding your edits) or **Cancel**.
+
+## Closing tabs
+
+Closing a tab with unsaved changes asks whether to save first. Closing several tabs lists the tabs with unsaved changes and offers "Discard and close".
+
+## Files
+
+**Download .cql** saves the tab as a UTF-8 file. **Open .cql file…** (toolbar or palette), or dropping a file on the editor, opens it in a new unsaved tab. Files must be UTF-8 and at most 1 MiB.
+
+With sign-in on, every user has a private library. The shell can read and write the same library: see [Save and open query files in the shell](/helenus/docs/save-and-open-query-files-in-the-shell/).

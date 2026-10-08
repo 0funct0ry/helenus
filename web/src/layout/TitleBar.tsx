@@ -36,6 +36,13 @@ export function TitleBar() {
                 <b className="font-medium text-fg">{active.object}</b>
               </>
             )}
+            {!active.object &&
+              active.queryName?.split('/').slice(0, -1).map((folder, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  <ChevronRight size={12} aria-hidden />
+                  {folder}
+                </span>
+              ))}
             {!active.object && (
               <>
                 <ChevronRight size={12} aria-hidden />

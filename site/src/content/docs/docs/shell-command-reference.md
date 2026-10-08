@@ -23,6 +23,11 @@ Shell commands are lowercase and start with a dot. A trailing semicolon is optio
 | `.tracing on\|off` | Traces every statement and prints the trace table after its results. With no argument, shows the state. |
 | `.timing on\|off` | Prints `Time: 38.2 ms` to stderr after each statement. With tracing on, it adds the coordinator time: `Time: 38.2 ms (coordinator 31.7 ms)`. |
 | `.source '<file>'` | Runs the statements in a file. Stops at the first error. |
+| `.save [-n N \| -a] [-f] <path>` | Writes the last statement (or the last N, or all with `-a`) of this session to a file, each ending with `;`. An existing file needs `-f`. See [Save and open query files in the shell](/helenus/docs/save-and-open-query-files-in-the-shell/). |
+| `.open <path>` | Opens the file in `$VISUAL` or `$EDITOR`, then asks `Run them? [y/N/e]`. |
+| `.save --db [-n N \| -a] [-f] [--global] <name>` | Saves statements to the query library. |
+| `.queries [filter]` | Lists saved queries. |
+| `.load [--global] <name>` | Edits a saved query in your editor, offers to run it and to save the changes. |
 | `.clear`, `.cls` | Clears the screen. |
 | `.help [topic]` | Lists commands, or explains one. |
 | `.exit`, `.quit` | Leaves the shell. |

@@ -17,4 +17,11 @@ describe('LeftDock', () => {
     await userEvent.click(screen.getByRole('tab', { name: /Schema$/ }))
     expect(screen.queryByLabelText('Search schema changes')).not.toBeInTheDocument()
   })
+  it('shows the Queries tab with the saved-query library', async () => {
+    mockSchemaApi({ 'GET /p/local/queries': { queries: [] } })
+    render(<LeftDock />)
+    await userEvent.click(screen.getByRole('tab', { name: /Queries/ }))
+    expect(screen.getByRole('tab', { name: /Queries/ })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByText('No saved queries yet. Press ⌘S in a query tab to save one.')).toBeInTheDocument()
+  })
 })

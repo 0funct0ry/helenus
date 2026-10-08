@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { TitleBar } from './layout/TitleBar'
 import { SidebarResizer } from './layout/SidebarResizer'
 import { useSidebarWidth } from './lib/useSidebarWidth'
@@ -23,6 +23,9 @@ import { SignInScreen } from './layout/SignInScreen'
 import { useAuthGate } from './api/useAuth'
 import { useUiStateSync } from './api/useUiStateSync'
 import { useSession } from './store/session'
+import { QueryDialogs } from './layout/QueryDialogs'
+import { useQueryActions } from './api/useQueryActions'
+import { isDirtyTab } from './lib/queryDirty'
 
 /**
  * Application shell: title bar, schema dock, tab bar with the active tab's view, status bar and the
@@ -33,7 +36,11 @@ export function App() {
   const edits = useWorkspace((s) => s.edits)
   const activeId = useWorkspace((s) => s.activeId)
   const activate = useWorkspace((s) => s.activate)
-  const close = useWorkspace((s) => s.close)
+  const queryStates = useWorkspace((s) => s.queryStates)
+  const editorEpochs = useWorkspace((s) => s.editorEpochs)
+  const actions = useQueryActions()
+  const actionsRef = useRef(actions)
+  actionsRef.current = actions
   const closeMany = useWorkspace((s) => s.closeMany)
   const newQuery = useWorkspace((s) => s.newQuery)
   const profileId = useWorkspace((s) => s.profileId)
@@ -57,6 +64,12 @@ export function App() {
         e.preventDefault()
         const s = useWorkspace.getState()
         s.setPaletteOpen(!s.paletteOpen)
+      } else if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 's' && !e.defaultPrevented) {
+        const s = useWorkspace.getState()
+        if (s.tabs.find((t) => t.id === s.activeId)?.kind !== 'query') return
+        e.preventDefault()
+        if (e.shiftKey) actionsRef.current.saveAs(s.activeId)
+        else void actionsRef.current.save(s.activeId)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -80,11 +93,18 @@ export function App() {
           />
         </div>
         <main className="flex min-h-0 min-w-0 flex-col">
-          <TabBar tabs={tabs.map((t) => ({ ...t, modified: (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t) }))} activeId={activeId} onSelect={activate} onClose={close} onCloseMany={closeMany} onNew={() => newQuery()} />
+          <TabBar
+            tabs={tabs.map((t) => {
+              const dirty = isDirtyTab(t, queryStates[t.id])
+              return { ...t, dirty, modified: dirty || (edits[t.id]?.length ?? 0) > 0, readOnly: isSystemTab(t), tooltip: t.queryName ? `${t.queryName}${t.queryGlobal ? ' (Global)' : ''}` : undefined }
+            })}
+            activeId={activeId}
+            onSelect={activate}
+            onClose={actions.requestClose} onCloseMany={closeMany} onNew={() => newQuery()} />
           {active?.kind === 'table' || active?.kind === 'view' ? (
             <TableView key={active.id} tab={active} />
           ) : active?.kind === 'query' ? (
-            <QueryView key={active.id} tab={active} />
+            <QueryView key={`${active.id}:${editorEpochs[active.id] ?? 0}`} tab={active} />
           ) : active?.kind === 'type' ? (
             <TypeView key={active.id} tab={active} />
           ) : active?.kind === 'aggregate' ? (
@@ -100,6 +120,7 @@ export function App() {
       </div>
       <StatusBar />
       <CommandPalette />
+      <QueryDialogs />
       <ProfileDialog />
       <ReviewDataModelDialog profile={profileId} keyspace={reviewKeyspace} onClose={() => setReviewKeyspace(null)} />
       <ToastViewport />

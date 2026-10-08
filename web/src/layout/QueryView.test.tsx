@@ -1,10 +1,12 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryView } from './QueryView'
 import { renderWithClient as render, mockApi } from '../test/api'
 import type { Call } from '../test/api'
 import { connectedWorkspace, queryTab, rowsResponse, snapshot } from '../test/schemaFixture'
 import { useWorkspace } from '../store/workspace'
+import { useQueryDialogs } from '../store/queryDialogs'
+import { boundTab, boundWorkspace, savedRow, toastMessages } from '../test/queriesFixture'
 import type { WorkspaceTab } from '../store/workspace'
 
 const stmt = (text: string, start: number) => ({ text, start, end: start + text.length, line: 1, complete: true })
@@ -162,5 +164,80 @@ describe('QueryView', () => {
     await userEvent.click(screen.getAllByRole('button', { name: 'Count rows' }).at(-1)!)
     expect(await screen.findByText('42')).toBeInTheDocument()
     expect(queryCalls(calls).at(-1)?.cql).toBe('SELECT COUNT(*) FROM payments.merchants;')
+  })
+})
+
+describe('QueryView saving and files', () => {
+  it('Save opens Save as for an unbound tab', async () => {
+    connectedWorkspace([queryTab])
+    render(<QueryView tab={tabWith('SELECT 1;')} />)
+    await userEvent.click(screen.getByRole('button', { name: /^Save\s*⌘S/ }))
+    expect(useQueryDialogs.getState().saveAs).toMatchObject({ tabId: 'query-1', name: '' })
+  })
+  it('Save puts a bound tab', async () => {
+    boundWorkspace()
+    const calls = mockApi({ 'PUT /p/local/queries/1': savedRow({ version: 2 }), 'GET /p/local/schema': snapshot })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    await userEvent.click(screen.getByRole('button', { name: /^Save\s*⌘S/ }))
+    await waitFor(() => expect(toastMessages()).toEqual(['Saved daily.cql']))
+    expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ version: 1, text: 'SELECT 1;' })
+  })
+  it('Mod-s in the editor saves and Shift-Mod-s opens Save as', async () => {
+    boundWorkspace()
+    const calls = mockApi({ 'PUT /p/local/queries/1': savedRow({ version: 2 }), 'GET /p/local/schema': snapshot })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    screen.getByRole('textbox', { name: 'CQL editor' }).focus()
+    await userEvent.keyboard('{Control>}s{/Control}')
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'CQL editor' }), { key: 'S', keyCode: 83, ctrlKey: true, shiftKey: true })
+    expect(useQueryDialogs.getState().saveAs).toMatchObject({ tabId: 'query-1', name: 'reports/daily' })
+  })
+  it('the Save menu offers Save as…, Download .cql and Open .cql file…', async () => {
+    boundWorkspace()
+    mockApi({ 'GET /p/local/schema': snapshot })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Save options' }))
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['Save as…', 'Download .cql', 'Open .cql file…'])
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Open .cql file…' }))
+    expect(useQueryDialogs.getState().pickerNonce).toBe(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Save options' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Save as…' }))
+    expect(useQueryDialogs.getState().saveAs).toMatchObject({ tabId: 'query-1' })
+  })
+  it('Download .cql downloads the current text under the tab title', async () => {
+    boundWorkspace()
+    mockApi({ 'GET /p/local/schema': snapshot })
+    URL.createObjectURL = vi.fn(() => 'blob:v')
+    URL.revokeObjectURL = vi.fn()
+    let name = ''
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      name = this.download
+    })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Save options' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Download .cql' }))
+    expect(name).toBe('daily.cql')
+    click.mockRestore()
+  })
+  it('opens dropped files in new unbound tabs', async () => {
+    boundWorkspace()
+    mockApi({ 'GET /p/local/schema': snapshot })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    const drop = screen.getByTestId('editor-drop')
+    const file = new File(['SELECT 9;'], 'dropped.cql')
+    const over = fireEvent.dragOver(drop, { dataTransfer: { types: ['Files'], files: [file] } })
+    expect(over).toBe(false)
+    fireEvent.drop(drop, { dataTransfer: { types: ['Files'], files: [file] } })
+    await waitFor(() => expect(useWorkspace.getState().tabs).toHaveLength(2))
+    expect(useWorkspace.getState().tabs[1]).toMatchObject({ title: 'dropped.cql' })
+  })
+  it('reports a dropped file that is too large', async () => {
+    boundWorkspace()
+    mockApi({ 'GET /p/local/schema': snapshot })
+    render(<QueryView tab={{ ...boundTab, initialCql: 'SELECT 1;' }} />)
+    const file = new File([new Uint8Array(1024 * 1024 + 1)], 'big.sql')
+    fireEvent.drop(screen.getByTestId('editor-drop'), { dataTransfer: { types: ['Files'], files: [file] } })
+    await waitFor(() => expect(toastMessages()).toEqual(['Could not open big.sql: The file is larger than 1 MiB.']))
+    expect(useWorkspace.getState().tabs).toHaveLength(1)
   })
 })

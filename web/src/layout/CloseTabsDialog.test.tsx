@@ -12,7 +12,7 @@ function setup(titles: string[]) {
 describe('CloseTabsDialog', () => {
   it('lists the titles and focuses Cancel', () => {
     setup(['a', 'b'])
-    expect(screen.getByRole('dialog', { name: 'Discard unapplied changes?' })).toHaveTextContent('These tabs have changes that have not been applied and will be lost:')
+    expect(screen.getByRole('dialog', { name: 'Discard unapplied changes?' })).toHaveTextContent('These tabs have unsaved or unapplied changes that will be lost:')
     expect(screen.getAllByRole('listitem').map((l) => l.textContent)).toEqual(['a', 'b'])
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
   })

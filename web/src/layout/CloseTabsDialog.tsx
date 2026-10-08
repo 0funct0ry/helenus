@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 
 export interface CloseTabsDialogProps {
   open: boolean
-  /** Titles of the tabs that have unapplied changes (only these are listed). */
+  /** Titles of the tabs that have unapplied grid changes or unsaved query edits (only these are listed). */
   titles: string[]
   onConfirm: () => void
   onCancel: () => void
@@ -13,7 +13,7 @@ export interface CloseTabsDialogProps {
 const MAX_LISTED = 8
 
 /**
- * Modal asking before tabs with unapplied grid changes are closed. Lists up to eight affected tab
+ * Modal asking before tabs with unapplied grid changes or unsaved edits to a saved query are closed. Lists up to eight affected tab
  * titles ("and N more" beyond that). Cancel has initial focus; Enter confirms only while
  * "Discard and close" is focused. Escape, the scrim and Cancel dismiss without closing anything.
  */
@@ -42,7 +42,7 @@ export function CloseTabsDialog({ open, titles, onConfirm, onCancel }: CloseTabs
       }
     >
       <div className="px-4 py-4 text-[13px]">
-        <p className="m-0">These tabs have changes that have not been applied and will be lost:</p>
+        <p className="m-0">These tabs have unsaved or unapplied changes that will be lost:</p>
         <ul className="m-0 mt-2 list-disc pl-5">
           {titles.slice(0, MAX_LISTED).map((t, i) => (
             <li key={i}>{t}</li>

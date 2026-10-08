@@ -16,6 +16,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/cql"
 	"github.com/0funct0ry/helenus/internal/exec"
 	"github.com/0funct0ry/helenus/internal/schema"
+	"github.com/0funct0ry/helenus/internal/store"
 	"github.com/0funct0ry/helenus/internal/trace"
 )
 
@@ -106,6 +107,17 @@ type Shell struct {
 
 	aliasState
 
+	// OpenStore opens the SQLite file for the query library; it is called
+	// lazily by the first library command. Nil disables the library.
+	OpenStore func() (*store.Store, error)
+	// Editor edits a file for .open and .load; nil runs $VISUAL, $EDITOR or vi.
+	Editor func(path string) error
+	// Ask prompts and reads one answer; nil answers every question with no.
+	Ask func(prompt string) (string, error)
+
+	st      *store.Store
+	stmtLog []string
+
 	sourceDepth int
 	// pending holds the earlier lines of the statement being typed, for tab-completion.
 	pending []string
@@ -142,6 +154,7 @@ func (s *Shell) Execute(ctx context.Context, text string) error {
 			return err
 		}
 	}
+	s.logStatement(stmt)
 	if isCopy(body) {
 		return s.copyStmt(ctx, stmt)
 	}

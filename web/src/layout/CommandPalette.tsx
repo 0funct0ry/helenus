@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Activity, Database, Eye, Lightbulb, Moon, Plus, Shield, Table2 } from 'lucide-react'
+import { Activity, Database, Eye, FileText, FolderOpen, Lightbulb, Moon, Plus, Save, Shield, Table2 } from 'lucide-react'
 import { Dialog } from '../ui/Dialog'
 import { useProfiles, useSchema } from '../api/hooks'
+import { useQueries } from '../api/useQueries'
+import { useQueryActions } from '../api/useQueryActions'
+import { useToasts } from '../store/toast'
 import { useWorkspace } from '../store/workspace'
 import { useThemeStore } from '../store/theme'
 import { cn } from '../lib/cn'
 
 interface Action {
   id: string
-  group: 'Tables and views' | 'Commands'
+  group: 'Tables and views' | 'Saved queries' | 'Commands'
   label: string
   icon: ReactNode
   mono?: boolean
@@ -18,7 +21,7 @@ interface Action {
 
 /**
  * Command palette dialog (opened with Cmd/Ctrl-K). A filter input over mock actions: open a table or
- * view, new query, switch profile, toggle theme. Arrow keys move, Enter runs, Escape closes.
+ * view, a saved query (by full name), new query, Save query, Save query as…, Open .cql file…, switch profile, toggle theme. Arrow keys move, Enter runs, Escape closes.
  */
 export function CommandPalette() {
   const isOpen = useWorkspace((s) => s.paletteOpen)
@@ -39,6 +42,13 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const connected = useWorkspace((s) => s.connections[s.profileId]?.status === 'connected')
   const { data: keyspaces = [] } = useSchema(profileId, connected)
   const { data: profiles } = useProfiles()
+  const { data: saved = [] } = useQueries(profileId)
+  const qa = useQueryActions()
+  const withQueryTab = (fn: (id: string) => void) => () => {
+    const s = useWorkspace.getState()
+    if (s.tabs.find((t) => t.id === s.activeId)?.kind === 'query') fn(s.activeId)
+    else useToasts.getState().push('Open a query tab first')
+  }
   const astra = !!profiles?.find((p) => p.name === profileId)?.astra?.secure_bundle
 
   const actions: Action[] = useMemo(
@@ -49,7 +59,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
           ...k.tables.map<Action>((t) => ({ id: `t:${k.name}.${t.name}`, group: 'Tables and views', label: `${k.name}.${t.name}`, mono: true, icon: <Table2 size={14} />, run: () => open('table', k.name, t.name) })),
           ...k.views.map<Action>((v) => ({ id: `v:${k.name}.${v.name}`, group: 'Tables and views', label: `${k.name}.${v.name}`, mono: true, icon: <Eye size={14} />, run: () => open('view', k.name, v.name) })),
         ]),
+      ...saved.map<Action>((q) => ({ id: `q:${q.id}`, group: 'Saved queries', label: q.name, icon: <FileText size={14} />, run: () => void qa.openQuery(q) })),
       { id: 'new-query', group: 'Commands', label: 'New query', icon: <Plus size={14} />, run: () => newQuery() },
+      { id: 'save-query', group: 'Commands', label: 'Save query', icon: <Save size={14} />, run: withQueryTab((id) => void qa.save(id)) },
+      { id: 'save-query-as', group: 'Commands', label: 'Save query as…', icon: <Save size={14} />, run: withQueryTab((id) => qa.saveAs(id)) },
+      { id: 'open-file', group: 'Commands', label: 'Open .cql file…', icon: <FolderOpen size={14} />, run: qa.pickFile },
       { id: 'profiles', group: 'Commands', label: 'Switch profile…', icon: <Database size={14} />, run: () => openProfiles(true) },
       ...(astra ? [] : [{ id: 'security', group: 'Commands' as const, label: 'Security: roles and permissions', icon: <Shield size={14} />, run: () => open('security', '', 'Security') }]),
       ...['clients', 'settings', 'thread_pools', 'caches']
@@ -58,7 +72,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       ...keyspaces.filter((k) => !k.system).map<Action>((k) => ({ id: `review:${k.name}`, group: 'Commands', label: `Review data model: ${k.name}`, icon: <Lightbulb size={14} />, run: () => reviewKeyspace(k.name) })),
       { id: 'theme', group: 'Commands', label: 'Toggle light and dark theme', icon: <Moon size={14} />, run: cycleTheme },
     ],
-    [keyspaces, astra, open, newQuery, openProfiles, reviewKeyspace, cycleTheme],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [keyspaces, saved, astra, open, newQuery, openProfiles, reviewKeyspace, cycleTheme],
   )
   const q = query.trim().toLowerCase()
   const shown = actions.filter((a) => a.label.toLowerCase().includes(q))

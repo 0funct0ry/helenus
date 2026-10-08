@@ -17,6 +17,10 @@ export interface TabBarItem {
   closable?: boolean
   /** Shows an accent dot for unsaved/pending state. */
   modified?: boolean
+  /** The dot means unsaved query text (tooltip "Unsaved changes") rather than pending grid edits. */
+  dirty?: boolean
+  /** Native tooltip of the tab (full saved-query name, "Global"). */
+  tooltip?: string
   /** Shows a Read-only badge (system keyspace objects). */
   readOnly?: boolean
 }
@@ -108,12 +112,13 @@ export function TabBar({ tabs, activeId, onSelect, onClose, onCloseMany, onNew }
                 aria-selected={active}
                 tabIndex={active ? 0 : -1}
                 onClick={() => onSelect(t.id)}
+                title={t.tooltip}
                 className="flex h-full min-w-0 items-center gap-[7px]"
               >
                 <Icon size={14} className="shrink-0" aria-hidden />
                 <span className="truncate">{t.title}</span>
                 {t.readOnly && <ReadOnlyBadge />}
-                {t.modified && <span className="size-1.5 rounded-full bg-accent" title="Pending changes" />}
+                {t.modified && <span className="size-1.5 rounded-full bg-accent" title={t.dirty ? 'Unsaved changes' : 'Pending changes'} />}
               </button>
               {t.closable !== false && (
                 <button

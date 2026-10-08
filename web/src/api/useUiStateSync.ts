@@ -6,7 +6,7 @@ import type { WorkspaceTab } from '../store/workspace'
 interface SavedState {
   tabs: WorkspaceTab[]
   activeId: string
-  queries: Record<string, { text: string; keyspace: string }>
+  queries: Record<string, { text: string; keyspace: string; savedText?: string; savedVersion?: number }>
 }
 
 const SAVE_DELAY_MS = 1000
@@ -16,7 +16,7 @@ function snapshot(): SavedState {
   const queries: SavedState['queries'] = {}
   for (const t of s.tabs) {
     const q = s.queryStates[t.id]
-    if (t.kind === 'query' && q) queries[t.id] = { text: q.text, keyspace: q.keyspace }
+    if (t.kind === 'query' && q) queries[t.id] = { text: q.text, keyspace: q.keyspace, savedText: q.savedText, savedVersion: q.savedVersion }
   }
   return { tabs: s.tabs.map(({ initialCql, ...t }) => { void initialCql; return t }), activeId: s.activeId, queries }
 }
@@ -37,7 +37,7 @@ export function useUiStateSync(enabled: boolean, profile: string) {
         if (cancelled) return
         if (state?.tabs?.length && useWorkspace.getState().tabs.length === 0) {
           const queryStates = Object.fromEntries(
-            Object.entries(state.queries ?? {}).map(([id, q]) => [id, newQueryState({ text: q.text, keyspace: q.keyspace }, useWorkspace.getState().consistency)]),
+            Object.entries(state.queries ?? {}).map(([id, q]) => [id, newQueryState({ text: q.text, keyspace: q.keyspace, savedText: q.savedText, savedVersion: q.savedVersion }, useWorkspace.getState().consistency)]),
           )
           useWorkspace.setState({ tabs: state.tabs, activeId: state.activeId, queryStates })
         }

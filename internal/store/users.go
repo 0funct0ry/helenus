@@ -91,13 +91,16 @@ func (s *Store) BumpTokenVersion(id int64) error {
 	return s.expectOne(s.db.Exec(`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, id))
 }
 
-// DeleteUser removes the user and their saved UI state.
+// DeleteUser removes the user and their saved UI state and queries.
 func (s *Store) DeleteUser(username string) error {
 	u, err := s.UserByName(username)
 	if err != nil {
 		return err
 	}
 	if _, err := s.db.Exec(`DELETE FROM ui_state WHERE user_id = ?`, u.ID); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`DELETE FROM saved_queries WHERE user_id = ?`, u.ID); err != nil {
 		return err
 	}
 	return s.expectOne(s.db.Exec(`DELETE FROM users WHERE id = ?`, u.ID))

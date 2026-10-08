@@ -16,6 +16,7 @@ import (
 	"github.com/0funct0ry/helenus/internal/conn"
 	"github.com/0funct0ry/helenus/internal/schema"
 	"github.com/0funct0ry/helenus/internal/shell"
+	"github.com/0funct0ry/helenus/internal/store"
 )
 
 // rootCmd is the interactive shell; -e and -f run one-shot CQL.
@@ -96,6 +97,10 @@ func runShell(cmd *cobra.Command, args []string) error {
 			return b, err
 		},
 	}
+
+	dbPath := config.DBPath(s.V.GetString("paths.db"))
+	sh.OpenStore = func() (*store.Store, error) { return store.Open(dbPath) }
+	defer sh.CloseLibrary()
 
 	sh.Abbreviations = s.Config.Shell.Abbreviations
 	sh.ConfigPath = s.Path
@@ -200,4 +205,5 @@ func init() {
 	config.AddConfigFlag(rootCmd)
 	config.AddConnectionFlags(rootCmd, true)
 	config.AddShellFlags(rootCmd)
+	config.AddDBFlag(rootCmd)
 }

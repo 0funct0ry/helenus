@@ -19,6 +19,12 @@ export interface WorkspaceTab {
   closable: boolean
   /** Text a query tab starts with. */
   initialCql?: string
+  /** Id of the saved query this query tab is bound to; unbound tabs have none. */
+  savedQueryId?: number
+  /** Full library name of the bound query (`reports/daily`). */
+  queryName?: string
+  /** Whether the bound query is global (all profiles). */
+  queryGlobal?: boolean
 }
 
 /** An API error as shown in a result (SPEC §11). */
@@ -53,6 +59,10 @@ export interface QueryTabState {
   running: boolean
   results: StatementResult[]
   activeResult: number
+  /** Text last saved to the library for a bound tab; the tab is dirty when `text` differs. */
+  savedText?: string
+  /** Library version `savedText` was saved at; sent with the next save. */
+  savedVersion?: number
 }
 
 export const DEFAULT_QUERY_TEXT = '-- Write CQL here. Cmd+Enter runs the statement under the cursor.\n'
@@ -60,6 +70,31 @@ export const DEFAULT_QUERY_TEXT = '-- Write CQL here. Cmd+Enter runs the stateme
 /** Fresh state for a query tab. */
 export function newQueryState(over: Partial<QueryTabState> = {}, consistency = 'LOCAL_QUORUM'): QueryTabState {
   return { text: DEFAULT_QUERY_TEXT, keyspace: '', consistency, serial: 'SERIAL', pageSize: 100, allowFiltering: false, trace: false, running: false, results: [], activeResult: 0, ...over }
+}
+
+/** The library fields a bound tab mirrors. */
+export interface BoundQuery {
+  id: number
+  name: string
+  global: boolean
+  version: number
+}
+
+export interface NewQueryOptions {
+  keyspace?: string
+  cql?: string
+  /** Tab title; defaults to `query-N.cql`. */
+  title?: string
+  savedQueryId?: number
+  queryName?: string
+  queryGlobal?: boolean
+  savedText?: string
+  savedVersion?: number
+}
+
+/** Tab title for a saved query: last name segment plus `.cql`. */
+function titleOf(name: string): string {
+  return `${name.slice(name.lastIndexOf('/') + 1).replace(/\.cql$/i, '')}.cql`
 }
 
 export interface Connection {
@@ -104,7 +139,17 @@ interface WorkspaceState {
   setConsistency: (c: string) => void
   setCursor: (line: number, col: number) => void
   open: (kind: Exclude<TabKind, 'query'>, keyspace: string, object: string) => void
-  newQuery: (opts?: { keyspace?: string; cql?: string }) => void
+  newQuery: (opts?: NewQueryOptions) => void
+  /** Bind a query tab to a saved query: sets its title, name, scope and saved text/version. */
+  bindQuery: (tabId: string, row: BoundQuery, text: string) => void
+  /** Apply a renamed/moved/re-versioned saved query to every tab bound to it. */
+  syncBoundQuery: (row: BoundQuery & { text?: string }) => void
+  /** Detach every tab bound to `queryId` (text stays); returns the titles of the tabs affected. */
+  unbindQuery: (queryId: number) => string[]
+  /** Replace a bound tab's text and saved state and remount its editor. */
+  reloadQuery: (tabId: string, text: string, version: number) => void
+  /** Bumped per tab when its editor must remount to show replaced text. */
+  editorEpochs: Record<string, number>
   close: (id: string) => void
   /** Close several tabs in one update; `activeAfter` becomes active if the active tab is among them. */
   closeMany: (ids: string[], activeAfter?: string) => void
@@ -162,15 +207,72 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     }))
   },
   newQuery: (opts) => {
-    const n = get().queryCount + 1
+    let n = get().queryCount + 1
+    while (get().tabs.some((t) => t.id === `query-${n}`)) n++
     const id = `query-${n}`
+    const bound = opts?.savedQueryId !== undefined
     set((s) => ({
       queryCount: n,
-      queryStates: { ...s.queryStates, [id]: newQueryState({ keyspace: opts?.keyspace ?? '', text: opts?.cql ?? DEFAULT_QUERY_TEXT }, s.consistency) },
-      tabs: [...s.tabs, { id, kind: 'query', title: `query-${n}.cql`, keyspace: opts?.keyspace ?? '', object: '', closable: true, initialCql: opts?.cql }],
+      queryStates: {
+        ...s.queryStates,
+        [id]: newQueryState(
+          { keyspace: opts?.keyspace ?? '', text: opts?.cql ?? DEFAULT_QUERY_TEXT, ...(bound && { savedText: opts?.savedText ?? opts?.cql ?? '', savedVersion: opts?.savedVersion }) },
+          s.consistency,
+        ),
+      },
+      tabs: [
+        ...s.tabs,
+        {
+          id,
+          kind: 'query',
+          title: opts?.title ?? `query-${n}.cql`,
+          keyspace: opts?.keyspace ?? '',
+          object: '',
+          closable: true,
+          initialCql: opts?.cql,
+          ...(bound && { savedQueryId: opts.savedQueryId, queryName: opts.queryName, queryGlobal: opts.queryGlobal }),
+        },
+      ],
       activeId: id,
     }))
   },
+  editorEpochs: {},
+  bindQuery: (tabId, row, text) =>
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, title: titleOf(row.name), savedQueryId: row.id, queryName: row.name, queryGlobal: row.global } : t)),
+      queryStates: { ...s.queryStates, [tabId]: { ...(s.queryStates[tabId] ?? newQueryState({}, s.consistency)), savedText: text, savedVersion: row.version } },
+    })),
+  syncBoundQuery: (row) =>
+    set((s) => {
+      const bound = s.tabs.filter((t) => t.savedQueryId === row.id).map((t) => t.id)
+      if (bound.length === 0) return {}
+      const queryStates = { ...s.queryStates }
+      for (const id of bound) {
+        const q = queryStates[id]
+        // Only adopt the new version when the tab's saved text is what the library holds, so a hidden change is still reported as a conflict.
+        if (q && (row.text === undefined || row.text === q.savedText)) queryStates[id] = { ...q, savedVersion: row.version }
+      }
+      return {
+        tabs: s.tabs.map((t) => (t.savedQueryId === row.id ? { ...t, title: titleOf(row.name), queryName: row.name, queryGlobal: row.global } : t)),
+        queryStates,
+      }
+    }),
+  unbindQuery: (queryId) => {
+    const hit = get().tabs.filter((t) => t.savedQueryId === queryId)
+    if (hit.length === 0) return []
+    const ids = new Set(hit.map((t) => t.id))
+    set((s) => ({
+      tabs: s.tabs.map((t) => (ids.has(t.id) ? { ...t, savedQueryId: undefined, queryName: undefined, queryGlobal: undefined } : t)),
+      queryStates: Object.fromEntries(Object.entries(s.queryStates).map(([k, q]) => [k, ids.has(k) ? { ...q, savedText: undefined, savedVersion: undefined } : q])),
+    }))
+    return hit.map((t) => t.title)
+  },
+  reloadQuery: (tabId, text, version) =>
+    set((s) => ({
+      queryStates: { ...s.queryStates, [tabId]: { ...(s.queryStates[tabId] ?? newQueryState({}, s.consistency)), text, savedText: text, savedVersion: version } },
+      tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, initialCql: text } : t)),
+      editorEpochs: { ...s.editorEpochs, [tabId]: (s.editorEpochs[tabId] ?? 0) + 1 },
+    })),
   dataEpoch: 0,
   bumpDataEpoch: () => set((s) => ({ dataEpoch: s.dataEpoch + 1 })),
   close: (id) => get().closeMany([id]),
@@ -189,7 +291,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           activeId = tabs[Math.min(before, tabs.length - 1)]?.id ?? ''
         }
       }
-      return { tabs, activeId, queryStates: drop(s.queryStates), columnViews: drop(s.columnViews), edits: drop(s.edits), editErrors: drop(s.editErrors) }
+      return { tabs, activeId, editorEpochs: drop(s.editorEpochs), queryStates: drop(s.queryStates), columnViews: drop(s.columnViews), edits: drop(s.edits), editErrors: drop(s.editErrors) }
     })
   },
   activate: (id) => set({ activeId: id }),

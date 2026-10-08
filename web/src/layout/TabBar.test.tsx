@@ -50,6 +50,26 @@ describe('TabBar', () => {
     expect(screen.queryByRole('button', { name: /^Close/ })).not.toBeInTheDocument()
   })
 
+  describe('dots and tooltips', () => {
+    it('shows "Pending changes" for grid edits and "Unsaved changes" for dirty query text', () => {
+      setup({ tabs: [{ ...tabs[0], modified: true }, { ...tabs[1], modified: true, dirty: true }] })
+      expect(screen.getAllByTitle('Pending changes')).toHaveLength(1)
+      expect(screen.getAllByTitle('Unsaved changes')).toHaveLength(1)
+    })
+    it('puts the tooltip on the tab', () => {
+      setup({ tabs: [{ ...tabs[1], title: 'daily.cql', tooltip: 'reports/daily (Global)' }] })
+      expect(screen.getByRole('tab', { name: 'daily.cql' })).toHaveAttribute('title', 'reports/daily (Global)')
+    })
+    it('lists dirty tabs in the discard dialog and closes them on "Discard and close"', async () => {
+      const p = setup({ tabs: [{ ...tabs[0] }, { ...tabs[1], modified: true, dirty: true, title: 'daily.cql' }], activeId: 'a' })
+      fireEvent.contextMenu(screen.getByRole('tab', { name: 'transactions_by_merchant' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Close all tabs' }))
+      expect(screen.getByRole('dialog', { name: 'Discard unapplied changes?' })).toHaveTextContent('daily.cql')
+      await userEvent.click(screen.getByRole('button', { name: 'Discard and close' }))
+      expect(p.onCloseMany).toHaveBeenCalledWith(['a', 'b'], 'a')
+    })
+  })
+
   describe('context menu', () => {
     const item = (name: string) => screen.getByRole('menuitem', { name })
     it('opens on right-click for that tab without activating it', () => {

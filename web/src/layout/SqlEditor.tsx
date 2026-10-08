@@ -17,6 +17,10 @@ export interface SqlEditorProps {
   onChange?: (text: string) => void
   /** Called on Mod-Enter (`all` false) or Shift-Mod-Enter (`all` true) with the text and the cursor's UTF-16 index. */
   onRun?: (run: { all: boolean; text: string; pos: number }) => void
+  /** Called on Mod-s. */
+  onSave?: () => void
+  /** Called on Shift-Mod-s. */
+  onSaveAs?: () => void
   /** Profile whose schema drives completion. Without one, only keywords are offered. */
   profile?: string
   /** Current keyspace, which unqualified table names resolve in. */
@@ -27,14 +31,17 @@ export interface SqlEditorProps {
 /**
  * CodeMirror 6 editor with the Cassandra SQL dialect and One-theme highlighting driven by CSS
  * variables, so it follows the light/dark theme without reconfiguration. Completion comes from the
+ * Mod-s and Shift-Mod-s call `onSave` and `onSaveAs`. Completion comes from the
  * server's schema-aware engine (debounced and cancellable) and falls back to keywords on failure;
  * `profile` and `keyspace` are read at request time, so changing them does not recreate the editor.
  */
-export function SqlEditor({ initialValue, onCursor, onChange, onRun, profile, keyspace, ...rest }: SqlEditorProps) {
+export function SqlEditor({ initialValue, onCursor, onChange, onRun, onSave, onSaveAs, profile, keyspace, ...rest }: SqlEditorProps) {
   const host = useRef<HTMLDivElement>(null)
   const cb = useRef(onCursor)
   const changeCb = useRef(onChange)
   const runCb = useRef(onRun)
+  const saveCb = useRef(onSave)
+  const saveAsCb = useRef(onSaveAs)
   const profileRef = useRef(profile)
   const keyspaceRef = useRef(keyspace)
   useEffect(() => {
@@ -43,6 +50,8 @@ export function SqlEditor({ initialValue, onCursor, onChange, onRun, profile, ke
     cb.current = onCursor
     changeCb.current = onChange
     runCb.current = onRun
+    saveCb.current = onSave
+    saveAsCb.current = onSaveAs
   })
 
   useEffect(() => {
@@ -55,6 +64,8 @@ export function SqlEditor({ initialValue, onCursor, onChange, onRun, profile, ke
           Prec.highest(
             keymap.of([
               { key: 'Mod-Enter', run: (v) => (runCb.current?.({ all: false, text: v.state.doc.toString(), pos: v.state.selection.main.head }), true) },
+              { key: 'Mod-s', run: () => (saveCb.current?.(), true) },
+              { key: 'Shift-Mod-s', run: () => (saveAsCb.current?.(), true) },
               { key: 'Shift-Mod-Enter', run: (v) => (runCb.current?.({ all: true, text: v.state.doc.toString(), pos: v.state.selection.main.head }), true) },
             ]),
           ),

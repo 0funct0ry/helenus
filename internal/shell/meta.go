@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/0funct0ry/helenus/internal/config"
 )
 
 var consistencyLevels = []string{"ANY", "ONE", "TWO", "THREE", "QUORUM", "ALL", "LOCAL_QUORUM", "EACH_QUORUM", "SERIAL", "LOCAL_SERIAL", "LOCAL_ONE"}
@@ -50,6 +52,14 @@ func (s *Shell) meta(ctx context.Context, line string) (handled bool, err error)
 		return true, s.paging(args)
 	case ".source":
 		return true, s.source(ctx, line)
+	case ".save":
+		return true, s.saveCmd(line)
+	case ".open":
+		return true, s.openCmd(ctx, line)
+	case ".queries":
+		return true, s.queriesCmd(line)
+	case ".load":
+		return true, s.loadCmd(ctx, line)
 	case ".clear", ".cls":
 		s.clear()
 		return true, nil
@@ -273,27 +283,26 @@ func (s *Shell) source(ctx context.Context, line string) error {
 	if s.sourceDepth >= maxSourceDepth {
 		return errors.New(".source nested too deeply")
 	}
-	b, err := os.ReadFile(expandHome(rest))
+	b, err := os.ReadFile(config.ExpandPath(rest))
 	if err != nil {
 		return err
 	}
-	s.sourceDepth++
-	defer func() { s.sourceDepth-- }()
-	err = s.RunScript(ctx, rest, string(b), ScriptOptions{})
-	if err != nil && !errors.Is(err, ErrExit) {
-		// Errors were already printed by RunScript.
-		return fmt.Errorf("%s: script stopped on an error", rest)
-	}
-	return err
+	return s.runFile(ctx, rest, string(b))
 }
 
-func expandHome(p string) string {
-	if strings.HasPrefix(p, "~/") {
-		if h, err := os.UserHomeDir(); err == nil {
-			return h + p[1:]
-		}
+// runFile runs the statements of a file like .source: it stops at the first error.
+func (s *Shell) runFile(ctx context.Context, name, text string) error {
+	if s.sourceDepth >= maxSourceDepth {
+		return errors.New(".source nested too deeply")
 	}
-	return p
+	s.sourceDepth++
+	defer func() { s.sourceDepth-- }()
+	err := s.RunScript(ctx, name, text, ScriptOptions{})
+	if err != nil && !errors.Is(err, ErrExit) {
+		// Errors were already printed by RunScript.
+		return fmt.Errorf("%s: script stopped on an error", name)
+	}
+	return err
 }
 
 func (s *Shell) clear() {

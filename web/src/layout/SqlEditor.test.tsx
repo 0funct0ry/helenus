@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SqlEditor } from './SqlEditor'
 
@@ -28,6 +28,21 @@ describe('SqlEditor callbacks', () => {
     expect(onRun).toHaveBeenLastCalledWith(expect.objectContaining({ all: true }))
     await userEvent.keyboard('x')
     expect(onChange).toHaveBeenLastCalledWith(expect.stringContaining('x'))
+  })
+})
+
+describe('SqlEditor save keys', () => {
+  it('calls onSave on Mod-s and onSaveAs on Shift-Mod-s and prevents the browser default', async () => {
+    const onSave = vi.fn()
+    const onSaveAs = vi.fn()
+    render(<SqlEditor initialValue="SELECT 1;" onSave={onSave} onSaveAs={onSaveAs} />)
+    screen.getByRole('textbox', { name: 'CQL editor' }).focus()
+    await userEvent.keyboard('{Control>}s{/Control}')
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSaveAs).not.toHaveBeenCalled()
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'CQL editor' }), { key: 'S', keyCode: 83, ctrlKey: true, shiftKey: true })
+    expect(onSaveAs).toHaveBeenCalledTimes(1)
+    expect(onSave).toHaveBeenCalledTimes(1)
   })
 })
 

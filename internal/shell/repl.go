@@ -45,6 +45,11 @@ func (s *Shell) Run(ctx context.Context) error {
 		return err == nil && !strings.EqualFold(strings.TrimSpace(line), "q")
 	}
 	defer func() { s.Pause = nil }()
+	s.Ask = func(prompt string) (string, error) {
+		rl.SetPrompt(prompt)
+		return rl.Readline()
+	}
+	defer func() { s.Ask = nil }()
 
 	var lines []string
 	defer func() { s.pending = nil }()

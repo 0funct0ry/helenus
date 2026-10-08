@@ -1,0 +1,38 @@
+---
+title: Save and open query files in the shell
+description: Write session statements to .cql files, edit files in your editor, and share saved queries with the web UI through the query library.
+---
+
+The shell keeps a log of the CQL statements you send to the server in this session, successes and failures alike. Meta-commands are not logged, and neither is any statement containing `PASSWORD`.
+
+## Save statements to a file
+
+```text
+.save ~/queries/daily.cql          # the last statement
+.save -n 3 daily.cql               # the last three
+.save -a -f "my queries.cql"       # everything, overwriting the file
+```
+
+Each statement ends with `;`, statements are separated by one blank line, and the file ends with a newline. The folder must exist, and an existing file is only replaced with `-f`. Paths may be absolute, relative to the shell's working directory, or start with `~`. Press Tab to complete paths.
+
+## Edit and run a file
+
+```text
+.open daily.cql
+```
+
+The file opens in `$VISUAL`, then `$EDITOR`, then `vi` (`notepad` on Windows). When the editor exits, the shell prints how many statements the file holds and asks `Run them? [y/N/e]`. Answer `y` to run them, stopping at the first error, `e` to edit again, anything else to return to the prompt. If the editor exits with an error, nothing runs. `.source` still runs a file directly.
+
+## The query library
+
+The library is the same SQLite file the web UI uses (`-D, --db`, `HELENUS_DB`, `paths.db`). The shell opens it the first time you use a library command, as the local owner. If it can't be opened you get `query library unavailable: <reason>` and the file commands keep working.
+
+A query belongs to the current profile, or to every profile when it is global (always the case when the shell was started without a profile). `--global` forces global.
+
+| Command | What it does |
+|---|---|
+| `.queries [filter]` | Lists saved queries: name, scope and update time. |
+| `.save --db [-n N \| -a] [-f] [--global] <name>` | Saves statements under a name such as `reports/daily`. An existing name needs `-f`. |
+| `.load [--global] <name>` | Opens the query in your editor, asks `Run them? [y/N/e]`, then offers to save your changes back. |
+
+If someone changed the query meanwhile, `.load` prints `changed elsewhere; use .save --db -f to overwrite` and the path of your edited temporary file.
